@@ -31,15 +31,13 @@ namespace HanabiLang.Parses.Nodes
         public List<FnParameter> Parameters { get; private set; }
         public AstNode ReturnType { get; private set; }
         public List<AstNode> Body { get; private set; }
-        public bool IsBuildIn { get; private set; }
 
-        public FnDefineNode(string name, List<FnParameter> parameters, AstNode returnType, List<AstNode> body, bool isBuildIn)
+        public FnDefineNode(string name, List<FnParameter> parameters, AstNode returnType, List<AstNode> body)
         {
             this.Name = name;
             this.Parameters = parameters;
             this.ReturnType = returnType;
             this.Body = body;
-            this.IsBuildIn = isBuildIn;
         }
 
         public override string ToString()

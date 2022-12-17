@@ -595,7 +595,7 @@ namespace HanabiLang.Parses
                                             (this.tokens[this.currentTokenIndex].Line + 1));
                 body.Add(new ReturnNode(this.ParseChild()));
             }
-            return new FnDefineNode(functionName, parameters, returnType, body, false);
+            return new FnDefineNode(functionName, parameters, returnType, body);
 
         }
         private AstNode SwitchStatement()

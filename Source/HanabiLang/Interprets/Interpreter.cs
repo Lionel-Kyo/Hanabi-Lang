@@ -64,6 +64,43 @@ namespace HanabiLang.Interprets
         public void ImportFile(AstNode node)
         {
             var realNode = (ImportNode)node;
+            try
+            {
+                Type type = Type.GetType(realNode.Path);
+                ScriptScope scriptScope =  BuildInClasses.FromStaticClass(type);
+                if (realNode.Imports == null)
+                {
+                    if (string.IsNullOrEmpty(realNode.AsName))
+                        this.currentScope.Classes[type.Name] = new
+                            ScriptClass(type.Name, null,
+                            new List<string>(), scriptScope, true);
+                    else
+                        this.currentScope.Classes[realNode.AsName] = new
+                            ScriptClass(realNode.AsName, null,
+                            new List<string>(), scriptScope, true);
+                }
+                else
+                {
+                    foreach (string item in realNode.Imports)
+                    {
+                        if (scriptScope.TryGetValue(item, out ScriptType scriptType))
+                        {
+                            if (scriptType is ScriptFn)
+                                this.currentScope.Functions[((ScriptFn)scriptType).Name] = (ScriptFn)scriptType;
+                            else if (scriptType is ScriptClass)
+                                this.currentScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
+                            else if (scriptType is ScriptVariable)
+                                this.currentScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
+                            else
+                                throw new SystemException($"Unexpected script type");
+                        }
+                        else
+                            throw new SystemException($"{item} is not defined in realNode.Path");
+                    }
+                }
+                return;
+            }
+            catch { }
 
             string fullPath = System.IO.Path.GetFullPath(realNode.Path);
             if (!System.IO.File.Exists(fullPath))

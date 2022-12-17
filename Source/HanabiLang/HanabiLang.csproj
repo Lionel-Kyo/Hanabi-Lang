@@ -58,6 +58,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Interprets\BuildInClasses.cs" />
     <Compile Include="Interprets\ScriptValue.cs" />
     <Compile Include="Interprets\BuildInFns.cs" />
     <Compile Include="Interprets\ImportedFiles.cs" />

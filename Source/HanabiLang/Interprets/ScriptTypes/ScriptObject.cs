@@ -13,7 +13,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         public delegate ScriptObject CreateBuildInObject();
         public ScriptScope Scope { get; private set; }
         public ScriptClass ObjectClass { get; private set; }
-        public Interpreter interpreter { get; private set; }
 
         public ScriptObject(ScriptClass objectClass, Interpreter interpreter = null)
         {
