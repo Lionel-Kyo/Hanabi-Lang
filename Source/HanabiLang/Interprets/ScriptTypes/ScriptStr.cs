@@ -71,6 +71,22 @@ namespace HanabiLang.Interprets.ScriptTypes
             return new ScriptStr(result);
         }
 
+        public override ScriptObject Multiply(ScriptObject value)
+        {
+            if (value is ScriptInt)
+            {
+                StringBuilder result = new StringBuilder(this.Value);
+                long number = ((ScriptInt)value).Value;
+                for (long i = 0;i< number; i++)
+                {
+                    result.Append(this.Value);
+                }
+                return new ScriptStr(result);
+            }
+
+            return base.Multiply(value);
+        }
+
         public ScriptStr(char value) : this()
         {
             this.Value = value.ToString();

@@ -540,21 +540,19 @@ namespace HanabiLang.Interprets
 
                 var list = (IEnumerable<ScriptValue>)location.Value;
 
-                this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
+                /*this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
 
                 this.currentScope.Variables[realNode.Initializer] =
-                    new ScriptVariable(realNode.Initializer, new ScriptValue(0), false);
+                    new ScriptVariable(realNode.Initializer, new ScriptValue(0), false);*/
 
                 var hasBreak = false;
 
                 foreach (var item in list)
                 {
-                    ScriptVariable currentVariable;
-                    if (currentScope.Variables.TryGetValue(realNode.Initializer, out currentVariable))
-                    {
-                        currentVariable.Value = item;
-                    }
+                    this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
 
+                    this.currentScope.Variables[realNode.Initializer] =
+                        new ScriptVariable(realNode.Initializer, item, false);
 
                     var hasContinue = false;
 
@@ -586,11 +584,12 @@ namespace HanabiLang.Interprets
                             this.InterpretChild(bodyNode);
                     }
 
+                    this.currentScope = this.currentScope.Parent;
                     if (hasBreak)
                         break;
                 }
 
-                this.currentScope = this.currentScope.Parent;
+                //this.currentScope = this.currentScope.Parent;
                 return null;
             }
             else if (node is ListNode)
