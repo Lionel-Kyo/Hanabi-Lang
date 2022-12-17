@@ -483,10 +483,9 @@ namespace HanabiLang.Interprets
                 var realNode = (WhileNode)(node);
                 var condition = realNode.Condition;
 
-                this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
-
                 while (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
                 {
+                    this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
                     var hasBreak = false;
 
                     foreach (var bodyNode in realNode.Body)
@@ -508,10 +507,7 @@ namespace HanabiLang.Interprets
                         }
 
                         if (bodyNode is BreakNode)
-                        {
                             hasBreak = true;
-                            break;
-                        }
 
                         if (bodyNode is ContinueNode)
                             hasContinue = true;
@@ -523,11 +519,11 @@ namespace HanabiLang.Interprets
                             break;
                     }
 
+                    this.currentScope = this.currentScope.Parent;
                     if (hasBreak)
                         break;
                 }
 
-                this.currentScope = this.currentScope.Parent;
                 return null;
             }
             else if (node is ForNode)
