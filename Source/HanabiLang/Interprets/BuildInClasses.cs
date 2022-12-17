@@ -11,6 +11,28 @@ namespace HanabiLang.Interprets
 {
     class BuildInClasses
     {
+        private static T[] GetCsArray<T>(ScriptList scriptList)
+        {
+            T[] arr = new T[scriptList.Value.Count];
+            for (int i = 0; i < arr.Length; i++)
+            {
+
+                arr[i] = (T)ToCsObject(scriptList.Value[i], arr.GetType().GetElementType());
+            }
+            return arr;
+        }
+
+        private static List<T> GetCsList<T>(ScriptList scriptList)
+        {
+            List<T> list = new List<T>(scriptList.Value.Count);
+            for (int i = 0; i < list.Count; i++)
+            {
+
+                list[i] = (T)ToCsObject(scriptList.Value[i], list.GetType());
+            }
+            return list;
+        }
+
         private static object ToCsObject(ScriptValue value, Type csType)
         {
             if (value.IsClass || value.IsFunction)
@@ -24,17 +46,17 @@ namespace HanabiLang.Interprets
                 return (sbyte)((ScriptInt)obj).Value;
             else if (csType == typeof(short) && obj is ScriptInt)
                 return (short)((ScriptInt)obj).Value;
-            else if(csType == typeof(int) && obj is ScriptInt)
+            else if (csType == typeof(int) && obj is ScriptInt)
                 return (int)((ScriptInt)obj).Value;
-            else if(csType == typeof(long) && obj is ScriptInt)
+            else if (csType == typeof(long) && obj is ScriptInt)
                 return (long)((ScriptInt)obj).Value;
-            else if(csType == typeof(byte) && obj is ScriptInt)
+            else if (csType == typeof(byte) && obj is ScriptInt)
                 return (byte)((ScriptInt)obj).Value;
-            else if(csType == typeof(ushort) && obj is ScriptInt)
+            else if (csType == typeof(ushort) && obj is ScriptInt)
                 return (ushort)((ScriptInt)obj).Value;
-            else if(csType == typeof(uint) && obj is ScriptInt)
+            else if (csType == typeof(uint) && obj is ScriptInt)
                 return (uint)((ScriptInt)obj).Value;
-            else if(csType == typeof(ulong) && obj is ScriptInt)
+            else if (csType == typeof(ulong) && obj is ScriptInt)
                 return (ulong)((ScriptInt)obj).Value;
 
             else if (csType == typeof(string) && obj is ScriptStr)
@@ -58,6 +80,49 @@ namespace HanabiLang.Interprets
                 return (double)((ScriptFloat)obj).Value;
             else if (csType == typeof(decimal) && obj is ScriptDecimal)
                 return (decimal)((ScriptFloat)obj).Value;
+
+            else if (csType.IsGenericType)
+            {
+                Type genericType = csType.GetGenericTypeDefinition();
+                if (genericType == typeof(List<>))
+                {
+
+                }
+            }
+            else if (csType.IsArray && obj is ScriptList)
+            {
+                if (csType.GetElementType() == typeof(sbyte))
+                    return GetCsArray<sbyte>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(short))
+                    return GetCsArray<short>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(int))
+                    return GetCsArray<int>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(long))
+                    return GetCsArray<long>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(byte))
+                    return GetCsArray<byte>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(ushort))
+                    return GetCsArray<ushort>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(uint))
+                    return GetCsArray<uint>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(ulong))
+                    return GetCsArray<ulong>((ScriptList)obj);
+
+                else if (csType.GetElementType() == typeof(string))
+                    return GetCsArray<string>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(StringBuilder))
+                    return GetCsArray<StringBuilder>((ScriptList)obj);
+
+                else if (csType.GetElementType() == typeof(bool))
+                    return GetCsArray<bool>((ScriptList)obj);
+
+                else if (csType.GetElementType() == typeof(float))
+                    return GetCsArray<float>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(double))
+                    return GetCsArray<double>((ScriptList)obj);
+                else if (csType.GetElementType() == typeof(decimal))
+                    return GetCsArray<decimal>((ScriptList)obj);
+            }
 
             throw new SystemException($"Expected type: {csType.Name}");
         }
@@ -99,6 +164,10 @@ namespace HanabiLang.Interprets
                 return new ScriptValue((double)csObj);
             else if (csType == typeof(decimal))
                 return new ScriptValue((decimal)csObj);
+            else if (csType == typeof(List<>))
+            {
+                Console.WriteLine(csType);
+            }
 
             throw new SystemException($"Unexpected type: {csType.Name}");
         }
