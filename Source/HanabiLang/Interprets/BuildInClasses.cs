@@ -11,26 +11,76 @@ namespace HanabiLang.Interprets
 {
     class BuildInClasses
     {
-        private static T[] GetCsArray<T>(ScriptList scriptList)
+        private static T[] GetCsArray<T>(ScriptList scriptList, T defaultValue)
         {
-            T[] arr = new T[scriptList.Value.Count];
-            for (int i = 0; i < arr.Length; i++)
+            T[] result = new T[scriptList.Value.Count];
+            var valueType = result.GetType().GetElementType();
+            for (int i = 0; i < scriptList.Value.Count; i++)
             {
 
-                arr[i] = (T)ToCsObject(scriptList.Value[i], arr.GetType().GetElementType());
+                result[i] = (T)ToCsObject(scriptList.Value[i], valueType);
             }
-            return arr;
+            return result;
         }
 
-        private static List<T> GetCsList<T>(ScriptList scriptList)
+        private static List<T> GetCsList<T>(ScriptList scriptList, T defaultValue)
         {
-            List<T> list = new List<T>(scriptList.Value.Count);
-            for (int i = 0; i < list.Count; i++)
+            List<T> result = new List<T>(scriptList.Value.Count);
+            var valueType = result.GetType().GenericTypeArguments[0];
+            for (int i = 0; i < scriptList.Value.Count; i++)
             {
-
-                list[i] = (T)ToCsObject(scriptList.Value[i], list.GetType());
+                result.Add((T)ToCsObject(scriptList.Value[i], valueType));
             }
-            return list;
+            return result;
+        }
+
+        private static Dictionary<TKey,TValue> GetCsDictionary<TKey, TValue>(ScriptDict scriptDict, TKey defaultKey, TValue defaultValue)
+        {
+            var result = new Dictionary<TKey, TValue>();
+            var keyType = result.GetType().GenericTypeArguments[0];
+            var valueType = result.GetType().GenericTypeArguments[1];
+            foreach (var keyValue in scriptDict.Value)
+            {
+                result[(TKey)ToCsObject(keyValue.Key, keyType)] = (TValue)ToCsObject(keyValue.Value, valueType);
+            }
+            return result;
+        }
+
+        private static dynamic GetDefaultValue(Type type)
+        {
+            if (type == typeof(sbyte))
+                return (sbyte)0;
+            else if (type == typeof(short))
+                return (short)0;
+            else if (type == typeof(int))
+                return (int)0;
+            else if (type == typeof(long))
+                return (long)0;
+            else if (type == typeof(byte))
+                return (byte)0;
+            else if (type == typeof(ushort))
+                return (ushort)0;
+            else if (type == typeof(uint))
+                return (uint)0;
+            else if (type == typeof(ulong))
+                return (ulong)0;
+
+            else if (type == typeof(string))
+                return (string)"";
+            else if (type == typeof(StringBuilder))
+                return (StringBuilder)new StringBuilder();
+
+            else if (type == typeof(bool))
+                return (bool)false;
+
+            else if (type == typeof(float))
+                return (float)0.0f;
+            else if (type == typeof(double))
+                return (double)0.0d;
+            else if (type == typeof(decimal))
+                return (decimal)0.0m;
+
+            throw new SystemException($"Unexpected type: {type.Name}");
         }
 
         private static object ToCsObject(ScriptValue value, Type csType)
@@ -84,44 +134,19 @@ namespace HanabiLang.Interprets
             else if (csType.IsGenericType)
             {
                 Type genericType = csType.GetGenericTypeDefinition();
+                Type[] genericArgs = csType.GenericTypeArguments;
                 if (genericType == typeof(List<>))
                 {
-
+                    return GetCsList((ScriptList)obj, GetDefaultValue(genericArgs[0]));
+                }
+                else if (genericType == typeof(Dictionary<,>))
+                {
+                    return GetCsDictionary((ScriptDict)obj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
                 }
             }
             else if (csType.IsArray && obj is ScriptList)
             {
-                if (csType.GetElementType() == typeof(sbyte))
-                    return GetCsArray<sbyte>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(short))
-                    return GetCsArray<short>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(int))
-                    return GetCsArray<int>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(long))
-                    return GetCsArray<long>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(byte))
-                    return GetCsArray<byte>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(ushort))
-                    return GetCsArray<ushort>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(uint))
-                    return GetCsArray<uint>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(ulong))
-                    return GetCsArray<ulong>((ScriptList)obj);
-
-                else if (csType.GetElementType() == typeof(string))
-                    return GetCsArray<string>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(StringBuilder))
-                    return GetCsArray<StringBuilder>((ScriptList)obj);
-
-                else if (csType.GetElementType() == typeof(bool))
-                    return GetCsArray<bool>((ScriptList)obj);
-
-                else if (csType.GetElementType() == typeof(float))
-                    return GetCsArray<float>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(double))
-                    return GetCsArray<double>((ScriptList)obj);
-                else if (csType.GetElementType() == typeof(decimal))
-                    return GetCsArray<decimal>((ScriptList)obj);
+                return GetCsArray((ScriptList)obj, GetDefaultValue(csType.GetElementType()));
             }
 
             throw new SystemException($"Expected type: {csType.Name}");

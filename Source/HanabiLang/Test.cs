@@ -15,5 +15,13 @@ namespace Testing
                 Console.WriteLine(line);
             }
         }
+
+        public static void PrintDict(Dictionary<string, string> lines)
+        {
+            foreach (var kv in lines)
+            {
+                Console.WriteLine($"{kv.Key}: {kv.Value}");
+            }
+        }
     }
 }
