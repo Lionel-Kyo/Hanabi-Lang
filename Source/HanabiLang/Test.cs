@@ -8,20 +8,22 @@ namespace Testing
 {
     public static class Test
     {
-        public static void PrintLn(string[] lines)
+        public static string[] PrintLn(string[] lines)
         {
             foreach (string line in lines) 
             {
                 Console.WriteLine(line);
             }
+            return lines;
         }
 
-        public static void PrintDict(Dictionary<string, string> lines)
+        public static Dictionary<string, string> PrintDict(Dictionary<string, string> lines)
         {
             foreach (var kv in lines)
             {
                 Console.WriteLine($"{kv.Key}: {kv.Value}");
             }
+            return lines;
         }
     }
 }

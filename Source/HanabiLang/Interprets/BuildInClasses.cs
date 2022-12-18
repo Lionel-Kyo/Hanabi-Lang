@@ -46,6 +46,39 @@ namespace HanabiLang.Interprets
             return result;
         }
 
+        private static ScriptValue FromCsArray<T>(object obj, T defaultValue)
+        {
+            ScriptList result = new ScriptList();
+            T[] arr = (T[])obj;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                result.Value.Add(FromCsObject(arr[i]));
+            }
+            return new ScriptValue(result);
+        }
+
+        private static ScriptValue FromCsList<T>(object obj, T defaultValue)
+        {
+            ScriptList result = new ScriptList();
+            List<T> list = (List<T>)obj;
+            for (int i = 0; i < list.Count; i++)
+            {
+                result.Value.Add(FromCsObject(list[i]));
+            }
+            return new ScriptValue(result);
+        }
+
+        private static ScriptValue FromCsDictionary<TKey, TValue>(object obj, TKey defaultKey, TValue defaultValue)
+        {
+            ScriptDict result = new ScriptDict();
+            Dictionary<TKey, TValue> dict = (Dictionary<TKey, TValue>)obj;
+            foreach (var keyValue in dict)
+            {
+                result.Value[FromCsObject(keyValue.Key)] = FromCsObject(keyValue.Value);
+            }
+            return new ScriptValue(result);
+        }
+
         private static dynamic GetDefaultValue(Type type)
         {
             if (type == typeof(sbyte))
@@ -125,11 +158,11 @@ namespace HanabiLang.Interprets
                 return (decimal)((ScriptFloat)obj).Value;
 
             else if (csType == typeof(float) && obj is ScriptDecimal)
-                return (float)((ScriptFloat)obj).Value;
+                return (float)((ScriptDecimal)obj).Value;
             else if (csType == typeof(double) && obj is ScriptDecimal)
-                return (double)((ScriptFloat)obj).Value;
+                return (double)((ScriptDecimal)obj).Value;
             else if (csType == typeof(decimal) && obj is ScriptDecimal)
-                return (decimal)((ScriptFloat)obj).Value;
+                return (decimal)((ScriptDecimal)obj).Value;
 
             else if (csType.IsGenericType)
             {
@@ -189,9 +222,23 @@ namespace HanabiLang.Interprets
                 return new ScriptValue((double)csObj);
             else if (csType == typeof(decimal))
                 return new ScriptValue((decimal)csObj);
-            else if (csType == typeof(List<>))
+
+            else if (csType.IsGenericType)
             {
-                Console.WriteLine(csType);
+                Type genericType = csType.GetGenericTypeDefinition();
+                Type[] genericArgs = csType.GenericTypeArguments;
+                if (genericType == typeof(List<>))
+                {
+                    return FromCsList(csObj, GetDefaultValue(genericArgs[0]));
+                }
+                else if (genericType == typeof(Dictionary<,>))
+                {
+                    return FromCsDictionary(csObj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
+                }
+            }
+            else if (csType.IsArray)
+            {
+                return FromCsArray(csObj, GetDefaultValue(csType.GetElementType()));
             }
 
             throw new SystemException($"Unexpected type: {csType.Name}");
