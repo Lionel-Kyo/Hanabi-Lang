@@ -19,6 +19,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     {
         public string Name { get; private set; }
         public List<FnParameter> Parameters { get; private set; }
+        private Dictionary<string, int> ArgsMap { get; set; }
         public List<AstNode> Body { get; private set; }
         public ScriptScope Scope { get; private set; }
         public BuildInFns.ScriptFnType BuildInFn { get; private set; }
@@ -30,15 +31,20 @@ namespace HanabiLang.Interprets.ScriptTypes
             if (string.IsNullOrEmpty(this.Name))
                 this.Name = "Lambda";
             this.Parameters = parameters;
+            this.ArgsMap = new Dictionary<string, int>();
             this.Body = body;
             this.Scope = scope;
             this.BuildInFn = fn;
+
+            int count = 0;
             foreach (var param in this.Parameters)
             {
+                ArgsMap[param.Name] = count;
                 if (param.DefaultValue == null)
                 {
                     MinArgs++;
                 }
+                count++;
             }
         }
 
@@ -149,9 +155,18 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
                 else
                 {
-                    fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name,
-                                  interpreter.InterpretExpression(
-                                          callArgs[index.ToString()]).Ref, false);
+                    if (callArgs.TryGetValue(parameter.Name, out AstNode expressNode))
+                    {
+                        fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name,
+                                      interpreter.InterpretExpression(
+                                              expressNode).Ref, false);
+                    }
+                    else
+                    {
+                        fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name,
+                                      interpreter.InterpretExpression(
+                                              callArgs[index.ToString()]).Ref, false);
+                    }
                 }
                 index++;
             }

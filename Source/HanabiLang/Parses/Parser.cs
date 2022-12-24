@@ -720,7 +720,8 @@ namespace HanabiLang.Parses
                 {
                     string argName = this.tokens[this.currentTokenIndex].Raw;
                     this.Expect(TokenType.IDENTIFIER);
-                    arguments[argName] = this.Expression();
+                    this.Expect(TokenType.EQUALS);
+                    arguments[argName] = this.Expression(false, true, false);
                     isLastWithName = true;
                 }
                 else
@@ -729,13 +730,13 @@ namespace HanabiLang.Parses
                         throw new SystemException("cannot pass argument without name after passing named argument");
 
                     arguments[argsCount.ToString()] = this.Expression();
-
-                    if (this.currentTokenIndex < this.tokens.Count &&
-                        this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
-                    {
-                        this.currentTokenIndex++;
-                    }
                     argsCount++;
+                }
+
+                if (this.currentTokenIndex < this.tokens.Count &&
+                    this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
+                {
+                    this.currentTokenIndex++;
                 }
             }
 
