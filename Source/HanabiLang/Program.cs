@@ -16,9 +16,9 @@ namespace HanabiLang
         {
             BuildInFns.AddBasicFunctions();
             //string path = "./Test3.txt";
-            //string path = "./Test4.txt";
+            string path = "./Test4.txt";
             //string path = "./BubbleSort.txt";
-            string path = "./CsImport.txt";
+            //string path = "./CsImport.txt";
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 path = args[0];

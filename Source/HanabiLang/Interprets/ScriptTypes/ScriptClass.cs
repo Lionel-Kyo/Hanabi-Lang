@@ -30,7 +30,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.CreateBuildInObject = createBuildInObject; 
         }
 
-        public ScriptValue Call(ScriptScope currentScope, FnCallNode callNode)
+        public ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
         {
             if (this.IsStatic)
                 throw new SystemException("Static class cannot create an object");
@@ -69,9 +69,9 @@ namespace HanabiLang.Interprets.ScriptTypes
             // A Function with same name as class is constructor
             ScriptFn currentConstructor;
             
-            if (interpreter.currentScope.Functions.TryGetValue(callNode.Name, out currentConstructor))
+            if (interpreter.currentScope.Functions.TryGetValue(this.Name, out currentConstructor))
             {
-                currentConstructor.Call(interpreter.currentScope, callNode);
+                currentConstructor.Call(interpreter.currentScope, callArgs);
             }
 
             interpreter.currentScope = parentScope;

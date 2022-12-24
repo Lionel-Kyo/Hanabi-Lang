@@ -117,22 +117,22 @@ namespace HanabiLang.Interprets.ScriptTypes
             interpreter.currentScope = parentScope;
             return new ScriptValue();
         }
-        public ScriptValue Call(ScriptScope currentScope, FnCallNode callNode)
+        public ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
         {
             var interpreter = new Interpreter(currentScope);
             if (this.IsBuildIn)
             {
                 List<ScriptValue> args = new List<ScriptValue>();
 
-                foreach (var arg in callNode.Args)
+                foreach (var arg in callArgs)
                 {
-                    args.Add(interpreter.InterpretExpression(arg).Ref);
+                    args.Add(interpreter.InterpretExpression(arg.Value).Ref);
                 }
 
                 return this.BuildInFn(args);
             }
 
-            if (callNode.Args.Count < this.MinArgs)
+            if (callArgs.Count < this.MinArgs)
                 throw new SystemException("Wrong number of arguments");
 
             var parentScope = interpreter.currentScope;
@@ -141,7 +141,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             var index = 0;
             foreach (var parameter in this.Parameters)
             {
-                if (index >= callNode.Args.Count && parameter.DefaultValue != null)
+                if (index >= callArgs.Count && parameter.DefaultValue != null)
                 {
                     fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name,
                                                             interpreter.InterpretExpression(
@@ -151,7 +151,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 {
                     fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name,
                                   interpreter.InterpretExpression(
-                                          callNode.Args[index]).Ref, false);
+                                          callArgs[index.ToString()]).Ref, false);
                 }
                 index++;
             }
@@ -198,7 +198,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
         public override string ToJsonString(int basicIndent = 2, int currentIndent = 0)
         {
-            return $"\"Function\": \"{this.Name}\"";
+            return $"{{\"Function\": \"{this.Name}\"}}";
         }
         public override string ToString()
         {

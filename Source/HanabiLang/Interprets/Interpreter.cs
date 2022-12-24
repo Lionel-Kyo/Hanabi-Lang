@@ -171,7 +171,7 @@ namespace HanabiLang.Interprets
             if (node is ExpressionNode || node is IntNode ||
                 node is FloatNode ||
                 node is UnaryNode || node is StringNode ||
-                node is VariableReferenceNode || node is FnCallNode || 
+                node is VariableReferenceNode || node is FnCallNode || node is FnReferenceCallNode ||
                 node is ForNode || node is WhileNode ||
                 node is SwitchNode || node is SwitchCaseNode || node is IfNode)
             {
@@ -256,21 +256,41 @@ namespace HanabiLang.Interprets
                         leftScope = ((ScriptFn)left.Value).Scope;
                     else
                         leftScope = ((ScriptObject)left.Value).Scope;
-                    if (realNode.Right is FnCallNode)
+                    /*if (realNode.Right is FnCallNode)
                     {
 
                         var fnCall = (FnCallNode)realNode.Right;
                         if (leftScope.TryGetValue(fnCall.Name, out ScriptType scriptType))
                         {
                             if (scriptType is ScriptFn)
-                                return new ValueReference(((ScriptFn)scriptType).Call(this.currentScope, fnCall));
+                                return new ValueReference(((ScriptFn)scriptType).Call(this.currentScope, fnCall.Args));
                             else if (scriptType is ScriptClass)
-                                return new ValueReference(((ScriptClass)scriptType).Call(this.currentScope, fnCall));
+                                return new ValueReference(((ScriptClass)scriptType).Call(this.currentScope, fnCall.Args));
                             else if (scriptType is ScriptVariable &&
                                 ((ScriptVariable)(scriptType)).Value.IsFunction)
-                                return new ValueReference(((ScriptFn)((ScriptVariable)(scriptType)).Value.Value).Call(this.currentScope, fnCall));
+                                return new ValueReference(((ScriptFn)((ScriptVariable)(scriptType)).Value.Value).Call(this.currentScope, fnCall.Args));
                             else
                                 throw new SystemException($"{fnCall.Name} is not callable");
+                        }
+                    }*/
+                    if (realNode.Right is FnReferenceCallNode)
+                    {
+
+                        var fnCall = (FnReferenceCallNode)realNode.Right;
+                        if (!(fnCall.Reference is VariableReferenceNode))
+                            throw new SystemException($"Unexpected function call");
+
+                        if (leftScope.TryGetValue(((VariableReferenceNode)fnCall.Reference).Name, out ScriptType scriptType))
+                        {
+                            if (scriptType is ScriptFn)
+                                return new ValueReference(((ScriptFn)scriptType).Call(this.currentScope, fnCall.Args));
+                            else if (scriptType is ScriptClass)
+                                return new ValueReference(((ScriptClass)scriptType).Call(this.currentScope, fnCall.Args));
+                            else if (scriptType is ScriptVariable &&
+                                ((ScriptVariable)(scriptType)).Value.IsFunction)
+                                return new ValueReference(((ScriptFn)((ScriptVariable)(scriptType)).Value.Value).Call(this.currentScope, fnCall.Args));
+                            else
+                                throw new SystemException($"{((VariableReferenceNode)fnCall.Reference).Name} is not callable");
                         }
                     }
                     else if (realNode.Right is VariableReferenceNode)
@@ -362,6 +382,7 @@ namespace HanabiLang.Interprets
 
                 throw new SystemException($"{realNode.Name} is not defined");
             }
+            /*
             else if (node is FnCallNode)
             {
                 var realNode = (FnCallNode)node;
@@ -373,17 +394,17 @@ namespace HanabiLang.Interprets
                             ((ScriptVariable)scriptType).Value.IsFunction)
                         {
                             ScriptFn scriptFn = (ScriptFn)((ScriptVariable)scriptType).Value.Value;
-                            return new ValueReference(scriptFn.Call(this.currentScope, realNode));
+                            return new ValueReference(scriptFn.Call(this.currentScope, realNode.Args));
                         }
                         else if (scriptType is ScriptFn)
                         {
                             ScriptFn scriptFn = (ScriptFn)scriptType;
-                            return new ValueReference(scriptFn.Call(this.currentScope, realNode));
+                            return new ValueReference(scriptFn.Call(this.currentScope, realNode.Args));
                         }
                         else if (scriptType is ScriptClass) 
                         {
                             ScriptClass scriptClass = (ScriptClass)scriptType;
-                            return new ValueReference(scriptClass.Call(this.currentScope, realNode));
+                            return new ValueReference(scriptClass.Call(this.currentScope, realNode.Args));
                         }
                         else
                         {
@@ -393,7 +414,7 @@ namespace HanabiLang.Interprets
                 }
 
                 throw new SystemException($"{realNode.Name} is not defined");
-            }
+            }*/
             else if (node is FnReferenceCallNode)
             {
                 var realNode = (FnReferenceCallNode)node;
@@ -401,7 +422,12 @@ namespace HanabiLang.Interprets
                 if (fnRef.Ref.IsFunction)
                 {
                     var fn = (ScriptFn)fnRef.Ref.Value;
-                    return new ValueReference(fn.Call(this.currentScope, new FnCallNode("", realNode.Args)));
+                    return new ValueReference(fn.Call(this.currentScope, realNode.Args));
+                }
+                else if (fnRef.Ref.IsClass)
+                {
+                    var _class = (ScriptClass)fnRef.Ref.Value;
+                    return new ValueReference(_class.Call(this.currentScope, realNode.Args));
                 }
 
                 throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");

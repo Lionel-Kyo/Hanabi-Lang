@@ -87,10 +87,10 @@ namespace HanabiLang.Parses
                             // adjust currentTokenIndex shifted when checking arrow function
                             currentTokenIndex = lastCurrentIndex;
                             this.Expect(TokenType.OPEN_ROUND_BRACKET);
-                            var expr = this.Expression();
+                            var expression = this.Expression();
                             this.Expect(TokenType.CLOSE_ROUND_BRACKET);
 
-                            return expr;
+                            return expression;
                         }
                     }
                 case TokenType.OPERATOR:
@@ -100,8 +100,8 @@ namespace HanabiLang.Parses
                         // Unary operator
                         if (currentToken.Raw == "-" || currentToken.Raw == "+" || currentToken.Raw == "!")
                         {
-                            var expr = this.Factor(skipIndexers, skipArrowFn);
-                            return new UnaryNode(expr, currentToken.Raw);
+                            var expression = this.Factor(skipIndexers, skipArrowFn);
+                            return new UnaryNode(expression, currentToken.Raw);
                         }
                         else
                         {
@@ -402,9 +402,9 @@ namespace HanabiLang.Parses
                 case TokenType.NULL:
                 case TokenType.OPEN_SQURE_BRACKET:
                     {
-                        var expr = this.Expression();
-                        expr.Line = currentToken.Line;
-                        return new ReturnNode(expr);
+                        var expression = this.Expression();
+                        expression.Line = currentToken.Line;
+                        return new ReturnNode(expression);
                     }
             }
 
@@ -704,21 +704,38 @@ namespace HanabiLang.Parses
             return new ClassDefineNode(name, members);
         }
 
-        private AstNode FunctionCall(Token currentToken)
+        private AstNode FunctionCall(AstNode node)
         {
             this.currentTokenIndex++;
 
-            var arguments = new List<AstNode>();
-
+            var arguments = new Dictionary<string, AstNode>();
+            int argsCount = 0;
+            bool isLastWithName = false;
             while (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
             {
-                arguments.Add(this.Expression());
-
-                if (this.currentTokenIndex < this.tokens.Count &&
-                    this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
+                if (this.currentTokenIndex + 1 < this.tokens.Count &&
+                    this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER &&
+                    this.tokens[this.currentTokenIndex + 1].Type == TokenType.EQUALS)
                 {
-                    this.currentTokenIndex++;
+                    string argName = this.tokens[this.currentTokenIndex].Raw;
+                    this.Expect(TokenType.IDENTIFIER);
+                    arguments[argName] = this.Expression();
+                    isLastWithName = true;
+                }
+                else
+                {
+                    if (isLastWithName)
+                        throw new SystemException("cannot pass argument without name after passing named argument");
+
+                    arguments[argsCount.ToString()] = this.Expression();
+
+                    if (this.currentTokenIndex < this.tokens.Count &&
+                        this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
+                    {
+                        this.currentTokenIndex++;
+                    }
+                    argsCount++;
                 }
             }
 
@@ -730,12 +747,19 @@ namespace HanabiLang.Parses
 
             this.currentTokenIndex++;
 
-            AstNode lastFnRefCall = new FnCallNode(currentToken.Raw, arguments);
+            AstNode lastFnRefCall = new FnReferenceCallNode(node, arguments);
+            while (this.currentTokenIndex < this.tokens.Count &&
+                this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
+            {
+                lastFnRefCall = FunctionCall(lastFnRefCall);
+            }
+
+            /*AstNode lastFnRefCall = new FnCallNode(currentToken.Raw, arguments);
             while (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
             {
                 lastFnRefCall = FnRefCall(lastFnRefCall);
-            }
+            }*/
 
             return lastFnRefCall;
         }
@@ -744,17 +768,18 @@ namespace HanabiLang.Parses
         {
             this.currentTokenIndex++;
 
-            var arguments = new List<AstNode>();
-
+            var arguments = new Dictionary<string, AstNode>();
+            int argsCount = 0;
             while (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
             {
-                arguments.Add(this.Expression());
+                arguments[argsCount.ToString()] = this.Expression();
 
                 if (this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
                 {
                     this.currentTokenIndex++;
                 }
+                argsCount++;
             }
 
             if (this.currentTokenIndex < this.tokens.Count &&
@@ -779,7 +804,8 @@ namespace HanabiLang.Parses
             if (this.currentTokenIndex < this.tokens.Count && 
                 this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
             {
-                return FunctionCall(currentToken);
+                //return FunctionCall(currentToken);
+                return FunctionCall(new VariableReferenceNode(currentToken.Raw));
             }
             else if (this.currentTokenIndex < this.tokens.Count && 
                 this.tokens[this.currentTokenIndex].Type == TokenType.EQUALS)
@@ -800,17 +826,21 @@ namespace HanabiLang.Parses
                     var obj = this.Expression(true);
                     var indexersAccess = this.CheckIndexersAccess(obj);
 
-                    AstNode lastFnRefCall = null;
+                    /*AstNode lastFnRefCall = null;
                     while (this.currentTokenIndex < this.tokens.Count &&
                         this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
                     {
                         if (lastFnRefCall == null)
-                            lastFnRefCall = FnRefCall(indexersAccess);
+                            lastFnRefCall = FunctionCall(indexersAccess);
                         else
-                            lastFnRefCall = FnRefCall(lastFnRefCall);
+                            lastFnRefCall = FunctionCall(lastFnRefCall);
                     }
                     if (lastFnRefCall != null)
-                        return lastFnRefCall;
+                        return lastFnRefCall;*/
+
+                    if (this.currentTokenIndex < this.tokens.Count &&
+                        this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
+                        return FunctionCall(indexersAccess);
 
                     return indexersAccess;
                 }
@@ -833,18 +863,18 @@ namespace HanabiLang.Parses
 
             this.currentTokenIndex++;
 
-            var expr = this.Expression();
-            expr.Line = token.Line;
+            var expression = this.Expression();
+            expression.Line = token.Line;
 
             this.Expect(TokenType.CLOSE_SQURE_BRACKET);
 
             if (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_SQURE_BRACKET)
             {
-                return this.CheckIndexersAccess(new IndexersNode(child, expr));
+                return this.CheckIndexersAccess(new IndexersNode(child, expression));
             }
 
-            return new IndexersNode(child, expr);
+            return new IndexersNode(child, expression);
 
         }
 
@@ -891,9 +921,9 @@ namespace HanabiLang.Parses
                 case TokenType.NULL:
                 case TokenType.OPEN_SQURE_BRACKET:
                     {
-                        var expr = this.Expression();
-                        expr.Line = token.Line;
-                        return expr;
+                        var expression = this.Expression();
+                        expression.Line = token.Line;
+                        return expression;
                     }
                 case TokenType.KEYWORD:
                     {
@@ -922,9 +952,9 @@ namespace HanabiLang.Parses
                         }
                         else if (token.Raw.Equals("this"))
                         {
-                            var expr = this.Expression();
-                            expr.Line = token.Line;
-                            return expr;
+                            var expression = this.Expression();
+                            expression.Line = token.Line;
+                            return expression;
                         }
                         else throw new SystemException("Keyword is not implemented: " + token.Raw);
 
