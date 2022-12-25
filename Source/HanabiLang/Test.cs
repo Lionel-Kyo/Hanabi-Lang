@@ -8,9 +8,9 @@ namespace Testing
 {
     public static class Test
     {
-        public static string[] PrintLn(string[] lines)
+        public static object[] PrintLn(object[] lines)
         {
-            foreach (string line in lines) 
+            foreach (object line in lines) 
             {
                 Console.WriteLine(line);
             }

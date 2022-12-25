@@ -112,6 +112,8 @@ namespace HanabiLang.Interprets
                 return (double)0.0d;
             else if (type == typeof(decimal))
                 return (decimal)0.0m;
+            else if (type == typeof(object))
+                return new object();
 
             throw new SystemException($"Unexpected type: {type.Name}");
         }
@@ -131,7 +133,7 @@ namespace HanabiLang.Interprets
                 return (short)((ScriptInt)obj).Value;
             else if (csType == typeof(int) && obj is ScriptInt)
                 return (int)((ScriptInt)obj).Value;
-            else if (csType == typeof(long) && obj is ScriptInt)
+            else if ((csType == typeof(long) || csType == typeof(object)) && obj is ScriptInt)
                 return (long)((ScriptInt)obj).Value;
             else if (csType == typeof(byte) && obj is ScriptInt)
                 return (byte)((ScriptInt)obj).Value;
@@ -142,17 +144,17 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(ulong) && obj is ScriptInt)
                 return (ulong)((ScriptInt)obj).Value;
 
-            else if (csType == typeof(string) && obj is ScriptStr)
+            else if ((csType == typeof(string) || csType == typeof(object)) && obj is ScriptStr)
                 return (string)((ScriptStr)obj).Value;
             else if (csType == typeof(StringBuilder) && obj is ScriptStr)
                 return new StringBuilder(((ScriptStr)obj).Value);
 
-            else if (csType == typeof(bool) && obj is ScriptBool)
+            else if ((csType == typeof(bool) || csType == typeof(object)) && obj is ScriptBool)
                 return (bool)((ScriptBool)obj).Value;
 
             else if (csType == typeof(float) && obj is ScriptFloat)
                 return (float)((ScriptFloat)obj).Value;
-            else if (csType == typeof(double) && obj is ScriptFloat)
+            else if ((csType == typeof(double) || csType == typeof(object)) && obj is ScriptFloat)
                 return (double)((ScriptFloat)obj).Value;
             else if (csType == typeof(decimal) && obj is ScriptFloat)
                 return (decimal)((ScriptFloat)obj).Value;
@@ -161,7 +163,7 @@ namespace HanabiLang.Interprets
                 return (float)((ScriptDecimal)obj).Value;
             else if (csType == typeof(double) && obj is ScriptDecimal)
                 return (double)((ScriptDecimal)obj).Value;
-            else if (csType == typeof(decimal) && obj is ScriptDecimal)
+            else if ((csType == typeof(decimal) || csType == typeof(object)) && obj is ScriptDecimal)
                 return (decimal)((ScriptDecimal)obj).Value;
 
             else if (csType.IsGenericType)
