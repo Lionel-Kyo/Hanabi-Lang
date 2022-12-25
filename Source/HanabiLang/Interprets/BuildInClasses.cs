@@ -179,6 +179,14 @@ namespace HanabiLang.Interprets
                     return GetCsDictionary((ScriptDict)obj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
                 }
             }
+            else if (csType == typeof(object) && obj is ScriptList)
+            {
+                return GetCsList((ScriptList)obj, new object());
+            }
+            else if (csType == typeof(object) && obj is ScriptDict)
+            {
+                return GetCsDictionary((ScriptDict)obj, new object(), new object());
+            }
             else if (csType.IsArray && obj is ScriptList)
             {
                 return GetCsArray((ScriptList)obj, GetDefaultValue(csType.GetElementType()));
