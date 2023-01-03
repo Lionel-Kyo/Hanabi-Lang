@@ -9,9 +9,9 @@ namespace HanabiLang.Lexers
 
     public class Token
     {
-        public TokenType Type { get; set; }
-        public string Raw { get; set; }
-        public int Line { get; set; }
+        public TokenType Type { get; private set; }
+        public string Raw { get; private set; }
+        public int Line { get; private set; }
         public Token(TokenType type, string raw, int line)
         {
             this.Type = type;

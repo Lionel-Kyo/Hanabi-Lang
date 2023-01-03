@@ -25,6 +25,7 @@ namespace HanabiLang.Lexers
         KEYWORD,
         IDENTIFIER,
         STRING,
+        INTERPOLATED_STRING,
         INT,
         FLOAT,
         NULL,

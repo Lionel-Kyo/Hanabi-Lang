@@ -342,6 +342,23 @@ namespace HanabiLang.Interprets
                 var realNode = (StringNode)node;
                 return new ValueReference(new ScriptValue(realNode.Value));
             }
+            else if (node is InterpolatedString)
+            {
+                var realNode = (InterpolatedString)node;
+                StringBuilder text = new StringBuilder();
+                foreach (string str in realNode.Values)
+                {
+                    if (str == null)
+                    {
+                        text.Append(InterpretExpression(realNode.InterpolatedNodes.Dequeue()).Ref.ToString());
+                    }
+                    else
+                    {
+                        text.Append(str);
+                    }
+                }
+                return new ValueReference(new ScriptValue(text.ToString()));
+            }
             else if (node is UnaryNode)
             {
                 var realNode = (UnaryNode)node;

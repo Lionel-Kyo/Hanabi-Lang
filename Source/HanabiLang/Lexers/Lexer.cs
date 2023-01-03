@@ -34,7 +34,7 @@ namespace HanabiLang.Lexers
             "fn", "let" ,"var", "auto" ,"const",
             "in", "break", "continue", "return",
             "import", "from", "as", "try", "catch", "finally",
-            "switch", "case", "default", "async", "class", "this", "super",
+            "switch", "case", "default", "async", "await", "class", "this", "super",
             "null", "true", "false", "private", "public", "protected", "internal",
             "static", "using", "namespace", "object", "dynamic", "enum", "is", "not"
         };
@@ -78,8 +78,11 @@ namespace HanabiLang.Lexers
 
         private static void AddInterpolatedLiteralStringToken(char startChar, ref int index, List<Token> tokens, string line, int lineIndex)
         {
-            StringBuilder result = new StringBuilder();
+            List<string> texts = new List<string>();
+            StringBuilder text = new StringBuilder();
             index++;
+            Queue<int> openSqaureIndexQueue = new Queue<int>();
+            List<List<Token>> interpolatedTokens = new List<List<Token>>();
             while (index < line.Length)
             {
                 char c = line[index];
@@ -94,21 +97,213 @@ namespace HanabiLang.Lexers
                         throw new SystemException("Interpolated string cannot end with {");
                     if (line[index] == '{')
                     {
-                        result.Append('{');
+                        text.Append('{');
                         index++;
                     }
                     else
                     {
-                        line.IndexOf('}');
+                        openSqaureIndexQueue.Enqueue(index);
+                    }
+                }
+                else if (c == '}')
+                {
+                    index++;
+                    if (index >= line.Length)
+                        throw new SystemException("Interpolated string cannot end with }");
+                    if (openSqaureIndexQueue.Count > 0)
+                    {
+                        int lastOpenSquareIndex = openSqaureIndexQueue.Dequeue();
+                        string interpolated = line.Substring(lastOpenSquareIndex, index - lastOpenSquareIndex - 1);
+                        var token = Tokenize(new List<string>() { interpolated });
+
+                        texts.Add(text.ToString());
+                        text.Clear();
+                        texts.Add(null);
+                        interpolatedTokens.Add(token);
+                    }
+                    else if (line[index] == '}')
+                    {
+                        text.Append('}');
+                        index++;
+                    }
+                    else
+                    {
+                        throw new SystemException("Cannot put } without { in a interpolated string");
+                    }
+                }
+                else if (openSqaureIndexQueue.Count > 0)
+                {
+                    index++;
+                }
+                else
+                {
+                    text.Append(c);
+                    index++;
+                }
+            }
+            if (text.Length > 0)
+            {
+                texts.Add(text.ToString());
+                text.Clear();
+            }
+            tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", lineIndex, texts, interpolatedTokens));
+        }
+
+        private static void AddEscapeInterpolatedStringToken(char startChar, ref int index, List<Token> tokens, string line, int lineIndex)
+        {
+            List<string> texts = new List<string>();
+            StringBuilder text = new StringBuilder();
+            index++;
+            Queue<int> openSqaureIndexQueue = new Queue<int>();
+            List<List<Token>> interpolatedTokens = new List<List<Token>>();
+
+            while (index < line.Length)
+            {
+                char c = line[index];
+                if (c == startChar)
+                {
+                    break;
+                }
+                if (c == '{')
+                {
+                    index++;
+                    if (index >= line.Length)
+                        throw new SystemException("Interpolated string cannot end with {");
+                    if (line[index] == '{')
+                    {
+                        text.Append('{');
+                        index++;
+                    }
+                    else
+                    {
+                        openSqaureIndexQueue.Enqueue(index);
+                    }
+                }
+                else if (c == '}')
+                {
+                    index++;
+                    if (index >= line.Length)
+                        throw new SystemException("Interpolated string cannot end with }");
+                    if (openSqaureIndexQueue.Count > 0)
+                    {
+                        int lastOpenSquareIndex = openSqaureIndexQueue.Dequeue();
+                        string interpolated = line.Substring(lastOpenSquareIndex, index - lastOpenSquareIndex - 1);
+                        var token = Tokenize(new List<string>() { interpolated });
+
+                        texts.Add(text.ToString());
+                        text.Clear();
+                        texts.Add(null);
+                        interpolatedTokens.Add(token);
+                    }
+                    else if (line[index] == '}')
+                    {
+                        text.Append('}');
+                        index++;
+                    }
+                    else
+                    {
+                        throw new SystemException("Cannot put } without { in a interpolated string");
+                    }
+                }
+                else if (openSqaureIndexQueue.Count > 0)
+                {
+                    index++;
+                }
+                else if (c == '\\')
+                {
+                    index++;
+                    if (index >= line.Length)
+                        throw new SystemException("Cannot end with escape character");
+                    char nextChar = line[index];
+                    if (nextChar == startChar)
+                        throw new SystemException("Cannot end with escape character");
+
+                    switch (nextChar)
+                    {
+                        case '\'':
+                            text.Append('\'');
+                            index++;
+                            break;
+                        case '\"':
+                            text.Append('\'');
+                            index++;
+                            break;
+                        case '\\':
+                            text.Append('\\');
+                            index++;
+                            break;
+                        case '0':
+                            text.Append('\0');
+                            index++;
+                            break;
+                        case 'a':
+                            text.Append('\a');
+                            index++;
+                            break;
+                        case 'b':
+                            text.Append('\b');
+                            index++;
+                            break;
+                        case 'f':
+                            text.Append('\f');
+                            index++;
+                            break;
+                        case 'n':
+                            text.Append('\n');
+                            index++;
+                            break;
+                        case 'r':
+                            text.Append('\r');
+                            index++;
+                            break;
+                        case 't':
+                            text.Append('\t');
+                            index++;
+                            break;
+                        case 'v':
+                            text.Append('\v');
+                            index++;
+                            break;
+                        case 'u':
+                            index++;
+                            if (index + 4 <= line.Length && ushort.TryParse(line.Substring(index, 4),
+                                System.Globalization.NumberStyles.HexNumber, null, out ushort u16))
+                            {
+                                text.Append(Convert.ToChar(u16));
+                                index += 4;
+                            }
+                            else
+                            {
+                                throw new SystemException("Convert to unicode failed");
+                            }
+                            break;
+                        case 'U':
+                            index++;
+                            if (index + 8 <= line.Length && uint.TryParse(line.Substring(index, 8),
+                                System.Globalization.NumberStyles.HexNumber, null, out uint u32))
+                            {
+                                text.Append((char)u32);
+                                index += 8;
+                            }
+                            else
+                            {
+                                throw new SystemException("Convert to unicode failed");
+                            }
+                            break;
                     }
                 }
                 else
                 {
-                    result.Append(c);
+                    text.Append(c);
                     index++;
                 }
             }
-            tokens.Add(new Token(TokenType.STRING, result.ToString(), lineIndex));
+            if (text.Length > 0)
+            {
+                texts.Add(text.ToString());
+                text.Clear();
+            }
+            tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", lineIndex, texts, interpolatedTokens));
         }
 
         private static void AddEscapeStringToken(char startChar, ref int index, List<Token> tokens, string line, int lineIndex)
@@ -493,6 +688,28 @@ namespace HanabiLang.Lexers
                     {
                         AddEscapeStringToken(c, ref i, tokens, line, line_index);
                         continue;
+                    }
+
+                    if (c == '$')
+                    {
+                        if (i + 1 < line.Length && (line[i + 1] == '@'))
+                        {
+                            i++;
+                            if (i + 1 < line.Length && (line[i + 1] == '\'' || line[i + 1] == '\"'))
+                            {
+                                i++;
+                                AddInterpolatedLiteralStringToken(line[i], ref i, tokens, line, line_index);
+                            }
+                            else throw new SystemException($"Unexpected Token $@");
+                            continue;
+                        }
+                        else if (i + 1 < line.Length && (line[i + 1] == '\'' || line[i + 1] == '\"'))
+                        {
+                            i++;
+                            AddEscapeInterpolatedStringToken(line[i], ref i, tokens, line, line_index);
+                            continue;
+                        }
+                        else throw new SystemException($"Unexpected Token $");
                     }
 
                     if (c == '@')

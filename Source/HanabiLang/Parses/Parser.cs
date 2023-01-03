@@ -63,6 +63,17 @@ namespace HanabiLang.Parses
                 case TokenType.STRING:
                     this.currentTokenIndex++;
                     return new StringNode(currentToken.Raw);
+                case TokenType.INTERPOLATED_STRING:
+                    Queue<AstNode> interpolatedNodes = new Queue<AstNode>();
+                    InterpolatedStringToken interpolatedToken = (InterpolatedStringToken)currentToken;
+                    foreach (List<Token> tokens in interpolatedToken.InterpolatedTokens)
+                    {
+                        Parser parser = new Parser(tokens);
+                        var interpolatedNode = parser.Expression();
+                        interpolatedNodes.Enqueue(interpolatedNode);
+                    }
+                    this.currentTokenIndex++;
+                    return new InterpolatedString(interpolatedToken.Texts, interpolatedNodes);
                 case TokenType.TRUE:
                     this.currentTokenIndex++;
                     return new BooleanNode(true);

@@ -80,8 +80,10 @@
     <Compile Include="Interprets\ScriptTypes\ScriptScript.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptStr.cs" />
     <Compile Include="Interprets\ValueReference.cs" />
+    <Compile Include="Lexers\InterpolatedStringToken.cs" />
     <Compile Include="Parses\AbstractSyntaxTree.cs" />
     <Compile Include="Parses\Nodes\FnReferenceCallNode.cs" />
+    <Compile Include="Parses\Nodes\InterpolatedStringNode.cs" />
     <Compile Include="Parses\Nodes\TernaryNode.cs" />
     <Compile Include="Parses\Nodes\IndexersNode.cs" />
     <Compile Include="Parses\Nodes\DictNode.cs" />
