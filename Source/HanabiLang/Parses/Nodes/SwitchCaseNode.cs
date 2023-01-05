@@ -8,12 +8,12 @@ namespace HanabiLang.Parses.Nodes
 {
     class SwitchCaseNode : AstNode
     {
-        public AstNode Condition { get; private set; }
+        public List<AstNode> Conditions { get; private set; }
         public List<AstNode> Body { get; private set; }
 
-        public SwitchCaseNode(AstNode condition, List<AstNode> body)
+        public SwitchCaseNode(List<AstNode> conditions, List<AstNode> body)
         {
-            this.Condition = condition;
+            this.Conditions = conditions;
             this.Body = body;
         }
 
@@ -22,7 +22,7 @@ namespace HanabiLang.Parses.Nodes
             StringBuilder result = new StringBuilder();
             result.Append(this.NodeName);
             result.Append('(');
-            result.Append(Condition == null ? "default" : Condition.ToString());
+            result.Append(Conditions == null ? "default" : Conditions.ToString());
             result.Append(' ');
             foreach (var statement in Body)
             {

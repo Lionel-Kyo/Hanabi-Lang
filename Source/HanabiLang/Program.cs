@@ -19,7 +19,8 @@ namespace HanabiLang
             //string path = "./Test4.txt";
             //string path = "./BubbleSort.txt";
             //string path = "./CsImport.txt";
-            string path = "./InterpolatedString.txt";
+            //string path = "./InterpolatedString.txt";
+            string path = "./switchTest.txt";
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 path = args[0];

@@ -495,43 +495,51 @@ namespace HanabiLang.Interprets
             else if (node is SwitchNode)
             {
                 var realNode = (SwitchNode)node;
-                var condition = this.InterpretExpression(realNode.Condition);
+                var switchValue = this.InterpretExpression(realNode.Condition);
+                bool hasMatchCase = false;
 
                 foreach (var caseNode in realNode.Cases)
                 {
-                    var caseExpression = this.InterpretExpression(caseNode.Condition);
-
-                    if (caseExpression.Ref.Equals(condition.Ref))
+                    foreach (var condition in caseNode.Conditions)
                     {
-                        foreach (var item in caseNode.Body)
+                        var caseExpression = this.InterpretExpression(condition);
+                        if (caseExpression.Ref.Equals(switchValue.Ref))
                         {
-                            this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
-                            if (item is ReturnNode)
+                            hasMatchCase = true;
+                            foreach (var item in caseNode.Body)
                             {
-                                var returnNode = (ReturnNode)item;
-
-                                if (returnNode.Value != null)
+                                this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
+                                if (item is ReturnNode)
                                 {
-                                    var value = this.InterpretExpression(returnNode.Value);
+                                    var returnNode = (ReturnNode)item;
+
+                                    if (returnNode.Value != null)
+                                    {
+                                        var value = this.InterpretExpression(returnNode.Value);
+
+                                        this.currentScope = this.currentScope.Parent;
+                                        return value;
+                                    }
 
                                     this.currentScope = this.currentScope.Parent;
-                                    return value;
+                                    return new ValueReference(ScriptValue.Null);
                                 }
-
+                                else if (item is BreakNode)
+                                {
+                                    return null;
+                                }
+                                else
+                                {
+                                    this.InterpretChild(item);
+                                }
                                 this.currentScope = this.currentScope.Parent;
-                                return new ValueReference(ScriptValue.Null);
                             }
-                            else
-                            {
-                                this.InterpretChild(item);
-                            }
-                            this.currentScope = this.currentScope.Parent;
                         }
-
-                        return null;
                     }
                 }
 
+                if (realNode.DefaultCase == null || hasMatchCase)
+                    return null;
                 this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
                 foreach (var item in realNode.DefaultCase.Body)
                 {
@@ -560,7 +568,7 @@ namespace HanabiLang.Interprets
             }
             else if (node is WhileNode)
             {
-                var realNode = (WhileNode)(node);
+                var realNode = (WhileNode)node;
                 var condition = realNode.Condition;
 
                 while (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
@@ -595,8 +603,8 @@ namespace HanabiLang.Interprets
                         if (!hasBreak && !hasContinue)
                             this.InterpretChild(bodyNode);
 
-                        if (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
-                            break;
+                        /*if (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
+                            break;*/
                     }
 
                     this.currentScope = this.currentScope.Parent;

@@ -624,30 +624,35 @@ namespace HanabiLang.Parses
                 this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
             {
                 var token = this.tokens[this.currentTokenIndex];
+                bool isDefaultCase = false;
+                List<AstNode> caseExpressions = new List<AstNode>();
 
-                if (token.Type != TokenType.KEYWORD || (token.Raw != "case" && token.Raw != "default"))
-                    throw new SystemException($"switch only accept case or default as keyword");
+                // Every cases with same body
+                while (this.currentTokenIndex < this.tokens.Count &&
+                        this.tokens[this.currentTokenIndex].Type != TokenType.OPEN_CURLY_BRACKET)
+                {
+                    if (token.Type != TokenType.KEYWORD || (token.Raw != "case" && token.Raw != "default"))
+                        throw new SystemException($"switch only accept case or default as keyword");
 
-                this.currentTokenIndex++;
+                    this.currentTokenIndex++;
+
+                    if (token.Raw == "case")
+                    {
+                        AstNode caseExpression = this.Expression();
+                        caseExpression.Line = token.Line;
+                        caseExpressions.Add(caseExpression);
+                    }
+                    else
+                    {
+                        if (defaultCase != null)
+                            throw new SystemException("switch default case cannot define more than 1 time");
+                        isDefaultCase = true;
+                    }
+
+                    this.Expect(TokenType.COLON);
+                }
 
                 var statements = new List<AstNode>();
-
-                AstNode caseExpression = null;
-
-                bool isDefaultCase = false;
-
-                if (token.Raw == "case")
-                {
-                    caseExpression = this.Expression();
-                    caseExpression.Line = token.Line;
-                }
-                else
-                {
-                    if (defaultCase != null)
-                        throw new SystemException("switch default case cannot define more than 1 time");
-                    isDefaultCase = true;
-                }
-
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
                 while (this.currentTokenIndex < this.tokens.Count && 
@@ -658,7 +663,7 @@ namespace HanabiLang.Parses
 
                 this.currentTokenIndex++;
 
-                var switchCase = new SwitchCaseNode(caseExpression, statements);
+                var switchCase = new SwitchCaseNode(caseExpressions, statements);
                 if (isDefaultCase)
                     defaultCase = switchCase;
                 else
