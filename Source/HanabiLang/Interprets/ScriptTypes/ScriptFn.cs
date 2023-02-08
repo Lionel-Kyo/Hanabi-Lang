@@ -87,7 +87,6 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             foreach (var bodyNode in this.Body)
             {
-
                 if (bodyNode is ReturnNode)
                 {
                     var returnNode = (ReturnNode)bodyNode;

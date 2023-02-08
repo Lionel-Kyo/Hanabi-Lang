@@ -187,6 +187,13 @@ namespace HanabiLang.Parses
                 left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), currentToken.Raw);
             }
 
+            // For function calling
+            if (this.currentTokenIndex < this.tokens.Count &&
+                this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
+            {
+                left = FnRefCall(left);
+            }
+
             return left;
         }
 
