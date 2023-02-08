@@ -82,6 +82,7 @@
     <Compile Include="Interprets\ValueReference.cs" />
     <Compile Include="Lexers\InterpolatedStringToken.cs" />
     <Compile Include="Parses\AbstractSyntaxTree.cs" />
+    <Compile Include="Parses\Nodes\EmptyNode.cs" />
     <Compile Include="Parses\Nodes\FnReferenceCallNode.cs" />
     <Compile Include="Parses\Nodes\InterpolatedStringNode.cs" />
     <Compile Include="Parses\Nodes\TernaryNode.cs" />

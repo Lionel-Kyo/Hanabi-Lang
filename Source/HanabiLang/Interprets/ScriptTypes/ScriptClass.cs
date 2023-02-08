@@ -27,7 +27,26 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Constructor = constructor;
             this.Scope = scope;
             this.IsStatic = isStatic;
-            this.CreateBuildInObject = createBuildInObject; 
+            this.CreateBuildInObject = createBuildInObject;
+
+            /*if (!this.IsBuildIn && !ignoreInitialize)
+            {
+                var interpreter = new Interpreter(scope);
+                foreach (var bodyNode in this.Body)
+                {
+                    if (bodyNode is FnDefineNode || bodyNode is ClassDefineNode)
+                    {
+                        interpreter.InterpretChild(bodyNode);
+                    }
+                    else if (bodyNode is VariableDefinitionNode)
+                    {
+                        if (((VariableDefinitionNode)bodyNode).IsConstant)
+                        {
+                            interpreter.InterpretChild(bodyNode);
+                        }
+                    }
+                }
+            }*/
         }
 
         public ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)

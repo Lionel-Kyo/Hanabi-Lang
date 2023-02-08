@@ -20,6 +20,7 @@ namespace HanabiLang.Lexers
         DOT,
         COMMA,
         COLON,
+        SEMI_COLON,
         QUESTION_MARK,
 
         KEYWORD,

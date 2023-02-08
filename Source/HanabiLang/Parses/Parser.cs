@@ -29,9 +29,7 @@ namespace HanabiLang.Parses
                 var child = this.ParseChild();
 
                 if (child != null)
-                {
                     this.nodes.Add(child);
-                }
             }
 
             ast.Nodes = this.nodes;
@@ -266,6 +264,9 @@ namespace HanabiLang.Parses
                 return new VariableAssignmentNode(left, this.Expression());
             }
 
+            if (currentToken.Type == TokenType.SEMI_COLON)
+                return left;
+
             return left;
         }
 
@@ -306,7 +307,9 @@ namespace HanabiLang.Parses
             while (this.currentTokenIndex < this.tokens.Count &&
                    this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
             {
-                thenStatements.Add(this.ParseChild());
+                AstNode child = this.ParseChild();
+                if (child != null)
+                    thenStatements.Add(child);
             }
 
             this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -328,7 +331,9 @@ namespace HanabiLang.Parses
                     while (this.currentTokenIndex < this.tokens.Count &&
                            this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
                     {
-                        elseStatements.Add(this.ParseChild());
+                        AstNode child = this.ParseChild();
+                        if (child != null)
+                            elseStatements.Add(child);
                     }
 
                     this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -351,7 +356,9 @@ namespace HanabiLang.Parses
             while (this.currentTokenIndex < this.tokens.Count &&
                    this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
             {
-                thenStatements.Add(this.ParseChild());
+                AstNode child = this.ParseChild();
+                if (child != null)
+                    thenStatements.Add(child);
             }
 
             this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -394,7 +401,9 @@ namespace HanabiLang.Parses
             while (this.currentTokenIndex < this.tokens.Count &&
                    this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
             {
-                thenStatements.Add(this.ParseChild());
+                AstNode child = this.ParseChild();
+                if (child != null)
+                    thenStatements.Add(child);
             }
 
             this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -601,7 +610,9 @@ namespace HanabiLang.Parses
                 while (this.currentTokenIndex < this.tokens.Count &&
                         this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
                 {
-                    body.Add(this.ParseChild());
+                    AstNode child = this.ParseChild();
+                    if (child != null)
+                        body.Add(child);
                 }
 
                 this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -611,7 +622,9 @@ namespace HanabiLang.Parses
                 if (!haveArrow)
                     throw new SystemException("Function cannot define without arrow and curly bracket " +
                                             (this.tokens[this.currentTokenIndex].Line + 1));
-                body.Add(new ReturnNode(this.ParseChild()));
+                AstNode child = this.ParseChild();
+                if (child != null)
+                    body.Add(new ReturnNode(child));
             }
             return new FnDefineNode(functionName, parameters, returnType, body);
 
@@ -665,7 +678,9 @@ namespace HanabiLang.Parses
                 while (this.currentTokenIndex < this.tokens.Count && 
                     this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
                 {
-                    statements.Add(this.ParseChild());
+                    AstNode child = this.ParseChild();
+                    if (child != null)
+                        statements.Add(child);
                 }
 
                 this.currentTokenIndex++;
@@ -719,7 +734,9 @@ namespace HanabiLang.Parses
             while (this.currentTokenIndex < this.tokens.Count && 
                 this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
             {
-                members.Add(this.ParseChild());
+                AstNode child = this.ParseChild();
+                if (child != null)
+                    members.Add(child);
             }
 
             this.currentTokenIndex++;
@@ -967,7 +984,7 @@ namespace HanabiLang.Parses
                         else if (token.Raw.Equals("break"))
                         {
                             this.currentTokenIndex++;
-                            result = new BreakNode(); ;
+                            result = new BreakNode();
                         }
                         else if (token.Raw.Equals("continue"))
                         {
@@ -985,6 +1002,9 @@ namespace HanabiLang.Parses
                         result.Line = token.Line;
                         return result;
                     }
+                case TokenType.SEMI_COLON:
+                        this.currentTokenIndex++;
+                        return null;
                 default:
                     throw new SystemException(
                             "Unexpected token: " + token.Type + " line: " +

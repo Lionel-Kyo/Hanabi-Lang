@@ -434,6 +434,11 @@ namespace HanabiLang.Lexers
                             break;
                     }
 
+                    if (c == ';')
+                    {
+                        tokens.Add(new Token(TokenType.SEMI_COLON, ";", line_index));
+                    }
+
                     // check int / float
                     if (char.IsDigit(c))
                     {
