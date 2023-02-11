@@ -131,7 +131,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (this.Scope.Functions.TryGetValue("==", out ScriptFn fn))
                 return (ScriptObject)fn.Call(Scope, new ScriptValue(value)).Value;
-            throw new SystemException("Operator ! is not implemented");
+            return new ScriptBool(base.Equals(value));
         }
 
         public virtual ScriptStr ToStr()
@@ -193,7 +193,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                         return ((ScriptStr)obj).Value;
                 }
             }
-            return ToJsonString(2);
+            return ToJsonString(0);
         }
 
         public virtual ScriptObject Copy()

@@ -152,6 +152,8 @@ namespace HanabiLang.Interprets
         {
             if (a.value is ScriptObject && b.value is ScriptObject)
             {
+                if (a.value is ScriptStr || b.value is ScriptStr)
+                    return new ScriptValue(a.value.ToString() + b.value.ToString());
                 var left = (ScriptObject)a.value;
                 var right = (ScriptObject)b.value;
                 return new ScriptValue(left.Add(right));
@@ -172,6 +174,14 @@ namespace HanabiLang.Interprets
 
         public static ScriptValue operator *(ScriptValue a, ScriptValue b)
         {
+            if ((a.value is ScriptStr && b.value is ScriptInt) ||
+                (b.value is ScriptStr && a.value is ScriptInt))
+                return new ScriptValue(((ScriptStr)a.Value).Multiply((ScriptObject)b.Value));
+
+            if ((a.value is ScriptList && b.value is ScriptInt) ||
+                (b.value is ScriptList && a.value is ScriptInt))
+                return new ScriptValue(((ScriptList)a.Value).Multiply((ScriptObject)b.Value));
+
             if (a.value is ScriptObject && b.value is ScriptObject)
             {
                 var left = (ScriptObject)a.value;
@@ -280,22 +290,25 @@ namespace HanabiLang.Interprets
         {
             if (this.value is ScriptObject && value.value is ScriptObject)
             {
-                var left = (ScriptObject)this.value;
-                var right = (ScriptObject)value.value;
-                return ((ScriptBool)left.Equals(right)).Value;
+                ScriptObject oleft = (ScriptObject)this.value;
+                ScriptObject oright = (ScriptObject)value.value;
+                return ((ScriptBool)oleft.Equals(oright)).Value;
             }
-            throw new SystemException($"cannot > value between {this.value} and {value.value}");
+            ScriptType left = this.value;
+            ScriptType right = value.value;
+            return left.Equals(right);
         }
 
         public override bool Equals(object obj)
         {
-            if (obj is ScriptValue) return Equals((ScriptValue)obj);
+            if (obj is ScriptValue) 
+                return this.Equals((ScriptValue)obj);
             return false;
         }
 
         public override int GetHashCode()
         {
-            return this.ToString().GetHashCode();
+            return this.value.GetHashCode();
         }
     }
 }

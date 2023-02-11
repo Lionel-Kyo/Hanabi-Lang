@@ -33,7 +33,7 @@ namespace HanabiLang.Lexers
             "if", "else", "for", "while", "define",
             "fn", "let" ,"var", "auto" ,"const",
             "in", "break", "continue", "return",
-            "import", "from", "as", "try", "catch", "finally",
+            "import", "from", "as", "throw", "try", "catch", "finally",
             "switch", "case", "default", "async", "await", "class", "this", "super",
             "null", "true", "false", "private", "public", "protected", "internal",
             "static", "using", "namespace", "object", "dynamic", "enum", "is", "not"
@@ -323,8 +323,8 @@ namespace HanabiLang.Lexers
                     if (index >= line.Length)
                         throw new SystemException("Cannot end with escape character");
                     char nextChar = line[index];
-                    if (nextChar == startChar)
-                        throw new SystemException("Cannot end with escape character");
+                    //if (nextChar == startChar)
+                    //    throw new SystemException("Cannot end with escape character");
 
                     switch (nextChar)
                     {

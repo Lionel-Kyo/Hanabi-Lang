@@ -85,6 +85,7 @@
     <Compile Include="Parses\Nodes\EmptyNode.cs" />
     <Compile Include="Parses\Nodes\FnReferenceCallNode.cs" />
     <Compile Include="Parses\Nodes\InterpolatedStringNode.cs" />
+    <Compile Include="Parses\Nodes\ThrowNode.cs" />
     <Compile Include="Parses\Nodes\TernaryNode.cs" />
     <Compile Include="Parses\Nodes\IndexersNode.cs" />
     <Compile Include="Parses\Nodes\DictNode.cs" />

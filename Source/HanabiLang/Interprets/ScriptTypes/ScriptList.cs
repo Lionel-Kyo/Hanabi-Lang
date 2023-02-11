@@ -26,6 +26,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 return new ScriptValue(this.Value.Count);
             });
+            this.AddObjectFn("Add", args =>
+            {
+                this.Value.Add(args[0]);
+                return ScriptValue.Null;
+            });
         }
         public ScriptList(List<ScriptValue> value) : this()
         {

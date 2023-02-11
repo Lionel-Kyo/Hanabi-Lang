@@ -108,7 +108,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     bodyNode is ForNode || bodyNode is WhileNode)
                 {
                     var value = interpreter.InterpretExpression(bodyNode);
-                    if (value != null)
+                    if (!value.IsEmpty)
                     {
                         interpreter.currentScope = parentScope;
                         return value.Ref;
@@ -196,7 +196,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     node is ForNode || node is WhileNode)
                 {
                     var value = interpreter.InterpretExpression(node);
-                    if (value != null) 
+                    if (!value.IsEmpty) 
                     {
                         interpreter.currentScope = parentScope;
                         return value.Ref;

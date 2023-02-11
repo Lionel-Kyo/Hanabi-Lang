@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using HanabiLang.Parses;
 using HanabiLang.Lexers;
 using HanabiLang.Interprets.ScriptTypes;
@@ -147,6 +148,9 @@ namespace HanabiLang.Interprets
                 {
                     foreach (string item in realNode.Imports)
                     {
+                        if (this.currentScope.TryGetValue(item, out _))
+                            throw new SystemException($"Import failed, value {item} exists");
+
                         if (interpreter.currentScope.TryGetValue(item, out ScriptType scriptType))
                         {
                             if (scriptType is ScriptFn)
@@ -180,6 +184,17 @@ namespace HanabiLang.Interprets
             else if (node is ImportNode)
             {
                 ImportFile(node);
+            }
+            else if (node is ThrowNode)
+            {
+               /* var realNode = (ThrowNode)node;
+                var result = this.InterpretExpression(realNode.Value);
+                if (!result.Ref.IsObject)
+                    throw new SystemException($"{result.Ref} is not exception type");
+                ScriptClass objClass = ((ScriptObject)result.Ref.Value).ObjectClass;
+                if (!objClass.IsBuildIn)
+                    throw new SystemException($"{result.Ref} is not exception type");
+                throw (ScriptValue)result.Ref.Value;*/
             }
             else if (node is VariableDefinitionNode)
             {
@@ -490,7 +505,7 @@ namespace HanabiLang.Interprets
                 }
 
                 this.currentScope = this.currentScope.Parent;
-                return null;
+                return ValueReference.Empty;
             }
             else if (node is SwitchNode)
             {
@@ -526,7 +541,7 @@ namespace HanabiLang.Interprets
                                 }
                                 else if (item is BreakNode)
                                 {
-                                    return null;
+                                    return ValueReference.Empty;
                                 }
                                 else
                                 {
@@ -539,7 +554,7 @@ namespace HanabiLang.Interprets
                 }
 
                 if (realNode.DefaultCase == null || hasMatchCase)
-                    return null;
+                    return ValueReference.Empty;
                 this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
                 foreach (var item in realNode.DefaultCase.Body)
                 {
@@ -564,7 +579,7 @@ namespace HanabiLang.Interprets
                     }
                 }
                 this.currentScope = this.currentScope.Parent;
-                return null;
+                return ValueReference.Empty;
             }
             else if (node is WhileNode)
             {
@@ -612,7 +627,7 @@ namespace HanabiLang.Interprets
                         break;
                 }
 
-                return null;
+                return ValueReference.Empty;
             }
             else if (node is ForNode)
             {
@@ -674,7 +689,7 @@ namespace HanabiLang.Interprets
                 }
 
                 //this.currentScope = this.currentScope.Parent;
-                return null;
+                return ValueReference.Empty;
             }
             else if (node is ListNode)
             {

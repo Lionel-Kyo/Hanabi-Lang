@@ -77,7 +77,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 StringBuilder result = new StringBuilder(this.Value);
                 long number = ((ScriptInt)value).Value;
-                for (long i = 0;i< number; i++)
+                for (long i = 1; i < number; i++)
                 {
                     result.Append(this.Value);
                 }
@@ -118,6 +118,15 @@ namespace HanabiLang.Interprets.ScriptTypes
             return ScriptBool.False;
         }
 
+        public override int GetHashCode()
+        {
+            if (this.Value == "info")
+            {
+                Console.WriteLine();
+            }
+            return this.Value.GetHashCode();
+        }
+
         public IEnumerator<ScriptValue> GetEnumerator() => StrIterator(this.Value).GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => StrIterator(this.Value).GetEnumerator();
@@ -130,10 +139,5 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return new ScriptStr(this.Value);
         }
-
-        /*public override int GetHashCode()
-        {
-            return this.Value.GetHashCode();
-        }*/
     }
 }

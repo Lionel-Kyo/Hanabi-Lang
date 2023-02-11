@@ -108,10 +108,5 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return ToJsonString(2);
         }
-
-        /*public override int GetHashCode()
-        {
-            return this.Value.GetHashCode();
-        }*/
     }
 }

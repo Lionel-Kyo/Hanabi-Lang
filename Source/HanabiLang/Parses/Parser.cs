@@ -265,7 +265,10 @@ namespace HanabiLang.Parses
             }
 
             if (currentToken.Type == TokenType.SEMI_COLON)
+            {
+                this.Expect(TokenType.SEMI_COLON);
                 return left;
+            }
 
             return left;
         }
@@ -434,9 +437,19 @@ namespace HanabiLang.Parses
                         return new ReturnNode(expression);
                     }
             }
-
             return new ReturnNode();
         }
+        private AstNode ThrowStatement()
+        {
+            this.currentTokenIndex++;
+
+            var currentToken = this.tokens[this.currentTokenIndex];
+
+            var expression = this.Expression();
+            expression.Line = currentToken.Line;
+            return new ThrowNode(expression);
+        }
+
         private AstNode ImportStatement()
         {
             this.currentTokenIndex++;
@@ -981,6 +994,7 @@ namespace HanabiLang.Parses
                         else if (token.Raw.Equals("while")) result = this.WhileStatement();
                         else if (token.Raw.Equals("return")) result = this.ReturnStatement();
                         else if (token.Raw.Equals("import")) result = this.ImportStatement();
+                        else if (token.Raw.Equals("throw")) result = this.ThrowStatement();
                         else if (token.Raw.Equals("break"))
                         {
                             this.currentTokenIndex++;
