@@ -451,7 +451,10 @@ namespace HanabiLang.Lexers
                             if (c == '.')
                                 dotNums++;
                             if (dotNums > 1)
+                            {
+                                dotNums--;
                                 break;
+                            }
                             number += c;
                             i++;
                             if (i >= line.Length)
