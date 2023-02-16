@@ -189,7 +189,7 @@ namespace HanabiLang.Parses
             if (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
             {
-                left = FnRefCall(left);
+                left = FunctionCall(left);
             }
 
             return left;
@@ -423,6 +423,7 @@ namespace HanabiLang.Parses
             {
                 case TokenType.IDENTIFIER:
                 case TokenType.STRING:
+                case TokenType.INTERPOLATED_STRING:
                 case TokenType.OPEN_ROUND_BRACKET:
                 case TokenType.OPERATOR:
                 case TokenType.INT:
@@ -436,6 +437,14 @@ namespace HanabiLang.Parses
                         expression.Line = currentToken.Line;
                         return new ReturnNode(expression);
                     }
+                case TokenType.KEYWORD:
+                    if (currentToken.Raw.Equals("this") || currentToken.Raw.Equals("super"))
+                    {
+                        var expression = this.Expression();
+                        expression.Line = currentToken.Line;
+                        return new ReturnNode(expression);
+                    }
+                    break;
             }
             return new ReturnNode();
         }
@@ -502,7 +511,7 @@ namespace HanabiLang.Parses
                 this.currentTokenIndex++;
             }
 
-            var parameters = new List<FnParameter>();
+            var parameters = new List<FnDefineParameter>();
             List<AstNode> body = new List<AstNode>();
             bool isLastDefaultValue = false;
             if (!isOneParam)
@@ -545,7 +554,7 @@ namespace HanabiLang.Parses
                         }
                     }
 
-                    parameters.Add(new FnParameter(paramName, paramType, paramDefaultValue));
+                    parameters.Add(new FnDefineParameter(paramName, paramType, paramDefaultValue));
 
                     if (this.currentTokenIndex != this.tokens.Count)
                     {
@@ -584,7 +593,7 @@ namespace HanabiLang.Parses
                     this.Expect(TokenType.EQUALS);
                     paramValue = Expression();
                 }
-                parameters.Add(new FnParameter(paramName, paramType, paramValue));
+                parameters.Add(new FnDefineParameter(paramName, paramType, paramValue));
 
                 //this.currentTokenIndex++;
             }
@@ -776,11 +785,13 @@ namespace HanabiLang.Parses
                     this.Expect(TokenType.EQUALS);
                     arguments[argName] = this.Expression(false, true, false);
                     isLastWithName = true;
+                    argsCount++;
                 }
                 else
                 {
-                    if (isLastWithName)
-                        throw new SystemException("cannot pass argument without name after passing named argument");
+                    // supporting multiple arguments
+                    /*if (isLastWithName)
+                        throw new SystemException("cannot pass argument without name after passing named argument");*/
 
                     arguments[argsCount.ToString()] = this.Expression();
                     argsCount++;
@@ -818,7 +829,7 @@ namespace HanabiLang.Parses
             return lastFnRefCall;
         }
 
-        private AstNode FnRefCall(AstNode node)
+        /*private AstNode FnRefCall(AstNode node)
         {
             this.currentTokenIndex++;
 
@@ -845,7 +856,7 @@ namespace HanabiLang.Parses
             this.currentTokenIndex++;
 
             return new FnReferenceCallNode(node, arguments);
-        }
+        }*/
 
 
         private AstNode Identifier(bool skipIndexers)
@@ -965,6 +976,7 @@ namespace HanabiLang.Parses
             switch (token.Type)
             {
                 case TokenType.IDENTIFIER:
+                case TokenType.INTERPOLATED_STRING:
                 case TokenType.STRING:
                 case TokenType.OPEN_ROUND_BRACKET:
                 case TokenType.OPERATOR:

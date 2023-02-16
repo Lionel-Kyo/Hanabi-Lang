@@ -9,95 +9,112 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptList : ScriptObject, IEnumerable<ScriptValue>
+    class ScriptList : ScriptClass
     {
-        public static ScriptClass CreateBuildInClass()
+        public ScriptList() : 
+            base("List", null, new ScriptScope(ScopeType.Class), false)
         {
-            var newScrope = new ScriptScope(ScopeType.Class);
-            return new ScriptClass("List", null, new List<string>(),
-                newScrope, false, () => new ScriptList());
-        }
-        public List<ScriptValue> Value { get; private set; }
-        public ScriptList() :
-            base(CreateBuildInClass())
-        {
-            this.Value = new List<ScriptValue>();
-            this.AddObjectFn("Length", args =>
+            this.AddObjectFn("Length", new List<FnParameter>(), args =>
             {
-                return new ScriptValue(this.Value.Count);
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Count);
             });
-            this.AddObjectFn("Add", args =>
+            this.AddObjectFn("Add", new List<FnParameter>()
             {
-                this.Value.Add(args[0]);
+                new FnParameter("list", BasicTypes.List)
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ((List<ScriptValue>)_this.BuildInObject).Add(args[1]);
                 return ScriptValue.Null;
             });
-        }
-        public ScriptList(List<ScriptValue> value) : this()
-        {
-            this.Value = value;
+            this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var result =  BasicTypes.Enumerator.Create();
+                result.BuildInObject = (List<ScriptValue>)_this.BuildInObject;
+                return new ScriptValue(result);
+            });
         }
 
-        public override ScriptObject Negative()
+        public override ScriptObject Create() => new ScriptObject(this, new List<ScriptValue>());
+        public ScriptObject Create(List<ScriptValue> value) => new ScriptObject(this, value);
+
+        public override ScriptObject Negative(ScriptObject left)
         {
-            var result = Value.ToList();
+            var result = ((List<ScriptValue>)left.BuildInObject).ToList();
             result.Reverse();
-            return new ScriptList(result);
+            return BasicTypes.List.Create(result);
         }
 
-        public override ScriptObject Add(ScriptObject value)
+        public override ScriptObject Add(ScriptObject left, ScriptObject right)
         {
-            if (value is ScriptList)
+            if (right.ClassType is ScriptList)
             {
-                ScriptList obj = (ScriptList)value;
-                List<ScriptValue> list = new List<ScriptValue>(this.Value);
-                list.AddRange(obj.Value);
-                return new ScriptList(list);
+                var list = ((List<ScriptValue>)left.BuildInObject);
+                List<ScriptValue> result = new List<ScriptValue>((List<ScriptValue>)left.BuildInObject);
+                result.AddRange(list);
+                return BasicTypes.List.Create(result);
             }
-            return base.Add(value);
+            return base.Add(left, right);
         }
 
-        public override ScriptObject Multiply(ScriptObject value)
+        public override ScriptObject Multiply(ScriptObject left, ScriptObject right)
         {
-            if (value is ScriptInt)
+            if (right.ClassType is ScriptInt)
             {
-                ScriptInt obj = (ScriptInt)value;
+                long value = (long)right.BuildInObject;
                 List<ScriptValue> list = new List<ScriptValue>();
-                for (long i = 0; i < obj.Value; i++)
+                for (long i = 0; i < value; i++)
                 {
-                    list.AddRange(this.Value);
+                    list.AddRange((List<ScriptValue>)left.BuildInObject);
                 }
-                return new ScriptList(list);
+                return BasicTypes.List.Create(list);
             }
-            return base.Add(value);
+            return base.Add(left, right);
         }
 
-        public override ScriptObject Equals(ScriptObject value)
+        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
         {
-            if (value is ScriptList)
+            if (value.ClassType is ScriptList)
             {
-                List<ScriptValue> a = this.Value;
-                List<ScriptValue> b = ((ScriptList)value).Value;
+                var a = (List<ScriptValue>)_this.BuildInObject;
+                var b = (List<ScriptValue>)value.BuildInObject;
+                if (a.Equals(b))
+                    return ScriptBool.True;
                 if (a.Count == b.Count)
                 {
                     for (int i = 0; i < a.Count; i++)
                     {
                         if (!a[i].Equals(b[i]))
-                            return new ScriptBool(false);
+                            return ScriptBool.False;
                     }
-                    return new ScriptBool(true);
+                    return ScriptBool.True;
                 }
-                return new ScriptBool(false);
+                return ScriptBool.False;
             }
-            return new ScriptBool(false);
+            return ScriptBool.False;
         }
 
+        public override ScriptObject ToStr(ScriptObject _this)
+        {
+            StringBuilder result = new StringBuilder();
+            result.Append('[');
+            foreach (var item in (List<ScriptValue>)_this.BuildInObject)
+            {
+                if (item.IsObject && ((ScriptObject)item.Value).ClassType is ScriptStr)
+                    result.Append($"\"{item}\", ");
+                else
+                    result.Append($"{item}, ");
 
-        public IEnumerator<ScriptValue> GetEnumerator() => this.Value.GetEnumerator();
+            }
+            if (result.Length > 1)
+                result.Remove(result.Length - 2, 2);
+            result.Append(']');
+            return BasicTypes.Str.Create(result.ToString());
+        }
 
-        IEnumerator IEnumerable.GetEnumerator() => this.Value.GetEnumerator();
-
-        public override ScriptStr ToStr() => new ScriptStr(this.ToString());
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0)
+        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
             StringBuilder result = new StringBuilder();
             result.Append('[');
@@ -107,12 +124,16 @@ namespace HanabiLang.Interprets.ScriptTypes
                 currentIndent += 2;
             }
             int count = 0;
-            foreach (var item in this.Value)
+            foreach (var item in (List<ScriptValue>)_this.BuildInObject)
             {
-                result.Append(' ', currentIndent);
-                result.Append($"{item.ToJsonString(basicIndent, currentIndent)}");
+                if (!item.IsObject)
+                    throw new SystemException("list item contain not object");
 
-                if (count < this.Value.Count - 1)
+                ScriptObject itemObject = (ScriptObject)item.Value;
+                result.Append(' ', currentIndent);
+                result.Append($"{itemObject.ClassType.ToJsonString(itemObject, basicIndent, currentIndent)}");
+
+                if (count < ((List<ScriptValue>)_this.BuildInObject).Count - 1)
                 {
                     result.Append(", ");
                     if (basicIndent != 0)
@@ -130,27 +151,5 @@ namespace HanabiLang.Interprets.ScriptTypes
             result.Append(']');
             return result.ToString();
         }
-        public override string ToString()
-        {
-            StringBuilder result = new StringBuilder();
-            result.Append('[');
-            foreach (var item in this.Value)
-            {
-                if (item.Value is ScriptStr)
-                    result.Append($"\"{item}\", ");
-                else
-                    result.Append($"{item}, ");
-
-            }
-            if (result.Length > 1)
-                result.Remove(result.Length - 2, 2);
-            result.Append(']');
-            return result.ToString();
-        }
-
-        /*public override int GetHashCode()
-        {
-            return this.Value.GetHashCode();
-        }*/
     }
 }

@@ -10,15 +10,12 @@ namespace HanabiLang.Parses.Nodes
     {
         public string Name { get; private set; }
         public List<AstNode> Body { get; private set; }
-        // Constructor values
-        public List<string> Constructor { get; private set; }
 
         // Constructor requires a name and body
         public ClassDefineNode(string name, List<AstNode> body)
         {
             this.Name = name;
             this.Body = body;
-            this.Constructor = new List<string>();
         }
 
         public override string ToString()

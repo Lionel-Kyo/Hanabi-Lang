@@ -7,6 +7,7 @@ using System.IO;
 using HanabiLang.Lexers;
 using HanabiLang.Parses;
 using HanabiLang.Interprets;
+using System.Collections;
 
 namespace HanabiLang
 {
@@ -14,14 +15,17 @@ namespace HanabiLang
     {
         public static void Main(string[] args)
         {
-            BuildInFns.AddBasicFunctions();
+            //string path = "./Test.txt";
+            //string path = "./Test2.txt";
             //string path = "./Test3.txt";
             //string path = "./Test4.txt";
             //string path = "./BubbleSort.txt";
-            string path = "./CsImport.txt";
+            //string path = "./CsImport.txt";
+            //string path = "./FnInClass.txt";
             //string path = "./InterpolatedString.txt";
-            //string path = "./ImportJson.txt";
+            string path = "./ImportJson.txt";
             //string path = "./ChristmasTree.txt";
+            //string path = "./ForLoopTest.txt";
             //string path = "./switchTest.txt";
             if (args.Length > 0 && File.Exists(args[0]))
             {
@@ -40,7 +44,8 @@ namespace HanabiLang
                 //Console.WriteLine(item);
             }
             //Console.WriteLine();
-            Interpreter interpreter = new Interpreter(ast, path, true, args);
+            Interpreter.Arguments = args;
+            Interpreter interpreter = new Interpreter(ast, path, true);
             ImportedFiles.Files[Path.GetFullPath(path)] = interpreter;
             interpreter.Interpret();
         }

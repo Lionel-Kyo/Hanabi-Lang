@@ -8,38 +8,24 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptNull : ScriptObject
+    class ScriptNull : ScriptClass
     {
-        public static ScriptClass CreateBuildInClass()
+        public ScriptNull() :
+            base("bool", null, new ScriptScope(ScopeType.Class), false)
         {
-            var newScrope = new ScriptScope(ScopeType.Class);
-            var result  = new ScriptClass("null", null, new List<string>(),
-                newScrope, false, () => new ScriptNull());
-            return result;
-        }
-        public ScriptNull() : base(CreateBuildInClass()) { }
 
-        public override ScriptObject Equals(ScriptObject value)
+        }
+
+        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
         {
-            if (value is ScriptNull)
+            if (value.ClassType is ScriptNull)
             {
-                return new ScriptBool(true);
+                return ScriptBool.True;
             }
-            return new ScriptBool(false);
+            return ScriptBool.False;
         }
 
-        public override ScriptStr ToStr() => new ScriptStr(this.ToString());
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0) => "null";
-        public override string ToString() => "null";
-
-        public override ScriptObject Copy()
-        {
-            return new ScriptNull();
-        }
-
-        /*public override int GetHashCode()
-        {
-            return "null".GetHashCode();
-        }*/
+        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create("null");
+        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0) => "null";
     }
 }

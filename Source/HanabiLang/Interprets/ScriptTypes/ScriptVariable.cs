@@ -19,13 +19,10 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Value = value;
             this.IsConstant = isConstant;
         }
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0)
-        {
-            return $"\"Variable\": \"{this.Name}\"";
-        }
+
         public override string ToString()
         {
-            return $"Variable: {this.Name}";
+            return $"<variable: {this.Name}>";
         }
     }
 }

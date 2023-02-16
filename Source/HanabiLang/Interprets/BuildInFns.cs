@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets
     class BuildInFns
     {
         public delegate ScriptValue ScriptFnType(List<ScriptValue> parameters);
-        public static Dictionary<string, ScriptFnType> Fns = new Dictionary<string, ScriptFnType>();
+        //public static Dictionary<string, ScriptFnType> Fns = new Dictionary<string, ScriptFnType>();
         private static string GetStringByArgs(List<ScriptValue> args)
         {
             StringBuilder stringBuilder = new StringBuilder();
@@ -29,12 +29,14 @@ namespace HanabiLang.Interprets
         }
         public static ScriptValue Print(List<ScriptValue> args)
         {
+            args = (List<ScriptValue>)((ScriptObject)args[0].Value).BuildInObject;
             Console.Write(GetStringByArgs(args));
             return ScriptValue.Null;
         }
 
         public static ScriptValue Println(List<ScriptValue> args)
         {
+            args = (List<ScriptValue>)((ScriptObject)args[0].Value).BuildInObject;
             Console.WriteLine(GetStringByArgs(args));
             return ScriptValue.Null;
         }
@@ -45,30 +47,19 @@ namespace HanabiLang.Interprets
             return new ScriptValue(Console.ReadLine());
         }
 
-        public static ScriptValue ParallelFor(List<ScriptValue> args)
+        public static void AddBasicFunctions(ScriptScope scope)
         {
-            var arg1 = args[0];
-            var arg2 = args[1];
-            if (!(arg1.Value is IEnumerable<ScriptValue>))
-                throw new SystemException("ParallelFor should input enumerable and a function");
-            if (!arg2.IsFunction)
-                throw new SystemException("ParallelFor should input enumerable and a function");
-            var enumerable = (IEnumerable<ScriptValue>)arg1.Value;
-            ScriptFn fn = (ScriptFn)arg2.Value;
-            Parallel.ForEach(enumerable, x =>
-            {
-                fn.Call(fn.Scope, x);
-            });
-            Print(args);
-            return ScriptValue.Null;
-        }
+            scope.Functions["print"] = new ScriptFns("print");
+            scope.Functions["print"].Fns.Add(new ScriptFn(
+                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, null, Print));
 
-        public static void AddBasicFunctions()
-        {
-            Fns["print"] = Print;
-            Fns["println"] = Println;
-            Fns["input"] = Input;
-            //Fns["ParallelFor"] = ParallelFor;
+            scope.Functions["println"] = new ScriptFns("println");
+            scope.Functions["println"].Fns.Add(new ScriptFn(
+                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, null, Println));
+
+            scope.Functions["input"] = new ScriptFns("input");
+            scope.Functions["input"].Fns.Add(new ScriptFn(
+                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, null, Input));
         }
 
         public static List<FnParameter> GetBuildInFnParams(ScriptFnType fn)

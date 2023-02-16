@@ -7,270 +7,223 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptDecimal : ScriptObject
+    class ScriptDecimal : ScriptClass
     {
-        public static ScriptClass CreateBuildInClass()
-        {
-            var newScrope = new ScriptScope(ScopeType.Class);
-            return new ScriptClass("decimal", null, new List<string>(),
-                newScrope, false, () => new ScriptDecimal());
-        }
-        public decimal Value { get; private set; }
-
         public ScriptDecimal() :
-            base(CreateBuildInClass())
+            base("decimal", null, new ScriptScope(ScopeType.Class), false)
         {
-            this.Value = 0;
-            this.AddObjectFn(this.ObjectClass.Name, args =>
+            this.AddObjectFn(this.Name, new List<FnParameter>()
             {
-                if (args.Count == 1)
+                new FnParameter("value")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject value = (ScriptObject)args[1].Value;
+                if (value.ClassType is ScriptInt)
                 {
-                    ScriptValue value = args[0];
-                    if (value.Value is ScriptDecimal)
-                    {
-                        this.Value = ((ScriptDecimal)value.Value).Value;
-                    }
-                    else if (value.Value is ScriptFloat)
-                    {
-                        this.Value = ((ScriptInt)value.Value).Value;
-                    }
-                    else if (value.Value is ScriptInt)
-                    {
-                        this.Value = ((ScriptInt)value.Value).Value;
-                    }
-                    else if (value.Value is ScriptStr)
-                    {
-                        this.Value = long.Parse(((ScriptStr)value.Value).Value);
-                    }
+                    _this.BuildInObject = (decimal)value.BuildInObject;
+                }
+                else if (value.ClassType is ScriptDecimal)
+                {
+                    _this.BuildInObject = (decimal)value.BuildInObject;
+                }
+                else if (value.ClassType is ScriptFloat)
+                {
+                    _this.BuildInObject = (decimal)value.BuildInObject;
+                }
+                else if (value.ClassType is ScriptStr)
+                {
+                    _this.BuildInObject = decimal.Parse((string)value.BuildInObject);
                 }
                 return ScriptValue.Null;
             });
         }
-        public ScriptDecimal(decimal value) : this()
+        public override ScriptObject Create() => new ScriptObject(this, (decimal)0);
+        public ScriptObject Create(decimal value) => new ScriptObject(this, value);
+        public ScriptObject Create(double value) => this.Create((decimal)value);
+        public ScriptObject Create(float value) => this.Create((decimal)value);
+        public ScriptObject Create(byte value) => this.Create((decimal)value);
+        public ScriptObject Create(short value) => this.Create((decimal)value);
+        public ScriptObject Create(int value) => this.Create((decimal)value);
+        public ScriptObject Create(sbyte value) => this.Create((decimal)value);
+        public ScriptObject Create(ushort value) => this.Create((decimal)value);
+        public ScriptObject Create(uint value) => this.Create((decimal)value);
+        public ScriptObject Create(string value) => this.Create(decimal.Parse(value));
+        public ScriptObject Create(StringBuilder value) => this.Create(decimal.Parse(value.ToString()));
+
+        public override ScriptObject Positive(ScriptObject _this)
         {
-            this.Value = value;
+            return BasicTypes.Decimal.Create(+(decimal)_this.BuildInObject);
         }
-        public ScriptDecimal(float value) : this()
+        public override ScriptObject Negative(ScriptObject _this)
         {
-            this.Value = (decimal)value;
+            return BasicTypes.Decimal.Create(-(decimal)_this.BuildInObject);
         }
-        public ScriptDecimal(double value) : this()
+        public override ScriptObject Add(ScriptObject _this, ScriptObject value)
         {
-            this.Value = (decimal)value;
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject + (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Decimal.Create((double)(decimal)_this.BuildInObject + (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject + (decimal)value.BuildInObject);
+            }
+            return base.Add(_this, value);
+        }
+        public override ScriptObject Minus(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject - (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Decimal.Create((double)(decimal)_this.BuildInObject - (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject - (decimal)value.BuildInObject);
+            }
+            return base.Minus(_this, value);
+        }
+        public override ScriptObject Multiply(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject * (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Decimal.Create((double)(decimal)_this.BuildInObject * (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject * (decimal)value.BuildInObject);
+            }
+            return base.Multiply(_this, value);
+        }
+        public override ScriptObject Divide(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject / (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Decimal.Create((double)(decimal)_this.BuildInObject / (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject / (decimal)value.BuildInObject);
+            }
+            return base.Divide(_this, value);
+        }
+        public override ScriptObject Modulo(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject % (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Decimal.Create((double)(decimal)_this.BuildInObject % (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject % (decimal)value.BuildInObject);
+            }
+            return base.Modulo(_this, value);
+        }
+        public override ScriptObject Larger(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject > (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Bool.Create((double)(decimal)_this.BuildInObject > (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject > (decimal)value.BuildInObject);
+            }
+            return base.Larger(_this, value);
+        }
+        public override ScriptObject LargerEquals(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject >= (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Bool.Create((double)(decimal)_this.BuildInObject >= (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject >= (decimal)value.BuildInObject);
+            }
+            return base.LargerEquals(_this, value);
+        }
+        public override ScriptObject Less(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject < (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Bool.Create((double)(decimal)_this.BuildInObject < (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject < (decimal)value.BuildInObject);
+            }
+            return base.Less(_this, value);
+        }
+        public override ScriptObject LessEquals(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject <= (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Bool.Create((double)(decimal)_this.BuildInObject <= (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject <= (decimal)value.BuildInObject);
+            }
+            return base.LessEquals(_this, value);
+        }
+        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
+        {
+            if (value.ClassType is ScriptInt)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject == (long)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptFloat)
+            {
+                return BasicTypes.Bool.Create((double)(decimal)_this.BuildInObject == (double)value.BuildInObject);
+            }
+            else if (value.ClassType is ScriptDecimal)
+            {
+                return BasicTypes.Bool.Create((decimal)_this.BuildInObject == (decimal)value.BuildInObject);
+            }
+            return base.Equals(_this, value);
         }
 
-        public override ScriptObject Positive()
+        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(_this.BuildInObject.ToString());
+        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
-            return new ScriptDecimal(+this.Value);
+            return (string)this.ToStr(_this).BuildInObject;
         }
-        public override ScriptObject Negative()
-        {
-            return new ScriptDecimal(-this.Value);
-        }
-        public override ScriptObject Add(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptDecimal(this.Value + obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptDecimal(this.Value + (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptDecimal(this.Value + obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Minus(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptDecimal(this.Value - obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptDecimal(this.Value - (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptDecimal(this.Value - obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Multiply(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptDecimal(this.Value * obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptDecimal(this.Value * (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptDecimal(this.Value * obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Divide(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptDecimal(this.Value / obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptDecimal(this.Value / (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptDecimal(this.Value / obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Modulo(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptDecimal(this.Value % obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptDecimal(this.Value % (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptDecimal(this.Value % obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Larger(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptBool(this.Value > obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptBool(this.Value > (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptBool(this.Value > obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject LargerEquals(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptBool(this.Value >= obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptBool(this.Value >= (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptBool(this.Value >= obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Less(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptBool(this.Value < obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptBool(this.Value < (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptBool(this.Value < obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject LessEquals(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptBool(this.Value <= obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptBool(this.Value <= (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptBool(this.Value <= obj.Value);
-            }
-            return base.Add(value);
-        }
-        public override ScriptObject Equals(ScriptObject value)
-        {
-            if (value is ScriptInt)
-            {
-                ScriptInt obj = (ScriptInt)value;
-                return new ScriptBool(this.Value == obj.Value);
-            }
-            else if (value is ScriptFloat)
-            {
-                ScriptFloat obj = (ScriptFloat)value;
-                return new ScriptBool(this.Value == (decimal)obj.Value);
-            }
-            else if (value is ScriptDecimal)
-            {
-                ScriptDecimal obj = (ScriptDecimal)value;
-                return new ScriptBool(this.Value == obj.Value);
-            }
-            return base.Add(value);
-        }
-
-        public override ScriptStr ToStr() => new ScriptStr(this.ToString());
-
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0) => this.Value.ToString();
-        public override string ToString() => this.Value.ToString();
-
-        public override ScriptObject Copy()
-        {
-            return new ScriptDecimal(this.Value);
-        }
-
-        /*public override int GetHashCode()
-        {
-            return this.Value.GetHashCode();
-        }*/
     }
 }

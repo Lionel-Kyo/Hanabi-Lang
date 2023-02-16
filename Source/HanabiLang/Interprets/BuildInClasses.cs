@@ -11,35 +11,38 @@ namespace HanabiLang.Interprets
 {
     class BuildInClasses
     {
-        private static T[] GetCsArray<T>(ScriptList scriptList, T defaultValue)
+        private static T[] GetCsArray<T>(ScriptObject scriptList, T defaultValue)
         {
-            T[] result = new T[scriptList.Value.Count];
+            List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
+            T[] result = new T[list.Count];
             var valueType = result.GetType().GetElementType();
-            for (int i = 0; i < scriptList.Value.Count; i++)
+            for (int i = 0; i < list.Count; i++)
             {
 
-                result[i] = (T)ToCsObject(scriptList.Value[i], valueType);
+                result[i] = (T)ToCsObject(list[i], valueType);
             }
             return result;
         }
 
-        private static List<T> GetCsList<T>(ScriptList scriptList, T defaultValue)
+        private static List<T> GetCsList<T>(ScriptObject scriptList, T defaultValue)
         {
-            List<T> result = new List<T>(scriptList.Value.Count);
+            List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
+            List<T> result = new List<T>(list.Count);
             var valueType = result.GetType().GenericTypeArguments[0];
-            for (int i = 0; i < scriptList.Value.Count; i++)
+            for (int i = 0; i < list.Count; i++)
             {
-                result.Add((T)ToCsObject(scriptList.Value[i], valueType));
+                result.Add((T)ToCsObject(list[i], valueType));
             }
             return result;
         }
 
-        private static Dictionary<TKey,TValue> GetCsDictionary<TKey, TValue>(ScriptDict scriptDict, TKey defaultKey, TValue defaultValue)
+        private static Dictionary<TKey,TValue> GetCsDictionary<TKey, TValue>(ScriptObject scriptDict, TKey defaultKey, TValue defaultValue)
         {
+            var dict = (Dictionary<ScriptValue, ScriptValue>)scriptDict.BuildInObject;
             var result = new Dictionary<TKey, TValue>();
             var keyType = result.GetType().GenericTypeArguments[0];
             var valueType = result.GetType().GenericTypeArguments[1];
-            foreach (var keyValue in scriptDict.Value)
+            foreach (var keyValue in dict)
             {
                 result[(TKey)ToCsObject(keyValue.Key, keyType)] = (TValue)ToCsObject(keyValue.Value, valueType);
             }
@@ -48,35 +51,36 @@ namespace HanabiLang.Interprets
 
         private static ScriptValue FromCsArray<T>(object obj, T defaultValue)
         {
-            ScriptList result = new ScriptList();
+            List<ScriptValue> scriptList = new List<ScriptValue>();
             T[] arr = (T[])obj;
             for (int i = 0; i < arr.Length; i++)
             {
-                result.Value.Add(FromCsObject(arr[i]));
+                scriptList.Add(FromCsObject(arr[i]));
             }
-            return new ScriptValue(result);
+            return new ScriptValue(scriptList);
         }
 
         private static ScriptValue FromCsList<T>(object obj, T defaultValue)
         {
-            ScriptList result = new ScriptList();
+            List<ScriptValue> scriptList = new List<ScriptValue>();
             List<T> list = (List<T>)obj;
             for (int i = 0; i < list.Count; i++)
             {
-                result.Value.Add(FromCsObject(list[i]));
+                scriptList.Add(FromCsObject(list[i]));
             }
-            return new ScriptValue(result);
+            return new ScriptValue(scriptList);
         }
 
         private static ScriptValue FromCsDictionary<TKey, TValue>(object obj, TKey defaultKey, TValue defaultValue)
         {
             ScriptDict result = new ScriptDict();
+            Dictionary<ScriptValue, ScriptValue> scriptDict = new Dictionary<ScriptValue, ScriptValue>();
             Dictionary<TKey, TValue> dict = (Dictionary<TKey, TValue>)obj;
             foreach (var keyValue in dict)
             {
-                result.Value[FromCsObject(keyValue.Key)] = FromCsObject(keyValue.Value);
+                scriptDict[FromCsObject(keyValue.Key)] = FromCsObject(keyValue.Value);
             }
-            return new ScriptValue(result);
+            return new ScriptValue(scriptDict);
         }
 
         private static dynamic GetDefaultValue(Type type)
@@ -101,7 +105,7 @@ namespace HanabiLang.Interprets
             else if (type == typeof(string))
                 return (string)"";
             else if (type == typeof(StringBuilder))
-                return (StringBuilder)new StringBuilder();
+                return new StringBuilder();
 
             else if (type == typeof(bool))
                 return (bool)false;
@@ -124,47 +128,47 @@ namespace HanabiLang.Interprets
                 throw new SystemException("Class and function is not supported");
             var obj = (ScriptObject)value.Value;
 
-            if (obj is ScriptNull)
+            if (obj.ClassType is ScriptNull)
                 return null;
 
-            if (csType == typeof(sbyte) && obj is ScriptInt)
-                return (sbyte)((ScriptInt)obj).Value;
-            else if (csType == typeof(short) && obj is ScriptInt)
-                return (short)((ScriptInt)obj).Value;
-            else if (csType == typeof(int) && obj is ScriptInt)
-                return (int)((ScriptInt)obj).Value;
-            else if ((csType == typeof(long) || csType == typeof(object)) && obj is ScriptInt)
-                return (long)((ScriptInt)obj).Value;
-            else if (csType == typeof(byte) && obj is ScriptInt)
-                return (byte)((ScriptInt)obj).Value;
-            else if (csType == typeof(ushort) && obj is ScriptInt)
-                return (ushort)((ScriptInt)obj).Value;
-            else if (csType == typeof(uint) && obj is ScriptInt)
-                return (uint)((ScriptInt)obj).Value;
-            else if (csType == typeof(ulong) && obj is ScriptInt)
-                return (ulong)((ScriptInt)obj).Value;
+            if (csType == typeof(sbyte) && obj.ClassType is ScriptInt)
+                return (sbyte)((long)obj.BuildInObject);
+            else if (csType == typeof(short) && obj.ClassType is ScriptInt)
+                return (short)((long)obj.BuildInObject);
+            else if (csType == typeof(int) && obj.ClassType is ScriptInt)
+                return (int)((long)obj.BuildInObject);
+            else if ((csType == typeof(long) || csType == typeof(object)) && obj.ClassType is ScriptInt)
+                return (long)((long)obj.BuildInObject);
+            else if (csType == typeof(byte) && obj.ClassType is ScriptInt)
+                return (byte)((long)obj.BuildInObject);
+            else if (csType == typeof(ushort) && obj.ClassType is ScriptInt)
+                return (ushort)((long)obj.BuildInObject);
+            else if (csType == typeof(uint) && obj.ClassType is ScriptInt)
+                return (uint)((long)obj.BuildInObject);
+            else if (csType == typeof(ulong) && obj.ClassType is ScriptInt)
+                return (ulong)((long)obj.BuildInObject);
 
-            else if ((csType == typeof(string) || csType == typeof(object)) && obj is ScriptStr)
-                return (string)((ScriptStr)obj).Value;
-            else if (csType == typeof(StringBuilder) && obj is ScriptStr)
-                return new StringBuilder(((ScriptStr)obj).Value);
+            else if ((csType == typeof(string) || csType == typeof(object)) && obj.ClassType is ScriptStr)
+                return (string)obj.BuildInObject;
+            else if (csType == typeof(StringBuilder) && obj.ClassType is ScriptStr)
+                return new StringBuilder((string)obj.BuildInObject);
 
-            else if ((csType == typeof(bool) || csType == typeof(object)) && obj is ScriptBool)
-                return (bool)((ScriptBool)obj).Value;
+            else if ((csType == typeof(bool) || csType == typeof(object)) && obj.ClassType is ScriptBool)
+                return (bool)obj.BuildInObject;
 
-            else if (csType == typeof(float) && obj is ScriptFloat)
-                return (float)((ScriptFloat)obj).Value;
-            else if ((csType == typeof(double) || csType == typeof(object)) && obj is ScriptFloat)
-                return (double)((ScriptFloat)obj).Value;
-            else if (csType == typeof(decimal) && obj is ScriptFloat)
-                return (decimal)((ScriptFloat)obj).Value;
+            else if (csType == typeof(float) && obj.ClassType is ScriptFloat)
+                return (float)obj.BuildInObject;
+            else if ((csType == typeof(double) || csType == typeof(object)) && obj.ClassType is ScriptFloat)
+                return (double)obj.BuildInObject;
+            else if (csType == typeof(decimal) && obj.ClassType is ScriptFloat)
+                return (decimal)obj.BuildInObject;
 
-            else if (csType == typeof(float) && obj is ScriptDecimal)
-                return (float)((ScriptDecimal)obj).Value;
-            else if (csType == typeof(double) && obj is ScriptDecimal)
-                return (double)((ScriptDecimal)obj).Value;
-            else if ((csType == typeof(decimal) || csType == typeof(object)) && obj is ScriptDecimal)
-                return (decimal)((ScriptDecimal)obj).Value;
+            else if (csType == typeof(float) && obj.ClassType is ScriptDecimal)
+                return (float)obj.BuildInObject;
+            else if (csType == typeof(double) && obj.ClassType is ScriptDecimal)
+                return (double)obj.BuildInObject;
+            else if ((csType == typeof(decimal) || csType == typeof(object)) && obj.ClassType is ScriptDecimal)
+                return (decimal)obj.BuildInObject;
 
             else if (csType.IsGenericType)
             {
@@ -172,24 +176,24 @@ namespace HanabiLang.Interprets
                 Type[] genericArgs = csType.GenericTypeArguments;
                 if (genericType == typeof(List<>))
                 {
-                    return GetCsList((ScriptList)obj, GetDefaultValue(genericArgs[0]));
+                    return GetCsList(obj, GetDefaultValue(genericArgs[0]));
                 }
                 else if (genericType == typeof(Dictionary<,>))
                 {
-                    return GetCsDictionary((ScriptDict)obj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
+                    return GetCsDictionary(obj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
                 }
             }
-            else if (csType == typeof(object) && obj is ScriptList)
+            else if (csType == typeof(object) && obj.ClassType is ScriptList)
             {
-                return GetCsList((ScriptList)obj, new object());
+                return GetCsList(obj, new object());
             }
-            else if (csType == typeof(object) && obj is ScriptDict)
+            else if (csType == typeof(object) && obj.ClassType is ScriptDict)
             {
-                return GetCsDictionary((ScriptDict)obj, new object(), new object());
+                return GetCsDictionary(obj, new object(), new object());
             }
-            else if (csType.IsArray && obj is ScriptList)
+            else if (csType.IsArray && obj.ClassType is ScriptList)
             {
-                return GetCsArray((ScriptList)obj, GetDefaultValue(csType.GetElementType()));
+                return GetCsArray(obj, GetDefaultValue(csType.GetElementType()));
             }
 
             throw new SystemException($"Expected type: {csType.Name}");
@@ -258,74 +262,106 @@ namespace HanabiLang.Interprets
         {
             var fns = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
             var fnMatch = new Dictionary<string, List<BuildInFns.ScriptFnType>>();
-            foreach (var fn in fns)
-            {
-                if (fnMatch.TryGetValue(fn.Name, out List<BuildInFns.ScriptFnType> list))
-                {
-                    list.Add(ToScriptFn(fn));
-                }
-                else
-                {
-                    fnMatch[fn.Name] = new List<BuildInFns.ScriptFnType>() { ToScriptFn(fn) };
-                }
-            }
             var newScrope = new ScriptScope(ScopeType.Class);
 
-            foreach (var match in fnMatch)
+            foreach (var fn in fns)
             {
-                newScrope.Functions[match.Key] = new ScriptFn(match.Key, new List<FnParameter>(), null,
-                    new ScriptScope(ScopeType.Function), args =>
-                    {
-                        for (int i = 0; i < match.Value.Count; i++)
-                        {
-                            if (i == match.Value.Count -1)
-                            {
-                                return match.Value[i](args);
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    return match.Value[i](args);
-                                }
-                                catch { }
-                            }
-                        }
-                        throw new SystemException("");
-                    });
+                if (!newScrope.Functions.TryGetValue(fn.Name, out ScriptFns scriptFns))
+                {
+                    scriptFns = new ScriptFns(fn.Name);
+                    newScrope.Functions[fn.Name] = scriptFns;
+                }
+                try
+                {
+                    var scriptFn = ToScriptFn(fn);
+                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, null, newScrope, scriptFn.Item2));
+                }
+                catch (NotImplementedException ex) { }
             }
 
             return newScrope;
         }
 
-        public static BuildInFns.ScriptFnType ToScriptFn(MethodInfo method)
+        private static ScriptClass ToScriptType(Type type)
+        {
+            if (type == typeof(sbyte))
+                return BasicTypes.Int;
+            else if (type == typeof(short))
+                return BasicTypes.Int;
+            else if (type == typeof(int))
+                return BasicTypes.Int;
+            else if (type == typeof(long))
+                return BasicTypes.Int;
+            else if (type == typeof(byte))
+                return BasicTypes.Int;
+            else if (type == typeof(ushort))
+                return BasicTypes.Int;
+            else if (type == typeof(uint))
+                return BasicTypes.Int;
+            else if (type == typeof(ulong))
+                return BasicTypes.Int;
+
+            else if (type == typeof(string))
+                return BasicTypes.Str;
+            else if (type == typeof(StringBuilder))
+                return BasicTypes.Str;
+
+            else if (type == typeof(bool))
+                return BasicTypes.Bool;
+
+            else if (type == typeof(float))
+                return BasicTypes.Float;
+            else if (type == typeof(double))
+                return BasicTypes.Float;
+            else if (type == typeof(decimal))
+                return BasicTypes.Decimal;
+            else if (type == typeof(object))
+                return null;
+            else if (type.IsGenericType)
+            {
+                Type genericType = type.GetGenericTypeDefinition();
+                if (genericType == typeof(List<>))
+                    return BasicTypes.List;
+                else if (genericType == typeof(Dictionary<,>))
+                    return BasicTypes.Dict;
+            }
+            else if (type.IsArray)
+                return BasicTypes.List;
+
+            throw new NotImplementedException($"Not supported datatype {type.Name}");
+        } 
+
+        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method)
         {
             var returnType = method.ReturnType;
-            var parameters = new List<Tuple<string, Type>>();
+            var csParameters = new List<Type>();
+            var scriptParameters = new List<FnParameter>();
             foreach (var parameter in method.GetParameters())
             {
                 string name = parameter.Name;
                 Type type = parameter.ParameterType;
-                parameters.Add(Tuple.Create(name, type));
+                object defaultValue = parameter.DefaultValue;
+                csParameters.Add(type);
+                scriptParameters.Add(new FnParameter(name, ToScriptType(type)));
             }
 
             BuildInFns.ScriptFnType fn = args =>
             {
-                if (args.Count != parameters.Count)
-                    throw new SystemException($"Required {parameters.Count}, recevied {args.Count}");
+                if (args.Count != csParameters.Count)
+                    throw new SystemException($"Required {csParameters.Count}, recevied {args.Count}");
 
-                object[] csObjects = new object[parameters.Count];
+                object[] csObjects = new object[csParameters.Count];
 
-                for (int i = 0; i < parameters.Count; i++)
+                for (int i = 0; i < csParameters.Count; i++)
                 {
-                    csObjects[i] = ToCsObject(args[i], parameters[i].Item2);
+                    csObjects[i] = ToCsObject(args[i], csParameters[i]);
                 }
 
                 object returnObj = method.Invoke(null, csObjects);
 
                 return FromCsObject(returnObj);
             };
-            return fn;
+            return Tuple.Create(scriptParameters, fn);
         }
     }
 }

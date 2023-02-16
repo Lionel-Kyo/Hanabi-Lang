@@ -9,96 +9,88 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptStr : ScriptObject, IEnumerable<ScriptValue>
+    class ScriptStr : ScriptClass
     {
-        public static ScriptClass CreateBuildInClass()
-        {
-            var newScrope = new ScriptScope(ScopeType.Class);
-            return new ScriptClass("str", null, new List<string>(),
-                newScrope, false, () => new ScriptStr());
-        }
-
-        public string Value { get; private set; }
-
         public ScriptStr() :
-            base(CreateBuildInClass())
+            base("str", null, new ScriptScope(ScopeType.Class), false)
         {
-            this.Value = "";
-            this.AddObjectFn(this.ObjectClass.Name, args =>
+            this.AddObjectFn(this.Name, new List<FnParameter>() 
             {
-                if (args.Count == 1)
-                {
-                    ScriptValue value = args[0];
-                    if (value.Value is ScriptObject)
-                    {
-                        this.Value = ((ScriptObject)value.Value).ToString();
-                    }
-                }
-                return ScriptValue.Null;
-            });
-            this.AddObjectFn("SubStr", args =>
+                new FnParameter("value")
+            }, args =>
             {
-                if (args.Count == 1)
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                if (args.Count == 2)
                 {
-                    ScriptValue startIndex = args[0];
-                    if (startIndex.Value is ScriptObject)
-                    {
-                        return new ScriptValue(this.Value.Substring((int)((ScriptInt)startIndex.Value).Value));
-                    }
-                }
-                else if (args.Count == 2)
-                {
-                    ScriptValue startIndex = args[0];
-                    ScriptValue length = args[1];
-                    if (startIndex.Value is ScriptInt && length.Value is ScriptInt)
-                    {
-                        return new ScriptValue(this.Value.Substring((int)((ScriptInt)startIndex.Value).Value, (int)((ScriptInt)length.Value).Value));
-                    }
+                    ScriptObject value = (ScriptObject)args[1].Value;
+                    _this.BuildInObject = value.ToString();
                 }
                 return ScriptValue.Null;
             });
 
-            this.AddObjectFn("Length", args =>
+            this.AddObjectFn("SubStr", new List<FnParameter>()
             {
-                return new ScriptValue(this.Value.Length);
+                new FnParameter("startIndex", BasicTypes.Int)
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                return new ScriptValue(((string)_this.BuildInObject).Substring((int)startIndex));
+            });
+
+            this.AddObjectFn("SubStr", new List<FnParameter>()
+            {
+                new FnParameter("startIndex", BasicTypes.Int),
+                new FnParameter("length", BasicTypes.Int)
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                long length = (long)((ScriptObject)args[2].Value).BuildInObject;
+                return new ScriptValue(((string)_this.BuildInObject).Substring((int)startIndex, (int)length));
+            });
+
+            this.AddObjectFn("Length", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((List<ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
+            });
+
+            this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var result = BasicTypes.Enumerator.Create();
+                result.BuildInObject = StrIterator((string)_this.BuildInObject);
+                return new ScriptValue(result);
             });
         }
 
-        public override ScriptObject Add(ScriptObject value)
+        public override ScriptObject Create() => new ScriptObject(this, "");
+        public ScriptObject Create(string value) => new ScriptObject(this, value);
+        public ScriptObject Create(StringBuilder value) => new ScriptObject(this, value.ToString());
+        public ScriptObject Create(char value) => new ScriptObject(this, value.ToString());
+
+        public override ScriptObject Add(ScriptObject _this, ScriptObject value)
         {
-            StringBuilder result = new StringBuilder(this.Value);
+            StringBuilder result = new StringBuilder((string)_this.BuildInObject);
             result.Append(value.ToString());
-            return new ScriptStr(result);
+            return BasicTypes.Str.Create(result);
         }
 
-        public override ScriptObject Multiply(ScriptObject value)
+        public override ScriptObject Multiply(ScriptObject _this, ScriptObject value)
         {
-            if (value is ScriptInt)
+            if (value.ClassType is ScriptInt)
             {
-                StringBuilder result = new StringBuilder(this.Value);
-                long number = ((ScriptInt)value).Value;
+                StringBuilder result = new StringBuilder((string)_this.BuildInObject);
+                long number = (long)value.BuildInObject;
                 for (long i = 1; i < number; i++)
                 {
-                    result.Append(this.Value);
+                    result.Append((string)_this.BuildInObject);
                 }
-                return new ScriptStr(result);
+                return BasicTypes.Str.Create(result);
             }
 
-            return base.Multiply(value);
-        }
-
-        public ScriptStr(char value) : this()
-        {
-            this.Value = value.ToString();
-        }
-
-        public ScriptStr(string value) : this()
-        {
-            this.Value = value;
-        }
-        public ScriptStr(StringBuilder strbdr) : this()
-        {
-            this.Value = strbdr.ToString();
+            return base.Multiply(_this, value);
         }
 
         private static IEnumerable<ScriptValue> StrIterator(string value)
@@ -109,35 +101,18 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        public override ScriptObject Equals(ScriptObject value)
+        public override ScriptObject ToStr(ScriptObject _this) => _this;
+
+        public override ScriptObject Equals(ScriptObject left, ScriptObject right)
         {
-            if (value is ScriptStr)
-            {
-                return new ScriptBool(this.Value.Equals(((ScriptStr)value).Value));
-            }
-            return ScriptBool.False;
+            if (left.ClassType is ScriptStr && right.ClassType is ScriptStr)
+                return BasicTypes.Bool.Create(left.BuildInObject.Equals(right.BuildInObject));
+            return base.Equals(left, right);
         }
 
-        public override int GetHashCode()
+        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
-            if (this.Value == "info")
-            {
-                Console.WriteLine();
-            }
-            return this.Value.GetHashCode();
-        }
-
-        public IEnumerator<ScriptValue> GetEnumerator() => StrIterator(this.Value).GetEnumerator();
-
-        IEnumerator IEnumerable.GetEnumerator() => StrIterator(this.Value).GetEnumerator();
-
-        public override ScriptStr ToStr() => new ScriptStr(this.ToString());
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0) => $"\"{this.Value}\"";
-        public override string ToString() => this.Value;
-
-        public override ScriptObject Copy()
-        {
-            return new ScriptStr(this.Value);
+            return "\"" + (string)_this.BuildInObject +"\"";
         }
     }
 }

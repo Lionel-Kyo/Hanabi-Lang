@@ -9,66 +9,85 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptRange : ScriptObject, IEnumerable<ScriptValue>
+    class ScriptRange : ScriptClass
     {
-        public static ScriptClass CreateBuildInClass()
-        {
-            var newScrope = new ScriptScope(ScopeType.Class);
-            return new ScriptClass("range", null, new List<string>(),
-                newScrope, false, () => new ScriptRange());
-        }
-        public long Start { get; private set; }
-        public long End { get; private set; }
-        public long Step { get; private set; }
         public ScriptRange() :
-            base(CreateBuildInClass())
+            base("Range", null, new ScriptScope(ScopeType.Class), false)
         {
-            this.Start = 0;
-            this.End = 0;
-            this.Step = 1;
-            this.AddObjectFn(this.ObjectClass.Name, args =>
+            this.AddObjectFn(this.Name, new List<FnParameter>()
             {
-                if (args.Count == 1)
-                {
-                    this.End = ((ScriptInt)args[0].Value).Value;
-                    if (this.End < 0 && this.Step > 0)
-                        this.Step *= -1;
-                }
-                else if (args.Count == 2)
-                {
-                    this.Start = ((ScriptInt)args[0].Value).Value;
-                    this.End = ((ScriptInt)args[1].Value).Value;
-                    if (this.End < 0 && this.Step > 0)
-                        this.Step *= -1;
-                }
-                else if (args.Count == 3)
-                {
-                    this.Start = ((ScriptInt)args[0].Value).Value;
-                    this.End = ((ScriptInt)args[1].Value).Value;
-                    this.Step = ((ScriptInt)args[2].Value).Value;
-                }
+                new FnParameter("end", BasicTypes.Int, null),
+            }, args =>
+            {
+                long start = 0;
+                long end = 0;
+                long step = 1;
+                ScriptObject _this = (ScriptObject)args[0].Value;
 
-                if (this.Step == 0)
-                    throw new SystemException("step cannot be 0");
+                end = (long)((ScriptObject)args[1].Value).BuildInObject;
+                if (end < 0 && step > 0)
+                    step *= -1;
+
+                _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
             });
-        }
-        public ScriptRange(long start, long stop, long step = 1) : this()
-        {
-            this.Start = start;
-            this.End = stop;
-            this.Step = step;
+
+            this.AddObjectFn(this.Name, new List<FnParameter>()
+            {
+                new FnParameter("start", BasicTypes.Int, null),
+                new FnParameter("end", BasicTypes.Int, null)
+            }, args =>
+            {
+                long start = 0;
+                long end = 0;
+                long step = 1;
+                ScriptObject _this = (ScriptObject)args[0].Value;
+
+                start = (long)((ScriptObject)args[1].Value).BuildInObject;
+                end = (long)((ScriptObject)args[2].Value).BuildInObject;
+                if (end < 0 && step > 0)
+                    step *= -1;
+
+                if (step == 0)
+                    throw new SystemException("step cannot be 0");
+                _this.BuildInObject = Tuple.Create(start, end, step);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn(this.Name, new List<FnParameter>()
+            {
+                new FnParameter("start", BasicTypes.Int, null),
+                new FnParameter("end", BasicTypes.Int, null),
+                new FnParameter("step", BasicTypes.Int, null)
+            }, args =>
+            {
+                long start = 0;
+                long end = 0;
+                long step = 1;
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                start = (long)((ScriptObject)args[1].Value).BuildInObject;
+                end = (long)((ScriptObject)args[2].Value).BuildInObject;
+                step = (long)((ScriptObject)args[3].Value).BuildInObject;
+
+                if (step == 0)
+                    throw new SystemException("step cannot be 0");
+                _this.BuildInObject = Tuple.Create(start, end, step);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var result = BasicTypes.Enumerator.Create();
+                var value = (Tuple<long, long, long>)_this.BuildInObject;
+                result.BuildInObject = RangeIterator(value.Item1, value.Item2, value.Item3);
+                return new ScriptValue(result);
+            });
         }
 
-        public override ScriptObject Equals(ScriptObject value)
-        {
-            if (value is ScriptRange)
-            {
-                ScriptRange obj = (ScriptRange)value;
-                return new ScriptBool(this.Start == obj.Start && this.End == obj.End && this.Step == obj.Step);
-            }
-            return new ScriptBool(false);
-        }
+        public override ScriptObject Create() => new ScriptObject(this, Tuple.Create((long)0, (long)0, (long)0));
+        public ScriptObject Create(long start, long stop, long step = 1) => 
+            new ScriptObject(this, Tuple.Create(start, stop, step));
 
         private static IEnumerable<ScriptValue> RangeIterator(long start, long stop, long step)
         {
@@ -84,26 +103,27 @@ namespace HanabiLang.Interprets.ScriptTypes
             while (true);
         }
 
-        public IEnumerator<ScriptValue> GetEnumerator()
+        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
         {
-            return RangeIterator(this.Start, this.End, this.Step).GetEnumerator();
+            if (value.ClassType is ScriptRange)
+            {
+                var a = (Tuple<long, long, long>)_this.BuildInObject;
+                var b = (Tuple<long, long, long>)value.BuildInObject;
+                return BasicTypes.Bool.Create(a.Item1 == b.Item1 && a.Item2 == b.Item2 && a.Item3 == b.Item3);
+            }
+            return BasicTypes.Bool.Create(false);
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
+        public override ScriptObject ToStr(ScriptObject _this)
         {
-            return RangeIterator(this.Start, this.End, this.Step).GetEnumerator();
+            var value = (Tuple<long, long, long>)_this.BuildInObject;
+            return BasicTypes.Str.Create($"range({value.Item1}, {value.Item2}, {value.Item3})");
         }
 
-        public override ScriptStr ToStr() => new ScriptStr(this.ToString());
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0)
+        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
-            return this.ToString();
+            var value = (Tuple<long, long, long>)_this.BuildInObject;
+            return $"[{value.Item1}, {value.Item2}, {value.Item3}]";
         }
-        public override string ToString() => $"range({this.Start}, {this.End}, {this.Step})";
-
-        /*public override int GetHashCode()
-        {
-            return $"{this.Start}{this.End}{this.Step}".GetHashCode();
-        }*/
     }
 }

@@ -9,35 +9,38 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptDict : ScriptObject, IEnumerable<ScriptValue>
+    class ScriptDict : ScriptClass
     {
-        public static ScriptClass CreateBuildInClass()
-        {
-            var newScrope = new ScriptScope(ScopeType.Class);
-            return new ScriptClass("Dict", null, new List<string>(),
-                newScrope, false, () => new ScriptDict());
-        }
-        public Dictionary<ScriptValue, ScriptValue> Value { get; private set; }
         public ScriptDict() :
-            base(CreateBuildInClass())
+            base("Dict", null, new ScriptScope(ScopeType.Class), false)
         {
-            this.Value = new Dictionary<ScriptValue, ScriptValue>();
-            this.AddObjectFn("Length", args =>
+            this.AddObjectFn("Length", new List<FnParameter>(), args =>
             {
-                return new ScriptValue(this.Value.Count);
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
+            });
+
+            this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var result = BasicTypes.Enumerator.Create();
+                result.BuildInObject = DictIterator((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
+                return new ScriptValue(result);
             });
         }
-        public ScriptDict(Dictionary<ScriptValue, ScriptValue> value) : this()
-        {
-            this.Value = value;
-        }
 
-        public override ScriptObject Equals(ScriptObject value)
+        public override ScriptObject Create() => new ScriptObject(this, new Dictionary<ScriptValue, ScriptValue>());
+        public ScriptObject Create(Dictionary<ScriptValue, ScriptValue> value) => new ScriptObject(this, value);
+
+        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
         {
-            if (value is ScriptDict)
+            if (value.ClassType is ScriptDict)
             {
-                Dictionary<ScriptValue, ScriptValue> a = this.Value;
-                Dictionary<ScriptValue, ScriptValue> b = ((ScriptDict)value).Value;
+                if (_this.Equals(value))
+                    return ScriptBool.True;
+
+                var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
+                var b = (Dictionary<ScriptValue, ScriptValue>)value.BuildInObject;
                 if (a.Count == b.Count)
                 {
                     var list1 = a.ToList();
@@ -45,13 +48,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                     for (int i = 0; i < a.Count; i++)
                     {
                         if (!list1[i].Equals(list2[2]))
-                            return new ScriptBool(false);
+                            return ScriptBool.False;
                     }
-                    return new ScriptBool(true);
+                    return ScriptBool.True;
                 }
-                return new ScriptBool(false);
+                return ScriptBool.False;
             }
-            return new ScriptBool(false);
+            return ScriptBool.False;
         }
 
         private static IEnumerable<ScriptValue> DictIterator(Dictionary<ScriptValue, ScriptValue> value)
@@ -62,13 +65,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        public IEnumerator<ScriptValue> GetEnumerator() => DictIterator(this.Value).GetEnumerator();
-
-        IEnumerator IEnumerable.GetEnumerator() => DictIterator(this.Value).GetEnumerator();
-
-        public override ScriptStr ToStr() => new ScriptStr(this.ToString());
-
-        public override string ToJsonString(int basicIndent = 2, int currentIndent = 0)
+        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
             StringBuilder result = new StringBuilder();
             //result.Append(' ', currentIndent);
@@ -79,13 +76,18 @@ namespace HanabiLang.Interprets.ScriptTypes
                 currentIndent += 2;
             }
             int count = 0;
-            foreach (var item in this.Value)
+            foreach (var item in (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject)
             {
+                if (!(item.Key.IsObject && item.Value.IsObject))
+                    throw new SystemException("item.Key.IsObject or item.Value.IsObject is not object");
+
+                ScriptObject keyObject = (ScriptObject)item.Key.Value;
+                ScriptObject valueObject = (ScriptObject)item.Value.Value;
                 result.Append(' ', currentIndent);
-                result.Append($"{item.Key.ToJsonString(basicIndent, currentIndent)}");
+                result.Append($"{keyObject.ClassType.ToJsonString(keyObject, basicIndent, currentIndent)}");
                 result.Append(": ");
-                result.Append($"{item.Value.ToJsonString(basicIndent, currentIndent)}");
-                if (count < this.Value.Count - 1)
+                result.Append($"{valueObject.ClassType.ToJsonString(valueObject, basicIndent, currentIndent)}");
+                if (count < ((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Count - 1)
                 {
                     result.Append(", ");
                     if (basicIndent != 0)
@@ -104,9 +106,6 @@ namespace HanabiLang.Interprets.ScriptTypes
             return result.ToString();
         }
 
-        public override string ToString()
-        {
-            return ToJsonString(2);
-        }
+        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this));
     }
 }

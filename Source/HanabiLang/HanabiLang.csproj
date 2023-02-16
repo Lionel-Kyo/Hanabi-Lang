@@ -59,6 +59,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Interprets\BuildInClasses.cs" />
+    <Compile Include="Interprets\ScriptTypes\BasicTypes.cs" />
+    <Compile Include="Interprets\ScriptTypes\ScriptEnumerator.cs" />
     <Compile Include="Interprets\ScriptValue.cs" />
     <Compile Include="Interprets\BuildInFns.cs" />
     <Compile Include="Interprets\ImportedFiles.cs" />
@@ -66,7 +68,7 @@
     <Compile Include="Interprets\ScriptTypes\ScriptObject.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptVariable.cs" />
     <Compile Include="Interprets\Interpreter.cs" />
-    <Compile Include="Interprets\ScriptTypes\ScriptFn.cs" />
+    <Compile Include="Interprets\ScriptTypes\ScriptFns.cs" />
     <Compile Include="Interprets\ScriptScope.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptType.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptBool.cs" />

@@ -16,53 +16,39 @@ namespace HanabiLang.Interprets
         public ScriptScope currentScope { get; set; }
         private AbstractSyntaxTree ast { get; set; }
         public string Path { get; private set; }
-        public IEnumerable<string> Arguments { get; private set; }
+        public static IEnumerable<string> Arguments { get; set; }
 
         /// <summary>
         /// Script Start or Import Script
         /// </summary>
         /// <param name="ast"></param>
-        public Interpreter(AbstractSyntaxTree ast, string path, bool isMain, IEnumerable<string> arugments)
+        public Interpreter(AbstractSyntaxTree ast, string path, bool isMain)
         {
             this.ast = ast;
             this.currentScope = new ScriptScope(ScopeType.Normal);
             this.Path = path;
-            this.Arguments = arugments;
-            this.currentScope.Classes["Script"] = ScriptScript.CreateBuildInClass(isMain, arugments);
-            this.currentScope.Classes.Add("str", ScriptStr.CreateBuildInClass());
-            this.currentScope.Classes.Add("int", ScriptInt.CreateBuildInClass());
-            this.currentScope.Classes.Add("float", ScriptFloat.CreateBuildInClass());
-            this.currentScope.Classes.Add("decimal", ScriptDecimal.CreateBuildInClass());
-            this.currentScope.Classes.Add("bool", ScriptBool.CreateBuildInClass());
-            this.currentScope.Classes.Add("range", ScriptRange.CreateBuildInClass());
-            this.currentScope.Classes.Add("List", ScriptList.CreateBuildInClass());
-            this.currentScope.Classes.Add("Dict", ScriptDict.CreateBuildInClass());
-            foreach (var fn in BuildInFns.Fns)
-            {
-                currentScope.Functions[fn.Key] = new ScriptFn(fn.Key, BuildInFns.GetBuildInFnParams(fn.Value),
-                    null, this.currentScope, fn.Value);
-            }
-        }
-
-        /// <summary>
-        /// For Function Call
-        /// </summary>
-        /// <param name="scope">Function Scope</param>
-        public Interpreter(ScriptScope scope)
-        {
-            this.currentScope = scope;
-            this.ast = new AbstractSyntaxTree();
+            this.currentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
+            this.currentScope.Classes.Add("str", BasicTypes.Str);
+            this.currentScope.Classes.Add("int", BasicTypes.Int);
+            this.currentScope.Classes.Add("float", BasicTypes.Float);
+            this.currentScope.Classes.Add("decimal", BasicTypes.Decimal);
+            this.currentScope.Classes.Add("bool", BasicTypes.Bool);
+            this.currentScope.Classes.Add("range", BasicTypes.Range);
+            this.currentScope.Classes.Add("List", BasicTypes.List);
+            this.currentScope.Classes.Add("Dict", BasicTypes.Dict);
+            this.currentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
+            BuildInFns.AddBasicFunctions(this.currentScope);
         }
 
         public void Interpret()
         {
             foreach (var child in this.ast.Nodes)
             {
-                this.InterpretChild(child);
+                InterpretChild(this.currentScope, child);
             }
         }
 
-        public void ImportFile(AstNode node)
+        public static void ImportFile(ScriptScope interpretScope, AstNode node)
         {
             var realNode = (ImportNode)node;
             try
@@ -72,13 +58,13 @@ namespace HanabiLang.Interprets
                 if (realNode.Imports == null)
                 {
                     if (string.IsNullOrEmpty(realNode.AsName))
-                        this.currentScope.Classes[type.Name] = new
+                        interpretScope.Classes[type.Name] = new
                             ScriptClass(type.Name, null,
-                            new List<string>(), scriptScope, true);
+                            scriptScope, true);
                     else
-                        this.currentScope.Classes[realNode.AsName] = new
+                        interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, null,
-                            new List<string>(), scriptScope, true);
+                             scriptScope, true);
                 }
                 else
                 {
@@ -86,12 +72,12 @@ namespace HanabiLang.Interprets
                     {
                         if (scriptScope.TryGetValue(item, out ScriptType scriptType))
                         {
-                            if (scriptType is ScriptFn)
-                                this.currentScope.Functions[((ScriptFn)scriptType).Name] = (ScriptFn)scriptType;
+                            if (scriptType is ScriptFns)
+                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
                             else if (scriptType is ScriptClass)
-                                this.currentScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
+                                interpretScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
                             else if (scriptType is ScriptVariable)
-                                this.currentScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
+                                interpretScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
                             else
                                 throw new SystemException($"Unexpected script type");
                         }
@@ -116,13 +102,14 @@ namespace HanabiLang.Interprets
                 var tokens = Lexer.Tokenize(lines);
                 var parser = new Parser(tokens);
                 var ast = parser.Parse();
-                Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                Interpreter interpreter = new Interpreter(ast, fullPath, false);
                 interpreter.Interpret();
                 var jsonData = interpreter.currentScope.Variables["jsonData"].Value;
                 if (string.IsNullOrEmpty(realNode.AsName))
-                    this.currentScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true);
+                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true);
                 else
-                    this.currentScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, jsonData, true);
+                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, jsonData, true);
             }
             else
             {
@@ -130,35 +117,36 @@ namespace HanabiLang.Interprets
                 var tokens = Lexer.Tokenize(lines);
                 var parser = new Parser(tokens);
                 var ast = parser.Parse();
-                Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                Interpreter interpreter = new Interpreter(ast, fullPath, false);
                 interpreter.Interpret();
 
                 if (realNode.Imports == null)
                 {
                     if (string.IsNullOrEmpty(realNode.AsName))
-                        this.currentScope.Classes[fileNameWithoutExtension] = new
+                        interpretScope.Classes[fileNameWithoutExtension] = new
                             ScriptClass(fileNameWithoutExtension, interpreter.ast.Nodes,
-                            new List<string>(), interpreter.currentScope, true);
+                            interpreter.currentScope, true, true);
                     else
-                        this.currentScope.Classes[realNode.AsName] = new
+                        interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, interpreter.ast.Nodes,
-                            new List<string>(), interpreter.currentScope, true);
+                            interpreter.currentScope, true, true);
                 }
                 else
                 {
                     foreach (string item in realNode.Imports)
                     {
-                        if (this.currentScope.TryGetValue(item, out _))
+                        if (interpretScope.TryGetValue(item, out _))
                             throw new SystemException($"Import failed, value {item} exists");
 
                         if (interpreter.currentScope.TryGetValue(item, out ScriptType scriptType))
                         {
-                            if (scriptType is ScriptFn)
-                                this.currentScope.Functions[((ScriptFn)scriptType).Name] = (ScriptFn)scriptType;
+                            if (scriptType is ScriptFns)
+                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
                             else if (scriptType is ScriptClass)
-                                this.currentScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
+                                interpretScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
                             else if (scriptType is ScriptVariable)
-                                this.currentScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
+                                interpretScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
                             else
                                 throw new SystemException($"Unexpected script type");
                         }
@@ -169,21 +157,21 @@ namespace HanabiLang.Interprets
             }
         }
 
-        public void InterpretChild(AstNode node)
+        public static void InterpretChild(ScriptScope interpretScope, AstNode node)
         {
             // Interpret the child node
             if (node is ExpressionNode || node is IntNode ||
-                node is FloatNode ||
+                node is FloatNode || node is InterpolatedString ||
                 node is UnaryNode || node is StringNode ||
                 node is VariableReferenceNode || node is FnCallNode || node is FnReferenceCallNode ||
                 node is ForNode || node is WhileNode ||
                 node is SwitchNode || node is SwitchCaseNode || node is IfNode)
             {
-                this.InterpretExpression(node);
+                InterpretExpression(interpretScope, node);
             }
             else if (node is ImportNode)
             {
-                ImportFile(node);
+                ImportFile(interpretScope, node);
             }
             else if (node is ThrowNode)
             {
@@ -200,19 +188,19 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (VariableDefinitionNode)node;
 
-                if (this.currentScope.Variables.ContainsKey(realNode.Name))
+                if (interpretScope.Variables.ContainsKey(realNode.Name))
                     throw new SystemException($"Cannot reassigned variable {realNode.Name}");
 
-                this.currentScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name,
-                                                            this.InterpretExpression(realNode.Value).Ref,
+                interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name,
+                                                            InterpretExpression(interpretScope, realNode.Value).Ref,
                                                             realNode.IsConstant);
             }
             else if (node is VariableAssignmentNode)
             {
                 var realNode = (VariableAssignmentNode)node;
 
-                ValueReference left = InterpretExpression(realNode.Name);
-                var assignValue = InterpretExpression(realNode.Value);
+                ValueReference left = InterpretExpression(interpretScope, realNode.Name);
+                var assignValue = InterpretExpression(interpretScope, realNode.Value);
                 left.Ref = assignValue.Ref;
                 return;
                 throw new SystemException($"Variable: {realNode.Name} is not defined");
@@ -221,9 +209,31 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (FnDefineNode)node;
 
-                this.currentScope.Functions[realNode.Name] = 
-                    new ScriptFn(realNode.Name, realNode.Parameters,
-                    realNode.Body, this.currentScope, null);
+                if (!interpretScope.Functions.TryGetValue(realNode.Name, out ScriptFns scriptFns))
+                {
+                    scriptFns = new ScriptFns(realNode.Name);
+                    interpretScope.Functions[realNode.Name] = scriptFns;
+                }
+
+                List<FnParameter> fnParameters = new List<FnParameter>();
+                foreach (var param in realNode.Parameters)
+                {
+                    ScriptClass dataType = null;
+                    ScriptValue defaultValue = null;
+                    if (param.DataType != null)
+                    {
+                        ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
+                        if (!type.IsClass)
+                            throw new SystemException($"Only class is accepted in {realNode.Name}.{param.Name}");
+                        dataType = (ScriptClass)type.Value;
+                    }
+                    if (param.DefaultValue != null)
+                        defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
+                    fnParameters.Add(new FnParameter(param.Name, dataType, defaultValue));
+                }
+
+                scriptFns.Fns.Add(new ScriptFn(fnParameters,
+                    realNode.Body, interpretScope, null));
             }
             else if (node is ClassDefineNode)
             {
@@ -237,20 +247,20 @@ namespace HanabiLang.Interprets
                     }
                 }
 
-                var scope = new ScriptScope(ScopeType.Class, this.currentScope);
-                this.currentScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
-                    realNode.Constructor, scope, false);
+                var scope = new ScriptScope(ScopeType.Class, interpretScope);
+                interpretScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
+                    scope, false);
             }
         }
 
-        public ValueReference InterpretExpression(AstNode node)
+        public static ValueReference InterpretExpression(ScriptScope interpretScope, AstNode node)
         {
             if (node is ExpressionNode)
             {
                 var realNode = (ExpressionNode)node;
 
                 var _operater = realNode.Operator;
-                var left = this.InterpretExpression(realNode.Left).Ref;
+                var left = InterpretExpression(interpretScope, realNode.Left).Ref;
                 if (_operater == ".")
                 {
                     /*var originalScope = this.currentScope;
@@ -267,8 +277,8 @@ namespace HanabiLang.Interprets
                     ScriptScope leftScope = null;
                     if (left.Value is ScriptClass)
                         leftScope = ((ScriptClass)left.Value).Scope;
-                    else if (left.Value is ScriptFn)
-                        leftScope = ((ScriptFn)left.Value).Scope;
+                    else if (left.Value is ScriptFns)
+                        throw new SystemException("Function cannot use operator '.'");
                     else
                         leftScope = ((ScriptObject)left.Value).Scope;
                     /*if (realNode.Right is FnCallNode)
@@ -297,13 +307,19 @@ namespace HanabiLang.Interprets
 
                         if (leftScope.TryGetValue(((VariableReferenceNode)fnCall.Reference).Name, out ScriptType scriptType))
                         {
-                            if (scriptType is ScriptFn)
-                                return new ValueReference(((ScriptFn)scriptType).Call(this.currentScope, fnCall.Args));
+                            if (scriptType is ScriptFns)
+                            {
+                                return new ValueReference(((ScriptFns)scriptType).
+                                    Call(interpretScope, leftScope.Type == ScopeType.Object ? (ScriptObject)left.Value : null,
+                                    fnCall.Args));
+                            }
                             else if (scriptType is ScriptClass)
-                                return new ValueReference(((ScriptClass)scriptType).Call(this.currentScope, fnCall.Args));
+                                return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args));
                             else if (scriptType is ScriptVariable &&
                                 ((ScriptVariable)(scriptType)).Value.IsFunction)
-                                return new ValueReference(((ScriptFn)((ScriptVariable)(scriptType)).Value.Value).Call(this.currentScope, fnCall.Args));
+                                return new ValueReference(((ScriptFns)((ScriptVariable)(scriptType)).Value.Value).
+                                    Call(interpretScope, leftScope.Type == ScopeType.Object ? (ScriptObject)left.Value : null,
+                                    fnCall.Args));
                             else
                                 throw new SystemException($"{((VariableReferenceNode)fnCall.Reference).Name} is not callable");
                         }
@@ -312,8 +328,8 @@ namespace HanabiLang.Interprets
                     {
                         var varRef = (VariableReferenceNode)realNode.Right;
                         if (leftScope.TryGetValue(varRef.Name, out ScriptType scriptType))
-                            if (scriptType is ScriptFn)
-                                return new ValueReference(new ScriptValue((ScriptFn)scriptType));
+                            if (scriptType is ScriptFns)
+                                return new ValueReference(new ScriptValue((ScriptFns)scriptType));
                             else if (scriptType is ScriptClass)
                                 return new ValueReference(new ScriptValue((ScriptClass)scriptType));
                             else if (scriptType is ScriptVariable)
@@ -326,7 +342,7 @@ namespace HanabiLang.Interprets
                     }
                     throw new SystemException($"Unexcepted operation '.'");
                 }
-                var right = this.InterpretExpression(realNode.Right).Ref;
+                var right = InterpretExpression(interpretScope, realNode.Right).Ref;
                 if (_operater == "+") return new ValueReference(left + right);
                 else if (_operater == "-") return new ValueReference(left - right);
                 else if (_operater == "*") return new ValueReference(left * right);
@@ -361,11 +377,12 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (InterpolatedString)node;
                 StringBuilder text = new StringBuilder();
+                var interpolatedNodes = realNode.InterpolatedNodes;
                 foreach (string str in realNode.Values)
                 {
                     if (str == null)
                     {
-                        text.Append(InterpretExpression(realNode.InterpolatedNodes.Dequeue()).Ref.ToString());
+                        text.Append(InterpretExpression(interpretScope, interpolatedNodes.Dequeue()).Ref.ToString());
                     }
                     else
                     {
@@ -377,7 +394,7 @@ namespace HanabiLang.Interprets
             else if (node is UnaryNode)
             {
                 var realNode = (UnaryNode)node;
-                ScriptValue value = this.InterpretExpression(realNode.Node).Ref;
+                ScriptValue value = InterpretExpression(interpretScope, realNode.Node).Ref;
 
                 if (realNode.Operator == "+")
                     return new ValueReference(+value);
@@ -390,7 +407,7 @@ namespace HanabiLang.Interprets
                 var realNode = (VariableReferenceNode)node;
 
                 // Checking if the variable is defined in any scope above the current one
-                for (var scope = this.currentScope; scope != null; scope = scope.Parent)
+                for (var scope = interpretScope; scope != null; scope = scope.Parent)
                 {
                     if (scope.TryGetValue(realNode.Name, out ScriptType scriptType))
                     {
@@ -399,9 +416,9 @@ namespace HanabiLang.Interprets
                             var variable = (ScriptVariable)scriptType;
                             return new ValueReference(() => variable.Value, x => variable.Value = x);
                         }
-                        else if (scriptType is ScriptFn)
+                        else if (scriptType is ScriptFns)
                         {
-                            var fn = (ScriptFn)scriptType;
+                            var fn = (ScriptFns)scriptType;
                             return new ValueReference(new ScriptValue(fn));
                         }
                         else if (scriptType is ScriptClass)
@@ -450,16 +467,16 @@ namespace HanabiLang.Interprets
             else if (node is FnReferenceCallNode)
             {
                 var realNode = (FnReferenceCallNode)node;
-                var fnRef = InterpretExpression(realNode.Reference);
+                var fnRef = InterpretExpression(interpretScope, realNode.Reference);
                 if (fnRef.Ref.IsFunction)
                 {
-                    var fn = (ScriptFn)fnRef.Ref.Value;
-                    return new ValueReference(fn.Call(this.currentScope, realNode.Args));
+                    var fn = (ScriptFns)fnRef.Ref.Value;
+                    return new ValueReference(fn.Call(interpretScope, null, realNode.Args));
                 }
                 else if (fnRef.Ref.IsClass)
                 {
                     var _class = (ScriptClass)fnRef.Ref.Value;
-                    return new ValueReference(_class.Call(this.currentScope, realNode.Args));
+                    return new ValueReference(_class.Call(interpretScope, realNode.Args));
                 }
 
                 throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
@@ -468,15 +485,18 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (IfNode)node;
 
-                this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
+                var scope = new ScriptScope(ScopeType.Conditon, interpretScope);
 
-                var compareResult = this.InterpretExpression(realNode.Condition).Ref;
+                var compareResult = InterpretExpression(scope, realNode.Condition).Ref;
 
-                if (!(compareResult.Value is ScriptBool))
+                if (!(compareResult.Value is ScriptObject))
+                    throw new SystemException($"Cannot compare {compareResult}");
+
+                if (!(((ScriptObject)compareResult.Value).ClassType is ScriptBool))
                     throw new SystemException($"Cannot compare {compareResult}");
 
                 List<AstNode> currentBranch = null;
-                if (((ScriptBool)compareResult.Value).Value)
+                if ((bool)((ScriptObject)compareResult.Value).BuildInObject)
                     currentBranch = realNode.ThenBranch;
                 else
                     currentBranch = realNode.ElseBranch;
@@ -489,54 +509,48 @@ namespace HanabiLang.Interprets
 
                         if (returnNode.Value != null)
                         {
-                            var value = this.InterpretExpression(returnNode.Value);
+                            var value = InterpretExpression(scope, returnNode.Value);
 
-                            this.currentScope = this.currentScope.Parent;
                             return value;
                         }
-
-                        this.currentScope = this.currentScope.Parent;
                         return new ValueReference(ScriptValue.Null);
                     }
                     else
                     {
-                        this.InterpretChild(item);
+                        InterpretChild(scope, item);
                     }
                 }
 
-                this.currentScope = this.currentScope.Parent;
                 return ValueReference.Empty;
             }
             else if (node is SwitchNode)
             {
                 var realNode = (SwitchNode)node;
-                var switchValue = this.InterpretExpression(realNode.Condition);
+                var switchValue = InterpretExpression(interpretScope, realNode.Condition);
                 bool hasMatchCase = false;
 
                 foreach (var caseNode in realNode.Cases)
                 {
                     foreach (var condition in caseNode.Conditions)
                     {
-                        var caseExpression = this.InterpretExpression(condition);
+                        var caseExpression = InterpretExpression(interpretScope, condition);
                         if (caseExpression.Ref.Equals(switchValue.Ref))
                         {
                             hasMatchCase = true;
                             foreach (var item in caseNode.Body)
                             {
-                                this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
+                                var scope = new ScriptScope(ScopeType.Conditon, interpretScope);
                                 if (item is ReturnNode)
                                 {
                                     var returnNode = (ReturnNode)item;
 
                                     if (returnNode.Value != null)
                                     {
-                                        var value = this.InterpretExpression(returnNode.Value);
+                                        var value = InterpretExpression(scope, returnNode.Value);
 
-                                        this.currentScope = this.currentScope.Parent;
                                         return value;
                                     }
 
-                                    this.currentScope = this.currentScope.Parent;
                                     return new ValueReference(ScriptValue.Null);
                                 }
                                 else if (item is BreakNode)
@@ -545,9 +559,8 @@ namespace HanabiLang.Interprets
                                 }
                                 else
                                 {
-                                    this.InterpretChild(item);
+                                    InterpretChild(scope, item);
                                 }
-                                this.currentScope = this.currentScope.Parent;
                             }
                         }
                     }
@@ -555,7 +568,7 @@ namespace HanabiLang.Interprets
 
                 if (realNode.DefaultCase == null || hasMatchCase)
                     return ValueReference.Empty;
-                this.currentScope = new ScriptScope(ScopeType.Conditon, this.currentScope);
+                var defaultScope = new ScriptScope(ScopeType.Conditon, interpretScope);
                 foreach (var item in realNode.DefaultCase.Body)
                 {
                     if (item is ReturnNode)
@@ -564,21 +577,18 @@ namespace HanabiLang.Interprets
 
                         if (returnNode.Value != null)
                         {
-                            var value = this.InterpretExpression(returnNode.Value);
+                            var value = InterpretExpression(defaultScope, returnNode.Value);
 
-                            this.currentScope = this.currentScope.Parent;
                             return value;
                         }
 
-                        this.currentScope = this.currentScope.Parent;
                         return new ValueReference(ScriptValue.Null);
                     }
                     else
                     {
-                        this.InterpretChild(item);
+                        InterpretChild(defaultScope, item);
                     }
                 }
-                this.currentScope = this.currentScope.Parent;
                 return ValueReference.Empty;
             }
             else if (node is WhileNode)
@@ -586,9 +596,9 @@ namespace HanabiLang.Interprets
                 var realNode = (WhileNode)node;
                 var condition = realNode.Condition;
 
-                while (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
+                while ((bool)((ScriptObject)(InterpretExpression(interpretScope, condition).Ref.Value)).BuildInObject)
                 {
-                    this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
+                    var scope = new ScriptScope(ScopeType.Loop, interpretScope);
                     var hasBreak = false;
 
                     foreach (var bodyNode in realNode.Body)
@@ -600,12 +610,10 @@ namespace HanabiLang.Interprets
 
                             if (returnNode.Value != null)
                             {
-                                var value = this.InterpretExpression(returnNode.Value);
+                                var value = InterpretExpression(scope, returnNode.Value);
 
-                                this.currentScope = this.currentScope.Parent;
                                 return value;
                             }
-                            this.currentScope = this.currentScope.Parent;
                             return new ValueReference(ScriptValue.Null);
                         }
 
@@ -616,13 +624,12 @@ namespace HanabiLang.Interprets
                             hasContinue = true;
 
                         if (!hasBreak && !hasContinue)
-                            this.InterpretChild(bodyNode);
+                            InterpretChild(scope, bodyNode);
 
                         /*if (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
                             break;*/
                     }
 
-                    this.currentScope = this.currentScope.Parent;
                     if (hasBreak)
                         break;
                 }
@@ -632,12 +639,25 @@ namespace HanabiLang.Interprets
             else if (node is ForNode)
             {
                 var realNode = (ForNode)node;
-                var location = this.InterpretExpression(realNode.Location).Ref;
+                var location = InterpretExpression(interpretScope, realNode.Location).Ref;
 
-                if (!(location.Value is IEnumerable<ScriptValue>))
+
+                if (!location.IsObject)
                     throw new SystemException("For loop running failed, variable is not enumerable");
 
-                var list = (IEnumerable<ScriptValue>)location.Value;
+                ScriptObject scriptObject = (ScriptObject)location.Value;
+
+                if (!scriptObject.Scope.TryGetValue("GetEnumerator", out ScriptType getEnumerator))
+                    throw new SystemException("For loop running failed, variable is not enumerable");
+
+                if (!(getEnumerator is ScriptFns))
+                    throw new SystemException("For loop running failed, variable is not enumerable");
+                var enumerator = ((ScriptFns)getEnumerator).Call(interpretScope, scriptObject, new Dictionary<string, AstNode>());
+
+                if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
+                    throw new SystemException("For loop running failed, variable is not enumerable");
+
+                var list = (IEnumerable<ScriptValue>)(((ScriptObject)enumerator.Value).BuildInObject);
 
                 /*this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
 
@@ -648,9 +668,9 @@ namespace HanabiLang.Interprets
 
                 foreach (var item in list)
                 {
-                    this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
+                    var scope = new ScriptScope(ScopeType.Loop, interpretScope);
 
-                    this.currentScope.Variables[realNode.Initializer] =
+                    scope.Variables[realNode.Initializer] =
                         new ScriptVariable(realNode.Initializer, item, false);
 
                     var hasContinue = false;
@@ -663,13 +683,11 @@ namespace HanabiLang.Interprets
 
                             if (returnNode.Value != null)
                             {
-                                var value = this.InterpretExpression(returnNode.Value);
+                                var value = InterpretExpression(scope, returnNode.Value);
 
-                                this.currentScope = this.currentScope.Parent;
                                 return value;
                             }
 
-                            this.currentScope = this.currentScope.Parent;
                             return new ValueReference(ScriptValue.Null);
                         }
 
@@ -680,10 +698,9 @@ namespace HanabiLang.Interprets
                             hasContinue = true;
 
                         if (!hasBreak && !hasContinue)
-                            this.InterpretChild(bodyNode);
+                            InterpretChild(scope, bodyNode);
                     }
 
-                    this.currentScope = this.currentScope.Parent;
                     if (hasBreak)
                         break;
                 }
@@ -698,7 +715,7 @@ namespace HanabiLang.Interprets
                 List<ScriptValue> values = new List<ScriptValue>();
 
                 foreach (var value in realNode.Elements)
-                    values.Add(this.InterpretExpression(value).Ref);
+                    values.Add(InterpretExpression(interpretScope, value).Ref);
 
                 return new ValueReference(new ScriptValue(values));
             }
@@ -710,8 +727,8 @@ namespace HanabiLang.Interprets
 
                 foreach (var keyValue in realNode.KeyValues)
                 {
-                    var key = this.InterpretExpression(keyValue.Item1).Ref;
-                    var value = this.InterpretExpression(keyValue.Item2).Ref;
+                    var key = InterpretExpression(interpretScope, keyValue.Item1).Ref;
+                    var value = InterpretExpression(interpretScope, keyValue.Item2).Ref;
                     keyValues[key] = value;
                 }
 
@@ -721,32 +738,37 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (IndexersNode)node;
 
-                var list = this.InterpretExpression(realNode.Object);
+                var list = InterpretExpression(interpretScope, realNode.Object);
 
-                if (list.Ref.Value is ScriptList)
+                if (!(list.Ref.Value is ScriptObject))
+                    throw new SystemException("Indexer can only apply in object");
+
+                ScriptObject obj = (ScriptObject)list.Ref.Value;
+
+                if (obj.ClassType is ScriptList)
                 {
-                    ScriptList listValue = (ScriptList)list.Ref.Value;
+                    List<ScriptValue> listValue = (List<ScriptValue>)obj.BuildInObject;
 
-                    var index = this.InterpretExpression(realNode.Index);
+                    var index = InterpretExpression(interpretScope, realNode.Index);
 
-                    if (!(index.Ref.Value is ScriptInt))
+                    if (!(((ScriptObject)index.Ref.Value).ClassType is ScriptInt))
                         throw new SystemException("Index in List must be integer");
 
-                    ScriptInt intValue = (ScriptInt)index.Ref.Value;
+                    long intValue = (long)((ScriptObject)index.Ref.Value).BuildInObject;
 
-                    if (intValue.Value < 0 || intValue.Value >= listValue.Value.Count)
+                    if (intValue < 0 || intValue >= listValue.Count)
                         throw new SystemException("Index out of range");
-                    return new ValueReference(() => listValue.Value[(int)intValue.Value], x => listValue.Value[(int)intValue.Value] = x);
+                    return new ValueReference(() => listValue[(int)intValue],
+                        x => listValue[(int)intValue] = x);
                 }
-                else if (list.Ref.Value is ScriptDict)
+                else if (obj.ClassType is ScriptDict)
                 {
-                    ScriptDict dictValue = (ScriptDict)list.Ref.Value;
-
-                    var index = this.InterpretExpression(realNode.Index);
+                    Dictionary<ScriptValue, ScriptValue> dictValue = (Dictionary<ScriptValue, ScriptValue>)obj.BuildInObject;
+                    var index = InterpretExpression(interpretScope, realNode.Index);
 
                     ScriptValue accessValue = index.Ref;
 
-                    return new ValueReference(() => dictValue.Value[accessValue], x => dictValue.Value[accessValue] = x);
+                    return new ValueReference(() => dictValue[accessValue], x => dictValue[accessValue] = x);
                 }
                 else
                 {
@@ -765,21 +787,43 @@ namespace HanabiLang.Interprets
             else if (node is FnDefineNode)
             {
                 var realNode = (FnDefineNode)node;
-                return new ValueReference(
-                    new ScriptValue(new ScriptFn(realNode.Name, realNode.Parameters, realNode.Body,
-                                this.currentScope, null)));
+                List<FnParameter> fnParameters = new List<FnParameter>();
+                foreach (var param in realNode.Parameters)
+                {
+                    ScriptClass dataType = null;
+                    ScriptValue defaultValue = null;
+                    if (param.DataType != null)
+                    {
+                        ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
+                        if (!type.IsClass)
+                            throw new SystemException($"Only class is accepted in {realNode.Name}.{param.Name}");
+                        dataType = (ScriptClass)type.Value;
+                    }
+                    if (param.DefaultValue != null)
+                        defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
+                    fnParameters.Add(new FnParameter(param.Name, dataType, defaultValue));
+                }
+                var scriptFns = new ScriptFns(realNode.Name);
+                scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,
+                                interpretScope, null));
+                return new ValueReference(new ScriptValue(scriptFns));
             }
             else if (node is TernaryNode)
             {
                 var realNode = (TernaryNode)node;
-                var condition = this.InterpretExpression(realNode.Condition);
-                if (!(condition.Ref.Value is ScriptBool))
+                var condition = InterpretExpression(interpretScope, realNode.Condition);
+
+                if (!(condition.Ref.Value is ScriptObject))
                     throw new SystemException("Ternary condition should be boolean");
-                if (((ScriptBool)condition.Ref.Value).Value)
+
+                if (!(((ScriptObject)condition.Ref.Value).ClassType is ScriptBool))
+                    throw new SystemException("Ternary condition should be boolean");
+
+                if ((bool)((ScriptObject)condition.Ref.Value).BuildInObject)
                 {
-                    return this.InterpretExpression(realNode.Consequent);
+                    return InterpretExpression(interpretScope, realNode.Consequent);
                 }
-                return this.InterpretExpression(realNode.Alternative);
+                return InterpretExpression(interpretScope, realNode.Alternative);
             }
             throw new SystemException("Unexcepted interpret expression: " + node.GetType().Name);
         }

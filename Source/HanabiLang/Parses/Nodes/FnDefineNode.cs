@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class FnParameter
+    class FnDefineParameter
     {
         public string Name { get; private set; }
         public AstNode DataType { get; private set; }
         public AstNode DefaultValue { get; private set; }
 
-        public FnParameter(string name, AstNode dataType = null, AstNode defaultValue = null)
+        public FnDefineParameter(string name, AstNode dataType = null, AstNode defaultValue = null)
         {
             this.Name = name;
             this.DataType = dataType;
@@ -28,11 +28,11 @@ namespace HanabiLang.Parses.Nodes
     class FnDefineNode : AstNode
     {
         public string Name { get; private set; }
-        public List<FnParameter> Parameters { get; private set; }
+        public List<FnDefineParameter> Parameters { get; private set; }
         public AstNode ReturnType { get; private set; }
         public List<AstNode> Body { get; private set; }
 
-        public FnDefineNode(string name, List<FnParameter> parameters, AstNode returnType, List<AstNode> body)
+        public FnDefineNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body)
         {
             this.Name = name;
             this.Parameters = parameters;
