@@ -450,6 +450,8 @@ namespace HanabiLang.Lexers
                         {
                             if (c == '.')
                                 dotNums++;
+                            if (dotNums > 1)
+                                break;
                             number += c;
                             i++;
                             if (i >= line.Length)
@@ -458,6 +460,13 @@ namespace HanabiLang.Lexers
                         }
 
                         i--;
+
+                        if (number.EndsWith("."))
+                        {
+                            i--;
+                            dotNums--;
+                            number = number.TrimEnd('.');
+                        }
 
                         if (dotNums == 1)
                             tokens.Add(new Token(TokenType.FLOAT, number, line_index));
