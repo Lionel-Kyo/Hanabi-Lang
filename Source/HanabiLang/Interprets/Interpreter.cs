@@ -238,8 +238,12 @@ namespace HanabiLang.Interprets
                     if (realNode.GetFn.Body.Count == 0)
                     {
                         setFns = new ScriptFns($"set_{realNode.Name}");
-                        setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
-                            null, null, args => setValue = args[0]));
+                        if (interpretScope.Type == ScopeType.Object)
+                            setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
+                                null, null, args => setValue = args[1]));
+                        else
+                            setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
+                                null, null, args => setValue = args[0]));
                     }
                     else
                     {
