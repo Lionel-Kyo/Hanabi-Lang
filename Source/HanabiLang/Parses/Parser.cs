@@ -288,14 +288,127 @@ namespace HanabiLang.Parses
                 this.Expect(TokenType.COLON);
                 dataType = this.Expression(true, true, true);
             }
-            this.Expect(TokenType.EQUALS);
 
-            var node = new VariableDefinitionNode(variableName, this.Expression(), dataType, constant);
-            if (this.currentTokenIndex >= this.tokens.Count)
-                node.Line = this.tokens[this.tokens.Count - 1].Line;
+            FnDefineNode getFn = null;
+            FnDefineNode setFn = null;
+            if (this.currentTokenIndex < this.tokens.Count &&
+                this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_CURLY_BRACKET)
+            {
+                this.Expect(TokenType.OPEN_CURLY_BRACKET);
+                while (this.currentTokenIndex < this.tokens.Count &&
+                                this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER)
+                {
+                    var keyword = this.tokens[this.currentTokenIndex].Raw;
+                    this.Expect(TokenType.IDENTIFIER);
+
+                    List<AstNode> body = new List<AstNode>();
+                    if (keyword.Equals("get") || keyword.Equals("set"))
+                    {
+                        bool isGet = keyword.Equals("get");
+
+                        if (isGet && getFn != null)
+                            throw new SystemException($"Cannot redefine get function");
+                        if (!isGet && setFn != null)
+                            throw new SystemException($"Cannot redefine set function");
+
+                        if (this.currentTokenIndex < this.tokens.Count &&
+                            this.tokens[this.currentTokenIndex].Type == TokenType.DOUBLE_ARROW)
+                        {
+                            this.Expect(TokenType.DOUBLE_ARROW);
+                            var fnBody = this.ParseChild();
+
+                            if (isGet)
+                                body.Add(new ReturnNode(fnBody));
+                            else
+                                body.Add(fnBody);
+                        }
+                        else if (this.currentTokenIndex < this.tokens.Count &&
+                                    this.tokens[this.currentTokenIndex].Type == TokenType.CLOSE_CURLY_BRACKET)
+                        {
+                            this.Expect(TokenType.OPEN_CURLY_BRACKET);
+
+                            while (this.currentTokenIndex < this.tokens.Count &&
+                                    this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+                            {
+                                AstNode child = this.ParseChild();
+                                if (child != null)
+                                    body.Add(child);
+                            }
+
+                            this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+                        }
+                        else
+                        {
+                            this.Expect(TokenType.SEMI_COLON);
+                        }
+
+                        if (isGet)
+                        {
+                            getFn = new FnDefineNode($"get_{variableName}", new List<FnDefineParameter>() { }, dataType, body);
+                        }
+                        else
+                        {
+                            setFn = new FnDefineNode($"set_{variableName}",
+                                new List<FnDefineParameter>()
+                                {
+                                    new FnDefineParameter("value", dataType)
+                                }, new NullNode(), body);
+                        }
+                    }
+                    else
+                    {
+                        throw new SystemException($"Unexpected keyword {keyword}");
+                    }
+                }
+                this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+            }
+            else if (this.currentTokenIndex < this.tokens.Count &&
+                this.tokens[this.currentTokenIndex].Type == TokenType.DOUBLE_ARROW)
+            {
+                this.Expect(TokenType.DOUBLE_ARROW);
+                var fnBody = new ReturnNode(this.ParseChild());
+
+                getFn = new FnDefineNode($"get_{variableName}", 
+                    new List<FnDefineParameter>() { }, dataType, new List<AstNode>() { fnBody });
+            }
+
+                if (getFn != null && setFn != null)
+            {
+                if (getFn.Body.Count > 0 && setFn.Body.Count == 0)
+                    throw new SystemException("Setter is auto-implemented variable but Getter is not");
+                else if (setFn.Body.Count > 0 && getFn.Body.Count == 0)
+                    throw new SystemException("Getter is auto-implemented variable but Setter is not");
+            }
+
+            if (this.currentTokenIndex < this.tokens.Count &&
+                                    this.tokens[this.currentTokenIndex].Type == TokenType.EQUALS)
+            {
+                this.Expect(TokenType.EQUALS);
+
+                if (getFn != null && setFn == null)
+                    throw new SystemException("Cannot assign value to a read only variable");
+                if (setFn != null && setFn.Body.Count > 0)
+                    throw new SystemException("Only auto-implemented variable can have initializers");
+
+                var node = new VariableDefinitionNode(variableName, this.Expression(), dataType, getFn, setFn, constant);
+                if (this.currentTokenIndex >= this.tokens.Count)
+                    node.Line = this.tokens[this.tokens.Count - 1].Line;
+                else
+                    node.Line = this.tokens[this.currentTokenIndex].Line;
+                return node;
+            }
             else
-                node.Line = this.tokens[this.currentTokenIndex].Line;
-            return node;
+            {
+                if (getFn == null && setFn == null)
+                    throw new SystemException("Normal variable must define a initial value");
+
+                var node = new VariableDefinitionNode(variableName, null, dataType, getFn, setFn, constant);
+                if (this.currentTokenIndex >= this.tokens.Count)
+                    node.Line = this.tokens[this.tokens.Count - 1].Line;
+                else
+                    node.Line = this.tokens[this.currentTokenIndex].Line;
+                return node;
+            }
         }
         private AstNode IfStatement()
         {

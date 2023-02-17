@@ -51,20 +51,31 @@ namespace HanabiLang.Interprets
         public static void ImportFile(ScriptScope interpretScope, AstNode node)
         {
             var realNode = (ImportNode)node;
-            try
+            Type csharpType = Type.GetType(realNode.Path);
+            if (csharpType != null)
             {
-                Type type = Type.GetType(realNode.Path);
-                ScriptScope scriptScope =  BuildInClasses.FromStaticClass(type);
+                string className = string.IsNullOrEmpty(realNode.AsName) ? csharpType.Name : realNode.AsName;
+
+                if (!ImportedItems.Types.TryGetValue(csharpType, out ScriptClass scriptClass))
+                {
+                    bool isStruct = csharpType.IsValueType && !csharpType.IsEnum;
+                    bool isEnum = csharpType.IsValueType;
+                    bool isClass = csharpType.IsClass;
+                    if (!isClass && !isStruct/* && !isEnum*/)
+                        throw new SystemException("Only C# class/struct can be imported");
+
+                    bool isStatic = csharpType.IsAbstract && csharpType.IsSealed;
+
+                    scriptClass = new ScriptClass(className, null, new ScriptScope(ScopeType.Class), isStatic);
+                    BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType, isStatic);
+                    ImportedItems.Types[csharpType] = scriptClass;
+                }
+
+                ScriptScope scriptScope = scriptClass.Scope;
+
                 if (realNode.Imports == null)
                 {
-                    if (string.IsNullOrEmpty(realNode.AsName))
-                        interpretScope.Classes[type.Name] = new
-                            ScriptClass(type.Name, null,
-                            scriptScope, true);
-                    else
-                        interpretScope.Classes[realNode.AsName] = new
-                            ScriptClass(realNode.AsName, null,
-                             scriptScope, true);
+                    interpretScope.Classes[className] = scriptClass;
                 }
                 else
                 {
@@ -87,24 +98,29 @@ namespace HanabiLang.Interprets
                 }
                 return;
             }
-            catch { }
 
             string fullPath = System.IO.Path.GetFullPath(realNode.Path);
+
             if (!System.IO.File.Exists(fullPath))
                 throw new SystemException($"File {realNode.Path} not found");
             string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
             string extension = System.IO.Path.GetExtension(fullPath).ToLower();
             if (extension.Equals(".json"))
             {
-                List<string> lines = new List<string>();
-                lines.Add("const jsonData = ");
-                lines.AddRange(System.IO.File.ReadAllLines(fullPath));
-                var tokens = Lexer.Tokenize(lines);
-                var parser = new Parser(tokens);
-                var ast = parser.Parse();
-                //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                Interpreter interpreter = new Interpreter(ast, fullPath, false);
-                interpreter.Interpret();
+                if (!ImportedItems.Files.TryGetValue(fullPath, out Interpreter interpreter))
+                {
+                    List<string> lines = new List<string>();
+                    lines.Add("const jsonData = ");
+                    lines.AddRange(System.IO.File.ReadAllLines(fullPath));
+                    var tokens = Lexer.Tokenize(lines);
+                    var parser = new Parser(tokens);
+                    var ast = parser.Parse();
+                    //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                    interpreter = new Interpreter(ast, fullPath, false);
+                    interpreter.Interpret();
+                    ImportedItems.Files[fullPath] = interpreter;
+                }
+
                 var jsonData = interpreter.currentScope.Variables["jsonData"].Value;
                 if (string.IsNullOrEmpty(realNode.AsName))
                     interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true);
@@ -113,13 +129,17 @@ namespace HanabiLang.Interprets
             }
             else
             {
-                string[] lines = System.IO.File.ReadAllLines(fullPath);
-                var tokens = Lexer.Tokenize(lines);
-                var parser = new Parser(tokens);
-                var ast = parser.Parse();
-                //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                Interpreter interpreter = new Interpreter(ast, fullPath, false);
-                interpreter.Interpret();
+                if (!ImportedItems.Files.TryGetValue(fullPath, out Interpreter interpreter))
+                {
+                    string[] lines = System.IO.File.ReadAllLines(fullPath);
+                    var tokens = Lexer.Tokenize(lines);
+                    var parser = new Parser(tokens);
+                    var ast = parser.Parse();
+                    //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                    interpreter = new Interpreter(ast, fullPath, false);
+                    interpreter.Interpret();
+                    ImportedItems.Files[fullPath] = interpreter;
+                }
 
                 if (realNode.Imports == null)
                 {
@@ -191,9 +211,55 @@ namespace HanabiLang.Interprets
                 if (interpretScope.Variables.ContainsKey(realNode.Name))
                     throw new SystemException($"Cannot reassigned variable {realNode.Name}");
 
-                interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name,
-                                                            InterpretExpression(interpretScope, realNode.Value).Ref,
-                                                            realNode.IsConstant);
+                ScriptValue setValue = realNode.Value == null ? new ScriptValue() :
+                    InterpretExpression(interpretScope, realNode.Value).Ref;
+
+
+                ScriptFns getFns = null;
+                ScriptFns setFns = null;
+
+                if (realNode.GetFn != null)
+                {
+                    if (realNode.GetFn.Body.Count == 0)
+                    {
+                        getFns = new ScriptFns($"get_{realNode.Name}");
+                        getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, null, args => setValue));
+                    }
+                    else
+                    {
+                        var fn = InterpretExpression(interpretScope, realNode.GetFn).Ref;
+                        if (!fn.IsFunction)
+                            throw new SystemException("Getter must be a function");
+                        getFns = (ScriptFns)fn.Value;
+                    }
+                }
+                if (realNode.SetFn != null)
+                {
+                    if (realNode.GetFn.Body.Count == 0)
+                    {
+                        setFns = new ScriptFns($"set_{realNode.Name}");
+                        setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
+                            null, null, args => setValue = args[0]));
+                    }
+                    else
+                    {
+                        var fn = InterpretExpression(interpretScope, realNode.SetFn).Ref;
+                        if (!fn.IsFunction)
+                            throw new SystemException("Setter must be a function");
+                        setFns = (ScriptFns)fn.Value;
+                    }
+                }
+
+                if (getFns != null || setFns != null)
+                {
+                    interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name, getFns, setFns, realNode.IsConstant);
+                }
+                else
+                {
+                    interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name,
+                                                                setValue,
+                                                                realNode.IsConstant);
+                }
             }
             else if (node is VariableAssignmentNode)
             {
@@ -263,17 +329,6 @@ namespace HanabiLang.Interprets
                 var left = InterpretExpression(interpretScope, realNode.Left).Ref;
                 if (_operater == ".")
                 {
-                    /*var originalScope = this.currentScope;
-                    this.currentScope = null;
-                    if (left.Obj is ScriptClass)
-                        this.currentScope = ((ScriptClass)left.Obj).Scope;
-                    else if (left.Obj is ScriptFn)
-                        this.currentScope = ((ScriptFn)left.Obj).Scope;
-                    else
-                        this.currentScope = ((ScriptObject)left.Obj).Scope;
-                    var rightValue = this.InterpretExpression(realNode.Right);
-                    this.currentScope = originalScope;
-                    return rightValue;*/
                     ScriptScope leftScope = null;
                     if (left.Value is ScriptClass)
                         leftScope = ((ScriptClass)left.Value).Scope;
@@ -281,31 +336,15 @@ namespace HanabiLang.Interprets
                         throw new SystemException("Function cannot use operator '.'");
                     else
                         leftScope = ((ScriptObject)left.Value).Scope;
-                    /*if (realNode.Right is FnCallNode)
-                    {
-
-                        var fnCall = (FnCallNode)realNode.Right;
-                        if (leftScope.TryGetValue(fnCall.Name, out ScriptType scriptType))
-                        {
-                            if (scriptType is ScriptFn)
-                                return new ValueReference(((ScriptFn)scriptType).Call(this.currentScope, fnCall.Args));
-                            else if (scriptType is ScriptClass)
-                                return new ValueReference(((ScriptClass)scriptType).Call(this.currentScope, fnCall.Args));
-                            else if (scriptType is ScriptVariable &&
-                                ((ScriptVariable)(scriptType)).Value.IsFunction)
-                                return new ValueReference(((ScriptFn)((ScriptVariable)(scriptType)).Value.Value).Call(this.currentScope, fnCall.Args));
-                            else
-                                throw new SystemException($"{fnCall.Name} is not callable");
-                        }
-                    }*/
+                    
                     if (realNode.Right is FnReferenceCallNode)
                     {
-
                         var fnCall = (FnReferenceCallNode)realNode.Right;
                         if (!(fnCall.Reference is VariableReferenceNode))
                             throw new SystemException($"Unexpected function call");
+                        string fnName = ((VariableReferenceNode)fnCall.Reference).Name;
 
-                        if (leftScope.TryGetValue(((VariableReferenceNode)fnCall.Reference).Name, out ScriptType scriptType))
+                        if (leftScope.TryGetValue(fnName, out ScriptType scriptType))
                         {
                             if (scriptType is ScriptFns)
                             {
@@ -321,13 +360,18 @@ namespace HanabiLang.Interprets
                                     Call(interpretScope, leftScope.Type == ScopeType.Object ? (ScriptObject)left.Value : null,
                                     fnCall.Args));
                             else
-                                throw new SystemException($"{((VariableReferenceNode)fnCall.Reference).Name} is not callable");
+                                throw new SystemException($"{fnName} is not callable");
+                        }
+                        else
+                        {
+                            throw new SystemException($"{left} does not contains {fnName}");
                         }
                     }
                     else if (realNode.Right is VariableReferenceNode)
                     {
                         var varRef = (VariableReferenceNode)realNode.Right;
                         if (leftScope.TryGetValue(varRef.Name, out ScriptType scriptType))
+                        {
                             if (scriptType is ScriptFns)
                                 return new ValueReference(new ScriptValue((ScriptFns)scriptType));
                             else if (scriptType is ScriptClass)
@@ -335,12 +379,24 @@ namespace HanabiLang.Interprets
                             else if (scriptType is ScriptVariable)
                             {
                                 var variable = (ScriptVariable)scriptType;
+                                if (variable.Value == null)
+                                {
+                                    ScriptObject _this = leftScope.Type == ScopeType.Object ? (ScriptObject)left.Value : null;
+                                    return new ValueReference(
+                                        () => variable.Get.Call(_this),
+                                        x => variable.Set.Call(_this, x));
+                                }
                                 return new ValueReference(() => variable.Value, x => variable.Value = x);
                             }
                             else
                                 throw new SystemException($"Unexcepted reference to variable");
+                        }
+                        else
+                        {
+                            throw new SystemException($"{left} does not contains {varRef.Name}");
+                        }
                     }
-                    throw new SystemException($"Unexcepted operation '.'");
+                    throw new SystemException($"Unexcepted operation {left}'.'");
                 }
                 var right = InterpretExpression(interpretScope, realNode.Right).Ref;
                 if (_operater == "+") return new ValueReference(left + right);
@@ -414,6 +470,22 @@ namespace HanabiLang.Interprets
                         if (scriptType is ScriptVariable)
                         {
                             var variable = (ScriptVariable)scriptType;
+                            if (variable.Value == null)
+                            {
+                                return new ValueReference(
+                                    () =>
+                                    {
+                                        if (variable.Get == null)
+                                            throw new SystemException($"{realNode.Name} cannot be read");
+                                        return variable.Get.Call(null);
+                                    },
+                                    x => 
+                                    {
+                                        if (variable.Set == null)
+                                            throw new SystemException($"{realNode.Name} cannot be written");
+                                        variable.Set.Call(null, x);
+                                    });
+                            }
                             return new ValueReference(() => variable.Value, x => variable.Value = x);
                         }
                         else if (scriptType is ScriptFns)

@@ -14,6 +14,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public string Name { get; private set; }
         public List<AstNode> Body { get; private set; }
         public ScriptScope Scope { get; private set; }
+        public ScriptFns BuildInConstructor { get; private set; }
         public bool IsStatic { get; private set; }
         public bool IsBuildIn => this.Body == null;
 
@@ -23,6 +24,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Name = name;
             this.Body = body;
             this.Scope = scope;
+            this.BuildInConstructor = new ScriptFns(this.Name);
             this.IsStatic = isStatic;
             this.AddBasicFns();
 
@@ -154,6 +156,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public virtual ScriptObject ToStr(ScriptObject _this)
         {
+            if (_this.BuildInObject != null)
+                return BasicTypes.Str.Create(_this.BuildInObject.ToString());
             return BasicTypes.Str.Create($"<object: {this.Name}>");
         }
 
@@ -226,7 +230,12 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
         {
             if (this.IsStatic)
-                throw new SystemException("Static class cannot create an object");
+                throw new SystemException($"Static class({this.Name}) cannot create an object");
+
+            if (this.BuildInConstructor.Fns.Count != 0)
+            {
+                return this.BuildInConstructor.Call(currentScope, null, callArgs);
+            }
 
             ScriptObject _object = Create();
             

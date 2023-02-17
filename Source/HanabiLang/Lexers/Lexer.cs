@@ -33,7 +33,7 @@ namespace HanabiLang.Lexers
             "if", "else", "for", "while", "define",
             "fn", "let" ,"var", "auto" ,"const",
             "in", "break", "continue", "return",
-            "import", "from", "as", "throw", "try", "catch", "finally",
+            "import", "from", "as", "throw", "try", "catch", "finally", "params",
             "switch", "case", "default", "async", "await", "class", "this", "super",
             "null", "true", "false", "private", "public", "protected", "internal",
             "static", "using", "namespace", "object", "dynamic", "enum", "is", "not"

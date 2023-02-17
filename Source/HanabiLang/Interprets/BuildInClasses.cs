@@ -258,28 +258,160 @@ namespace HanabiLang.Interprets
             throw new SystemException($"Unexpected type: {csType.Name}");
         }
 
-        public static ScriptScope FromStaticClass(Type type)
+        public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type, bool isStatic)
         {
-            var fns = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
-            var fnMatch = new Dictionary<string, List<BuildInFns.ScriptFnType>>();
-            var newScrope = new ScriptScope(ScopeType.Class);
+            var staticFns = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+            var fields = type.GetFields(); // non get set variables
+            var properties = type.GetProperties(); // get set variables
 
-            foreach (var fn in fns)
+            ScriptScope classScope = scriptClass.Scope;
+
+            foreach (var fn in staticFns)
             {
-                if (!newScrope.Functions.TryGetValue(fn.Name, out ScriptFns scriptFns))
+                if (!classScope.Functions.TryGetValue(fn.Name, out ScriptFns scriptFns))
                 {
                     scriptFns = new ScriptFns(fn.Name);
-                    newScrope.Functions[fn.Name] = scriptFns;
+                    classScope.Functions[fn.Name] = scriptFns;
                 }
                 try
                 {
                     var scriptFn = ToScriptFn(fn);
-                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, null, newScrope, scriptFn.Item2));
+                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, null, classScope, scriptFn.Item2));
                 }
-                catch (NotImplementedException ex) { }
+                catch (NotImplementedException) { }
             }
 
-            return newScrope;
+            foreach (var field in fields)
+            {
+                BuildInFns.ScriptFnType getFn = args =>
+                {
+                    object value = null;
+                    if (field.IsStatic)
+                    {
+                        value = field.GetValue(null);
+                    }
+                    else
+                    {
+                        object _this = ((ScriptObject)args[0].Value).BuildInObject;
+                        value = field.GetValue(field.IsStatic ? null : _this);
+                    }
+                    return FromCsObject(value);
+                };
+
+                var getFns = new ScriptFns(field.Name);
+                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, null, getFn));
+
+                BuildInFns.ScriptFnType setFn = args =>
+                {
+                    if (field.IsStatic)
+                    {
+                        object value = ToCsObject(args[0], field.FieldType);
+                        field.SetValue(null, value);
+                    }
+                    else
+                    {
+                        object _this = ((ScriptObject)args[0].Value).BuildInObject;
+                        object value = ToCsObject(args[1], field.FieldType);
+                        field.SetValue(_this, value);
+                    }
+                    return ScriptValue.Null;
+                };
+
+                var setFns = new ScriptFns(field.Name);
+                setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
+                    {
+                        new FnParameter("value")
+                    }, null, null, setFn));
+
+                classScope.Variables[field.Name] = new ScriptVariable(field.Name, getFns, setFns, false);
+            }
+
+            foreach (var property in properties)
+            {
+                BuildInFns.ScriptFnType getFn = null;
+
+                if (property.CanRead)
+                {
+                    getFn = args =>
+                    {
+                        object value = null;
+                        if (property.GetMethod.IsStatic)
+                        {
+                            value = property.GetValue(null);
+                        }
+                        else
+                        {
+                            object _this = ((ScriptObject)args[0].Value).BuildInObject;
+                            value = property.GetValue(_this);
+                        }
+                        return FromCsObject(value);
+                    };
+                }
+
+                var getFns = new ScriptFns(property.Name);
+                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, null, getFn));
+
+                BuildInFns.ScriptFnType setFn = null;
+                if (property.CanWrite)
+                {
+                    setFn = args =>
+                    {
+                        if (property.SetMethod.IsStatic)
+                        {
+                            object value = ToCsObject(args[0], property.PropertyType);
+                            property.SetValue(null, value);
+                        }
+                        else
+                        {
+                            object _this = ((ScriptObject)args[0].Value).BuildInObject;
+                            object value = ToCsObject(args[1], property.PropertyType);
+                            property.SetValue(_this, value);
+                        }
+                        return ScriptValue.Null;
+                    };
+                }
+
+                var setFns = new ScriptFns(property.Name);
+                setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
+                    {
+                        new FnParameter("value")
+                    }, null, null, setFn));
+
+                classScope.Variables[property.Name] = new ScriptVariable(property.Name, getFns, setFns, false);
+            }
+
+
+            if (!isStatic)
+            {
+                var instanceFns = type.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+                var constructors = type.GetConstructors();
+                foreach (var fn in instanceFns)
+                {
+                    if (fn.IsSpecialName)
+                        continue;
+                    if (!classScope.Functions.TryGetValue(fn.Name, out ScriptFns scriptFns))
+                    {
+                        scriptFns = new ScriptFns(fn.Name);
+                        classScope.Functions[fn.Name] = scriptFns;
+                    }
+                    try
+                    {
+                        var scriptFn = ToScriptFn(fn);
+                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, null, classScope, scriptFn.Item2));
+                    }
+                    catch (NotImplementedException) { }
+                }
+
+                foreach (var constructor in constructors)
+                {
+                    try
+                    {
+                        var scriptConstructor = ToScriptConstructor(scriptClass, constructor);
+                        scriptClass.BuildInConstructor.Fns.Add(new ScriptFn(scriptConstructor.Item1, null, classScope, scriptConstructor.Item2));
+                    }
+                    catch (NotImplementedException) { }
+                }
+            }
         }
 
         private static ScriptClass ToScriptType(Type type)
@@ -334,6 +466,7 @@ namespace HanabiLang.Interprets
         public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method)
         {
             var returnType = method.ReturnType;
+            var isStatic = method.IsStatic;
             var csParameters = new List<Type>();
             var scriptParameters = new List<FnParameter>();
             foreach (var parameter in method.GetParameters())
@@ -347,9 +480,49 @@ namespace HanabiLang.Interprets
 
             BuildInFns.ScriptFnType fn = args =>
             {
-                if (args.Count != csParameters.Count)
-                    throw new SystemException($"Required {csParameters.Count}, recevied {args.Count}");
+                if (isStatic)
+                {
+                    if (args.Count != csParameters.Count)
+                        throw new SystemException($"Required {csParameters.Count}, recevied {args.Count}");
+                }
+                else
+                {
+                    if (args.Count - 1 != csParameters.Count)
+                        throw new SystemException($"Required {csParameters.Count}, recevied {args.Count}");
+                }
 
+                object[] csObjects = new object[csParameters.Count];
+
+                int startCount = isStatic ? 0 : 1;
+                for (int i = startCount; i < csParameters.Count; i++)
+                {
+                    csObjects[i] = ToCsObject(args[i], csParameters[i]);
+                }
+
+                object returnObj = method.Invoke(isStatic ? null : ((ScriptObject)args[0].Value).BuildInObject, csObjects);
+
+                return FromCsObject(returnObj);
+            };
+           
+            return Tuple.Create(scriptParameters, fn);
+        }
+
+        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptConstructor(ScriptClass scriptClass, ConstructorInfo constructor)
+        {
+            var isStatic = constructor.IsStatic;
+            var csParameters = new List<Type>();
+            var scriptParameters = new List<FnParameter>();
+            foreach (var parameter in constructor.GetParameters())
+            {
+                string name = parameter.Name;
+                Type type = parameter.ParameterType;
+                object defaultValue = parameter.DefaultValue;
+                csParameters.Add(type);
+                scriptParameters.Add(new FnParameter(name, ToScriptType(type)));
+            }
+
+            BuildInFns.ScriptFnType fn = args =>
+            {
                 object[] csObjects = new object[csParameters.Count];
 
                 for (int i = 0; i < csParameters.Count; i++)
@@ -357,10 +530,11 @@ namespace HanabiLang.Interprets
                     csObjects[i] = ToCsObject(args[i], csParameters[i]);
                 }
 
-                object returnObj = method.Invoke(null, csObjects);
+                object returnObj = constructor.Invoke(csObjects);
 
-                return FromCsObject(returnObj);
+                return new ScriptValue(new ScriptObject(scriptClass, returnObj));
             };
+
             return Tuple.Create(scriptParameters, fn);
         }
     }

@@ -11,12 +11,17 @@ namespace HanabiLang.Parses.Nodes
         public string Name { get; private set; }
         public AstNode Value { get; private set; }
         public AstNode DataType { get; private set; }
+        public FnDefineNode GetFn { get; private set; }
+        public FnDefineNode SetFn { get; private set; }
         public bool IsConstant { get; private set; }
 
-        public VariableDefinitionNode(string name, AstNode value, AstNode dataType, bool isConstant)
+        public VariableDefinitionNode(string name, AstNode value, AstNode dataType,
+            FnDefineNode getFn, FnDefineNode setFn, bool isConstant)
         {
             this.Name = name;
             this.Value = value;
+            this.GetFn = getFn;
+            this.SetFn = setFn;
             this.DataType = dataType;
             this.IsConstant = isConstant;
         }

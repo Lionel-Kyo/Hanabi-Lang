@@ -10,6 +10,7 @@ namespace Testing
     {
         public static object[] PrintLn(object[] arg)
         {
+            DateTime dt = DateTime.Now; 
             object[] lines = (object[])arg;
             foreach (object line in lines) 
             {
@@ -27,5 +28,37 @@ namespace Testing
             }
             return lines;
         }
+    }
+
+    public class Faker
+    {
+        private int a;
+        public int B => 12345;
+
+        public int BA { get; set; }
+
+        public int c;
+        public const string Hi = "Hi";
+        public static string Hello => "Hello";
+        public Faker()
+        {
+
+        }
+        public Faker(int a)
+        {
+            this.a = a;
+        }
+
+        public int GetA()
+        {
+            return this.a;
+        }
+
+        public static string Nyan() => "Nyan";
+    }
+
+    public enum ENUMMM
+    {
+
     }
 }

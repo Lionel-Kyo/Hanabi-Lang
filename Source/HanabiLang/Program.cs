@@ -21,12 +21,13 @@ namespace HanabiLang
             //string path = "./Test4.txt";
             //string path = "./BubbleSort.txt";
             //string path = "./CsImport.txt";
+            string path = "./CsImport2.txt";
             //string path = "./FnInClass.txt";
             //string path = "./InterpolatedString.txt";
             //string path = "./ImportJson.txt";
             //string path = "./ChristmasTree.txt";
             //string path = "./ForLoopTest.txt";
-            string path = "./switchTest.txt";
+            //string path = "./switchTest.txt";
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 path = args[0];
@@ -46,7 +47,7 @@ namespace HanabiLang
             //Console.WriteLine();
             Interpreter.Arguments = args;
             Interpreter interpreter = new Interpreter(ast, path, true);
-            ImportedFiles.Files[Path.GetFullPath(path)] = interpreter;
+            ImportedItems.Files[Path.GetFullPath(path)] = interpreter;
             interpreter.Interpret();
         }
     }
