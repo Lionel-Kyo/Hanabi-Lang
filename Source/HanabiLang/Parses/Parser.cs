@@ -385,8 +385,9 @@ namespace HanabiLang.Parses
             {
                 this.Expect(TokenType.EQUALS);
 
-                if (getFn != null && setFn == null)
-                    throw new SystemException("Cannot assign value to a read only variable");
+                // Disable assign default value to auto-implemented getter
+                /*if (getFn != null && setFn == null)
+                    throw new SystemException("Cannot assign value to a read only variable");*/
                 if (setFn != null && setFn.Body.Count > 0)
                     throw new SystemException("Only auto-implemented variable can have initializers");
 
