@@ -47,7 +47,7 @@ namespace HanabiLang.Parses
                     if (!skipArrowFn && this.currentTokenIndex + 1 < this.tokens.Count &&
                         this.tokens[this.currentTokenIndex + 1].Type == TokenType.DOUBLE_ARROW)
                     {
-                        return FunctionDefinition(true, true);
+                        return FunctionDefinition(false, AccessibilityLevels.Public, true, true);
                     }
                     break;
                 case TokenType.INT:
@@ -87,7 +87,7 @@ namespace HanabiLang.Parses
                         int lastCurrentIndex = this.currentTokenIndex;
                         try
                         {
-                            return FunctionDefinition(true, false);
+                            return FunctionDefinition(false, AccessibilityLevels.Public, true, false);
                         }
                         catch (SystemException)
                         {
@@ -274,13 +274,14 @@ namespace HanabiLang.Parses
         }
 
 
-        private AstNode VariableDefinition(bool constant)
+        private AstNode VariableDefinition(bool constant, bool isStatic, AccessibilityLevels level)
         {
             this.currentTokenIndex++;
 
             var variableName = this.tokens[this.currentTokenIndex].Raw;
-
             this.Expect(TokenType.IDENTIFIER);
+
+            // Check if datatype defined
             AstNode dataType = null;
             if (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type == TokenType.COLON)
@@ -344,7 +345,7 @@ namespace HanabiLang.Parses
 
                         if (isGet)
                         {
-                            getFn = new FnDefineNode($"get_{variableName}", new List<FnDefineParameter>() { }, dataType, body);
+                            getFn = new FnDefineNode($"get_{variableName}", new List<FnDefineParameter>() { }, dataType, body, isStatic, level);
                         }
                         else
                         {
@@ -352,7 +353,7 @@ namespace HanabiLang.Parses
                                 new List<FnDefineParameter>()
                                 {
                                     new FnDefineParameter("value", dataType)
-                                }, new NullNode(), body);
+                                }, new NullNode(), body, isStatic, level);
                         }
                     }
                     else
@@ -369,7 +370,7 @@ namespace HanabiLang.Parses
                 var fnBody = new ReturnNode(this.ParseChild());
 
                 getFn = new FnDefineNode($"get_{variableName}", 
-                    new List<FnDefineParameter>() { }, dataType, new List<AstNode>() { fnBody });
+                    new List<FnDefineParameter>() { }, dataType, new List<AstNode>() { fnBody }, isStatic, level);
             }
 
                 if (getFn != null && setFn != null)
@@ -391,7 +392,7 @@ namespace HanabiLang.Parses
                 if (setFn != null && setFn.Body.Count > 0)
                     throw new SystemException("Only auto-implemented variable can have initializers");
 
-                var node = new VariableDefinitionNode(variableName, this.Expression(), dataType, getFn, setFn, constant);
+                var node = new VariableDefinitionNode(variableName, this.Expression(), dataType, getFn, setFn, constant, isStatic, level);
                 if (this.currentTokenIndex >= this.tokens.Count)
                     node.Line = this.tokens[this.tokens.Count - 1].Line;
                 else
@@ -403,7 +404,7 @@ namespace HanabiLang.Parses
                 if (getFn == null && setFn == null)
                     throw new SystemException("Normal variable must define a initial value");
 
-                var node = new VariableDefinitionNode(variableName, null, dataType, getFn, setFn, constant);
+                var node = new VariableDefinitionNode(variableName, null, dataType, getFn, setFn, constant, isStatic, level);
                 if (this.currentTokenIndex >= this.tokens.Count)
                     node.Line = this.tokens[this.tokens.Count - 1].Line;
                 else
@@ -411,6 +412,7 @@ namespace HanabiLang.Parses
                 return node;
             }
         }
+
         private AstNode IfStatement()
         {
             this.currentTokenIndex++;
@@ -611,7 +613,7 @@ namespace HanabiLang.Parses
             return new ImportNode(importPath, imports, asName);
         }
 
-        private AstNode FunctionDefinition(bool isArrowFn = false, bool isOneParam = false)
+        private AstNode FunctionDefinition(bool isStatic, AccessibilityLevels level, bool isArrowFn = false, bool isOneParam = false)
         {
             if (!isArrowFn)
             {
@@ -762,7 +764,7 @@ namespace HanabiLang.Parses
                 if (child != null)
                     body.Add(new ReturnNode(child));
             }
-            return new FnDefineNode(functionName, parameters, returnType, body);
+            return new FnDefineNode(functionName, parameters, returnType, body, isStatic, level);
 
         }
         private AstNode SwitchStatement()
@@ -833,7 +835,7 @@ namespace HanabiLang.Parses
             return new SwitchNode(expression, cases, defaultCase);
 
         }
-        private AstNode ClassDefinition()
+        private AstNode ClassDefinition(bool isStatic, AccessibilityLevels level)
         {
             this.currentTokenIndex++;
 
@@ -877,7 +879,7 @@ namespace HanabiLang.Parses
 
             this.currentTokenIndex++;
 
-            return new ClassDefineNode(name, members);
+            return new ClassDefineNode(name, members, isStatic, level);
         }
 
         private AstNode FunctionCall(AstNode node)
@@ -1083,6 +1085,55 @@ namespace HanabiLang.Parses
             }
         }
 
+        private AstNode CheckAccessibilityLevel(string level)
+        {
+            this.Expect(TokenType.KEYWORD);
+            bool isStatic = level.Equals("static");
+            AccessibilityLevels accessibilityLevel = AccessibilityLevels.Public;
+            switch (level)
+            {
+                case "private":
+                    accessibilityLevel = AccessibilityLevels.Private;
+                    break;
+                case "protected":
+                    accessibilityLevel = AccessibilityLevels.Protected;
+                    break;
+                case "internal":
+                    accessibilityLevel = AccessibilityLevels.Internal;
+                    break;
+                case "public":
+                default:
+                    accessibilityLevel = AccessibilityLevels.Public;
+                    break;
+            }
+            while (this.currentTokenIndex < this.tokens.Count &&
+                this.tokens[this.currentTokenIndex].Type == TokenType.KEYWORD)
+            {
+                string keyword = this.tokens[this.currentTokenIndex].Raw;
+                if (keyword.Equals("static"))
+                {
+                    this.Expect(TokenType.KEYWORD);
+                    if (isStatic)
+                        throw new SystemException("Already defined static");
+                    isStatic = true;
+                }
+                else if (keyword.Equals("var") || keyword.Equals("auto") ||
+                    keyword.Equals("let") || keyword.Equals("const"))
+                {
+                    return this.VariableDefinition(keyword.Equals("const"), isStatic, accessibilityLevel);
+                }
+                else if (keyword.Equals("fn"))
+                {
+                    return this.FunctionDefinition(isStatic, accessibilityLevel, false, false);
+                }
+                else if (keyword.Equals("class"))
+                {
+                    return this.ClassDefinition(isStatic, accessibilityLevel);
+                }
+            }
+            throw new SystemException($"Unexpected {level} defined");
+        }
+
         private AstNode ParseChild()
         {
             var token = this.tokens[this.currentTokenIndex];
@@ -1111,11 +1162,14 @@ namespace HanabiLang.Parses
 
                         if (token.Raw.Equals("var") || token.Raw.Equals("auto") ||
                             token.Raw.Equals("let") || token.Raw.Equals("const"))
-                            result = this.VariableDefinition(token.Raw.Equals("const"));
+                            result = this.VariableDefinition(token.Raw.Equals("const"), false, AccessibilityLevels.Public);
+                        else if (token.Raw.Equals("public") || token.Raw.Equals("protected") ||
+                            token.Raw.Equals("private"))
+                            result = CheckAccessibilityLevel(token.Raw);
                         else if (token.Raw.Equals("if")) result = this.IfStatement();
                         else if (token.Raw.Equals("switch")) result = this.SwitchStatement();
-                        else if (token.Raw.Equals("fn")) result = this.FunctionDefinition(false, false);
-                        else if (token.Raw.Equals("class")) result = this.ClassDefinition();
+                        else if (token.Raw.Equals("fn")) result = this.FunctionDefinition(false, AccessibilityLevels.Public, false, false);
+                        else if (token.Raw.Equals("class")) result = this.ClassDefinition(false, AccessibilityLevels.Public);
                         else if (token.Raw.Equals("for")) result = this.ForStatement();
                         else if (token.Raw.Equals("while")) result = this.WhileStatement();
                         else if (token.Raw.Equals("return")) result = this.ReturnStatement();

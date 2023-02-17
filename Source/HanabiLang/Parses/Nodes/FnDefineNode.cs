@@ -31,13 +31,17 @@ namespace HanabiLang.Parses.Nodes
         public List<FnDefineParameter> Parameters { get; private set; }
         public AstNode ReturnType { get; private set; }
         public List<AstNode> Body { get; private set; }
+        public bool IsStatic { get; private set; }
+        public AccessibilityLevels Level { get; private set; }
 
-        public FnDefineNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body)
+        public FnDefineNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body, bool isStatic, AccessibilityLevels level)
         {
             this.Name = name;
             this.Parameters = parameters;
             this.ReturnType = returnType;
             this.Body = body;
+            this.IsStatic = isStatic;
+            this.Level = level;
         }
 
         public override string ToString()

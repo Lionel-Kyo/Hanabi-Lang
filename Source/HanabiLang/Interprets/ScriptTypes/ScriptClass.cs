@@ -16,6 +16,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptScope Scope { get; private set; }
         public ScriptFns BuildInConstructor { get; private set; }
         public bool IsStatic { get; private set; }
+        public AccessibilityLevels Level { get; private set; }
         public bool IsBuildIn => this.Body == null;
 
         public ScriptClass(string name, List<AstNode> body,

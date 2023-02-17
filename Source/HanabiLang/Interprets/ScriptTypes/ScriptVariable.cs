@@ -14,7 +14,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptFns Get { get; private set; }
         public ScriptFns Set { get; private set; }
         public bool IsConstant { get; private set; }
-        
+        public bool IsStatic { get; private set; }
+        public AccessibilityLevels Level { get; private set; }
+
         public ScriptVariable(string name, ScriptValue value, bool isConstant)
         {
             this.Name = name;

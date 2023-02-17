@@ -10,12 +10,16 @@ namespace HanabiLang.Parses.Nodes
     {
         public string Name { get; private set; }
         public List<AstNode> Body { get; private set; }
+        public bool IsStatic { get; private set; }
+        public AccessibilityLevels Level { get; private set; }
 
         // Constructor requires a name and body
-        public ClassDefineNode(string name, List<AstNode> body)
+        public ClassDefineNode(string name, List<AstNode> body, bool isStatic, AccessibilityLevels level)
         {
             this.Name = name;
             this.Body = body;
+            this.IsStatic = isStatic;
+            this.Level = level;
         }
 
         public override string ToString()

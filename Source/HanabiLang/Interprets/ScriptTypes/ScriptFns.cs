@@ -45,8 +45,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         public BuildInFns.ScriptFnType BuildInFn { get; private set; }
         public bool IsBuildIn => BuildInFn != null;
         public int MinArgs { get; private set; }
-
         public bool HasMultiArgs => Parameters.Count != 0 && Parameters[Parameters.Count - 1].IsMultiArgs;
+        public bool IsStatic { get; private set; }
+        public AccessibilityLevels Level { get; private set; }
 
         public ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn = null)
         {

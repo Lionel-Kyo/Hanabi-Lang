@@ -58,6 +58,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccessibilityLevels.cs" />
     <Compile Include="Interprets\BuildInClasses.cs" />
     <Compile Include="Interprets\ScriptTypes\BasicTypes.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptEnumerator.cs" />
