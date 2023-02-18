@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptEnumerator : ScriptClass
     {
         public ScriptEnumerator() :
-            base("Enumerator", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
+            base("Enumerator", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {
@@ -56,15 +56,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.resetFn = (ScriptFns)reset.Value;
             }
 
-            public object Current => currentFn.Call(currentObject.Scope, currentObject, new Dictionary<string, Parses.Nodes.AstNode>());
+            public object Current => currentFn.Call(currentObject, currentFn.GetFnInfo(currentObject.Scope, new Dictionary<string, Parses.Nodes.AstNode>()));
 
-            ScriptValue IEnumerator<ScriptValue>.Current => currentFn.Call(currentObject.Scope, currentObject, new Dictionary<string, Parses.Nodes.AstNode>());
+            ScriptValue IEnumerator<ScriptValue>.Current => currentFn.Call(currentObject, currentFn.GetFnInfo(currentObject.Scope, new Dictionary<string, Parses.Nodes.AstNode>()));
 
-            public void Dispose() => resetFn.Call(currentObject.Scope, currentObject, new Dictionary<string, Parses.Nodes.AstNode>());
+            public void Dispose() => resetFn.Call(currentObject, resetFn.GetFnInfo(currentObject.Scope, new Dictionary<string, Parses.Nodes.AstNode>()));
 
             public bool MoveNext()
             {
-                var result = moveNextFn.Call(currentObject.Scope, currentObject, new Dictionary<string, Parses.Nodes.AstNode>());
+                var result = moveNextFn.Call(currentObject, resetFn.GetFnInfo(currentObject.Scope, new Dictionary<string, Parses.Nodes.AstNode>()));
                 if (!result.IsObject)
                     throw new SystemException("MoveNext does not return a bool");
                 var obj = (ScriptObject)result.Value;
@@ -73,7 +73,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return (bool)obj.BuildInObject;
             }
 
-            public void Reset() => resetFn.Call(currentObject.Scope, currentObject, new Dictionary<string, Parses.Nodes.AstNode>());
+            public void Reset() => resetFn.Call(currentObject, resetFn.GetFnInfo(currentObject.Scope, new Dictionary<string, Parses.Nodes.AstNode>()));
 
             public IEnumerator<ScriptValue> GetEnumerator() => this;
             IEnumerator IEnumerable.GetEnumerator() => this;

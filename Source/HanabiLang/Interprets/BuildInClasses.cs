@@ -276,7 +276,7 @@ namespace HanabiLang.Interprets
                 try
                 {
                     var scriptFn = ToScriptFn(fn);
-                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevels.Public));
+                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevel.Public));
                 }
                 catch (NotImplementedException) { }
             }
@@ -298,7 +298,7 @@ namespace HanabiLang.Interprets
                     return FromCsObject(value);
                 };
 
-                AccessibilityLevels level = field.IsPublic ? AccessibilityLevels.Public : AccessibilityLevels.Private;
+                AccessibilityLevel level = field.IsPublic ? AccessibilityLevel.Public : AccessibilityLevel.Private;
                 var getFns = new ScriptFns(field.Name);
                 getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, field.IsStatic, level));
 
@@ -352,8 +352,8 @@ namespace HanabiLang.Interprets
                     };
                 }
 
-                AccessibilityLevels getLevel = property.CanRead && property.GetMethod.IsPublic ? 
-                    AccessibilityLevels.Public : AccessibilityLevels.Private;
+                AccessibilityLevel getLevel = property.CanRead && property.GetMethod.IsPublic ? 
+                    AccessibilityLevel.Public : AccessibilityLevel.Private;
 
                 getFns = new ScriptFns(property.Name);
                 getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, property.CanRead ? property.GetMethod.IsStatic : true, getLevel));
@@ -377,10 +377,10 @@ namespace HanabiLang.Interprets
                     };
                 }
 
-                AccessibilityLevels setLevel = property.CanWrite && property.SetMethod.IsPublic ? 
-                    AccessibilityLevels.Public : AccessibilityLevels.Private;
+                AccessibilityLevel setLevel = property.CanWrite && property.SetMethod.IsPublic ? 
+                    AccessibilityLevel.Public : AccessibilityLevel.Private;
 
-                AccessibilityLevels overAllLevel = (int)getLevel < (int)setLevel ? getLevel : setLevel;
+                AccessibilityLevel overAllLevel = (int)getLevel < (int)setLevel ? getLevel : setLevel;
 
                 bool overAllIsStatic = true;
 
@@ -415,7 +415,7 @@ namespace HanabiLang.Interprets
                     try
                     {
                         var scriptFn = ToScriptFn(fn);
-                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevels.Public));
+                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevel.Public));
                     }
                     catch (NotImplementedException) { }
                 }
@@ -425,7 +425,7 @@ namespace HanabiLang.Interprets
                     try
                     {
                         var scriptConstructor = ToScriptConstructor(scriptClass, constructor);
-                        scriptClass.BuildInConstructor.Fns.Add(new ScriptFn(scriptConstructor.Item1, classScope, scriptConstructor.Item2, isStatic, AccessibilityLevels.Public));
+                        scriptClass.BuildInConstructor.Fns.Add(new ScriptFn(scriptConstructor.Item1, classScope, scriptConstructor.Item2, isStatic, AccessibilityLevel.Public));
                     }
                     catch (NotImplementedException) { }
                 }

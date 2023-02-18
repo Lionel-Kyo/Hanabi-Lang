@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptDict : ScriptClass
     {
         public ScriptDict() :
-            base("Dict", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
+            base("Dict", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
         {
             this.AddObjectFn("Length", new List<FnParameter>(), args =>
             {

@@ -32,9 +32,9 @@ namespace HanabiLang.Parses.Nodes
         public AstNode ReturnType { get; private set; }
         public List<AstNode> Body { get; private set; }
         public bool IsStatic { get; private set; }
-        public AccessibilityLevels Level { get; private set; }
+        public AccessibilityLevel Level { get; private set; }
 
-        public FnDefineNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body, bool isStatic, AccessibilityLevels level)
+        public FnDefineNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body, bool isStatic, AccessibilityLevel level)
         {
             this.Name = name;
             this.Parameters = parameters;

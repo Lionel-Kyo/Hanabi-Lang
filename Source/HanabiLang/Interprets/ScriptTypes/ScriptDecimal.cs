@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptDecimal : ScriptClass
     {
         public ScriptDecimal() :
-            base("decimal", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
+            base("decimal", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {

@@ -15,10 +15,10 @@ namespace HanabiLang.Parses.Nodes
         public FnDefineNode SetFn { get; private set; }
         public bool IsConstant { get; private set; }
         public bool IsStatic { get; private set; }
-        public AccessibilityLevels Level { get; private set; }
+        public AccessibilityLevel Level { get; private set; }
 
         public VariableDefinitionNode(string name, AstNode value, AstNode dataType,
-            FnDefineNode getFn, FnDefineNode setFn, bool isConstant, bool isStatic, AccessibilityLevels level)
+            FnDefineNode getFn, FnDefineNode setFn, bool isConstant, bool isStatic, AccessibilityLevel level)
         {
             this.Name = name;
             this.Value = value;

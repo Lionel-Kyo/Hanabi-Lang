@@ -15,9 +15,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptFns Set { get; private set; }
         public bool IsConstant { get; private set; }
         public bool IsStatic { get; private set; }
-        public AccessibilityLevels Level { get; private set; }
+        public AccessibilityLevel Level { get; private set; }
 
-        public ScriptVariable(string name, ScriptValue value, bool isConstant, bool isStatic, AccessibilityLevels level)
+        public ScriptVariable(string name, ScriptValue value, bool isConstant, bool isStatic, AccessibilityLevel level)
         {
             this.Name = name;
             this.Value = value;
@@ -26,7 +26,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Level = level;
         }
 
-        public ScriptVariable(string name, ScriptFns Get, ScriptFns Set, bool isConstant, bool isStatic, AccessibilityLevels level)
+        public ScriptVariable(string name, ScriptFns Get, ScriptFns Set, bool isConstant, bool isStatic, AccessibilityLevel level)
         {
             this.Name = name;
             this.Get = Get;

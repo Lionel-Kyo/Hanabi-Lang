@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptList : ScriptClass
     {
         public ScriptList() : 
-            base("List", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
+            base("List", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
         {
             this.AddObjectFn("Length", new List<FnParameter>(), args =>
             {

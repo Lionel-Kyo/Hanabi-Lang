@@ -47,9 +47,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         public int MinArgs { get; private set; }
         public bool HasMultiArgs => Parameters.Count != 0 && Parameters[Parameters.Count - 1].IsMultiArgs;
         public bool IsStatic { get; private set; }
-        public AccessibilityLevels Level { get; private set; }
+        public AccessibilityLevel Level { get; private set; }
 
-        private ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevels level)
+        private ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level)
         {
             this.Parameters = parameters;
             this.ArgsMap = new Dictionary<string, int>();
@@ -71,11 +71,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        public ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevels level) :
+        public ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
             this(parameters, null, scope, fn, isStatic, level)
         { }
 
-        public ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, bool isStatic, AccessibilityLevels level) :
+        public ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, bool isStatic, AccessibilityLevel level) :
             this(parameters, body, scope, null, isStatic, level)
         { }
 
@@ -186,7 +186,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             return list[minIndex];
         }
 
-        private Tuple<ScriptFn, List<ScriptVariable>> FindFn(Dictionary<string, ScriptValue> args)
+        private Tuple<ScriptFn, List<ScriptVariable>> FindFnInfo(Dictionary<string, ScriptValue> args)
         {
             var fns = new List<Tuple<ScriptFn, List<ScriptVariable>, int>>();
 
@@ -209,13 +209,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                             multipleArguments.Add(value);
                             index++;
                         }
-                        variables.Add(new ScriptVariable(parameter.Name, new ScriptValue(multipleArguments), false, false, AccessibilityLevels.Private));
+                        variables.Add(new ScriptVariable(parameter.Name, new ScriptValue(multipleArguments), false, false, AccessibilityLevel.Private));
                     }
                     else if (index >= args.Count)
                     {
                         if (parameter.DefaultValue == null)
                             break;
-                        variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevels.Private));
+                        variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevel.Private));
                     }
                     else
                     {
@@ -227,7 +227,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                             break;
                         if (parameter.DataType == null)
                             anyTypeCount ++;
-                        variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevels.Private));
+                        variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
                     }
                     index++;
                 }
@@ -243,28 +243,35 @@ namespace HanabiLang.Interprets.ScriptTypes
             return Tuple.Create(scriptfn.Item1, scriptfn.Item2);
         }
 
-        public ScriptValue Call(ScriptScope scope, ScriptObject _this, Dictionary<string, AstNode> nodeArgs)
+        public Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(ScriptScope scope, Dictionary<string, AstNode> nodeArgs)
         {
-            var fn = FindFn(GetArgs(scope, nodeArgs));
-            return Call(fn.Item1, _this, fn.Item2);
+            return FindFnInfo(GetArgs(scope, nodeArgs));
         }
 
-        public ScriptValue Call(ScriptObject _this, Dictionary<string, ScriptValue> args)
+        public Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(Dictionary<string, ScriptValue> args)
         {
-            var fn = FindFn(args);
-            return Call(fn.Item1, _this, fn.Item2);
+            return FindFnInfo(args);
         }
 
-        public ScriptValue Call(ScriptObject _this, params ScriptValue[] values)
+        public Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(params ScriptValue[] values)
         {
-
             Dictionary<string, ScriptValue> args = new Dictionary<string, ScriptValue>();
             for (int i = 0; i < values.Length; i++)
             {
                 args[i.ToString()] = values[i];
             }
-            var fn = FindFn(args);
-            return Call(fn.Item1, _this, fn.Item2);
+            return FindFnInfo(args); ;
+        }
+
+        public ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> fnInfo)
+        {
+            return Call(fnInfo.Item1, _this, fnInfo.Item2);
+        }
+
+        public ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
+        {
+            var fnInfo = GetFnInfo(value);
+            return Call(fnInfo.Item1, _this, fnInfo.Item2);
         }
 
         private ScriptValue Call(ScriptFn fn, ScriptObject _this, List<ScriptVariable> args)
@@ -284,12 +291,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return fn.BuildInFn(valueArgs);
             }
 
-            ScriptScope parentScope = fn.Scope;
+            ScriptScope parentScope = _this == null ? fn.Scope : _this.Scope;
+            /*ScriptScope parentScope = fn.Scope;
             if (_this != null)
             {
                 parentScope = _this.Scope.Copy();
                 parentScope.Parent = _this.Scope.ClassScope;
-            }
+            }*/
 
             var fnScope = new ScriptScope(ScopeType.Function, parentScope);
 

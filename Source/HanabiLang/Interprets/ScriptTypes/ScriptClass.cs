@@ -16,11 +16,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptScope Scope { get; private set; }
         public ScriptFns BuildInConstructor { get; private set; }
         public bool IsStatic { get; private set; }
-        public AccessibilityLevels Level { get; private set; }
+        public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn => this.Body == null;
 
         public ScriptClass(string name, List<AstNode> body,
-            ScriptScope scope, bool isStatic, AccessibilityLevels level, bool ignoreInitialize = false)
+            ScriptScope scope, bool isStatic, AccessibilityLevel level, bool ignoreInitialize = false)
         {
             this.Name = name;
             this.Body = body;
@@ -50,7 +50,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
 
         protected void AddObjectFn(string name, List<FnParameter> parameters, BuildInFns.ScriptFnType fn,
-            bool isStatic = false, AccessibilityLevels level = AccessibilityLevels.Public)
+            bool isStatic = false, AccessibilityLevel level = AccessibilityLevel.Public)
         {
             if (!this.Scope.Functions.TryGetValue(name, out ScriptFns scriptFns))
             {
@@ -81,7 +81,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public virtual ScriptObject Negative(ScriptObject left)
         {
             if (left.ClassType.Scope.Functions.TryGetValue("^-", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left).Value;
+                return (ScriptObject)fn.Call(left, fn.GetFnInfo()).Value;
             throw new SystemException("Operator ! is not implemented");
         }
         public virtual ScriptObject Add(ScriptObject left, ScriptObject right)
@@ -237,7 +237,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (this.BuildInConstructor.Fns.Count != 0)
             {
-                return this.BuildInConstructor.Call(currentScope, null, callArgs);
+                var fnInfo = this.BuildInConstructor.GetFnInfo(currentScope, callArgs);
+                return this.BuildInConstructor.Call(null, fnInfo);
             }
 
             ScriptObject _object = Create();
@@ -271,7 +272,8 @@ namespace HanabiLang.Interprets.ScriptTypes
             
             if (this.Scope.Functions.TryGetValue(this.Name, out currentConstructor))
             {
-                currentConstructor.Call(currentScope, _object, callArgs);
+                var fnInfo = currentConstructor.GetFnInfo(currentScope, callArgs);
+                currentConstructor.Call(_object, fnInfo);
             }
 
             return new ScriptValue(_object);

@@ -23,51 +23,51 @@ namespace HanabiLang.Interprets
         public Dictionary<string, ScriptFns> Functions { get; private set; }
         public Dictionary<string, ScriptClass> Classes { get; private set; }
         public ScriptScope Parent { get; set; }
-        public ScriptScope ClassScope { get; private set; }
+        //public ScriptScope ClassScope { get; private set; }
         public ScopeType Type { get; private set; }
-        public ScriptScope(ScopeType Type, ScriptScope parent = null, ScriptScope classScope = null)
+        public ScriptScope(ScopeType Type, ScriptScope parent = null/*, ScriptScope classScope = null*/)
         {
             this.Type = Type;
             this.Parent = parent;
             this.Variables = new Dictionary<string, ScriptVariable>();
             this.Functions = new Dictionary<string, ScriptFns>();
             this.Classes = new Dictionary<string, ScriptClass>();
-            this.ClassScope = classScope;
+            /*this.ClassScope = classScope;
             if (this.Type == ScopeType.Object && this.ClassScope == null)
             {
                 throw new SystemException("Object cannot be created without class");
-            }
+            }*/
         }
 
-        public ScriptScope Copy()
+        /*public ScriptScope Copy()
         {
             ScriptScope result = new ScriptScope(this.Type, this.Parent, ClassScope);
             result.Variables = this.Variables;
             result.Functions = this.Functions;
             result.Classes = this.Classes;
             return result;
-        }
+        }*/
 
         public bool TryGetValue(string name, out ScriptType value)
         {
             if (this.Type == ScopeType.Object)
             {
-                if (ClassScope.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
+                if (this.Parent.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
                 {
                     value = interpretedFunction;
                     return true;
                 }
-                else if (ClassScope.Classes.TryGetValue(name, out ScriptClass interpretedClass))
+                else if (this.Parent.Classes.TryGetValue(name, out ScriptClass interpretedClass))
                 {
                     value = interpretedClass;
                     return true;
                 }
-                else if (Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
+                else if (this.Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
                 {
                     value = interpretedVariable;
                     return true;
                 }
-                else if (ClassScope.Variables.TryGetValue(name, out ScriptVariable interpretedVariable2))
+                else if (this.Parent.Variables.TryGetValue(name, out ScriptVariable interpretedVariable2))
                 {
                     value = interpretedVariable2;
                     return true;
@@ -75,23 +75,33 @@ namespace HanabiLang.Interprets
             }
             else
             {
-                if (Classes.TryGetValue(name, out ScriptClass interpretedClass))
+                if (this.Classes.TryGetValue(name, out ScriptClass interpretedClass))
                 {
                     value = interpretedClass;
                     return true;
                 }
-                else if (Functions.TryGetValue(name, out ScriptFns interpretedFunction))
+                else if (this.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
                 {
                     value = interpretedFunction;
                     return true;
                 }
-                else if (Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
+                else if (this.Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
                 {
                     value = interpretedVariable;
                     return true;
                 }
             }
             value = null;
+            return false;
+        }
+
+        public bool ContainsScope(ScriptScope scope)
+        {
+            for (ScriptScope item = this; item != null; item = item.Parent)
+            {
+                if (item == scope)
+                    return true;
+            }
             return false;
         }
 

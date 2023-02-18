@@ -11,7 +11,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptNull : ScriptClass
     {
         public ScriptNull() :
-            base("bool", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
+            base("bool", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
         {
 
         }

@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptInt : ScriptClass
     {
         public ScriptInt() :
-            base("int", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
+            base("int", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {

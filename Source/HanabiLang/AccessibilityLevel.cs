@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang
 {
-    public enum AccessibilityLevels
+    public enum AccessibilityLevel
     {
         Public = 0,
         Internal = 1,
