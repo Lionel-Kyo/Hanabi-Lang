@@ -290,6 +290,8 @@ namespace HanabiLang.Parses
                 dataType = this.Expression(true, true, true);
             }
 
+            // check if it is get set variable
+            AccessibilityLevels? lastLevel = null;
             FnDefineNode getFn = null;
             FnDefineNode setFn = null;
             if (this.currentTokenIndex < this.tokens.Count &&
@@ -297,13 +299,21 @@ namespace HanabiLang.Parses
             {
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
                 while (this.currentTokenIndex < this.tokens.Count &&
-                                this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER)
+                    this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER ||
+                    this.tokens[this.currentTokenIndex].Type == TokenType.KEYWORD)
                 {
                     var keyword = this.tokens[this.currentTokenIndex].Raw;
-                    this.Expect(TokenType.IDENTIFIER);
+                    this.Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
 
                     List<AstNode> body = new List<AstNode>();
-                    if (keyword.Equals("get") || keyword.Equals("set"))
+                    if (keyword.Equals("public") || keyword.Equals("protected") ||
+                            keyword.Equals("private"))
+                    {
+                        if (lastLevel.HasValue)
+                            throw new SystemException("Cannot redefine accessibility levels");
+                        lastLevel = ToAccessibilityLevel(keyword);
+                    }
+                    else if (keyword.Equals("get") || keyword.Equals("set"))
                     {
                         bool isGet = keyword.Equals("get");
 
@@ -343,9 +353,15 @@ namespace HanabiLang.Parses
                             this.Expect(TokenType.SEMI_COLON);
                         }
 
+                        if (lastLevel.HasValue && (int)lastLevel.Value <= (int)level)
+                        {
+                            throw new SystemException($"Cannot define getter/setter with the same or a larger accessibility level");
+                        }
+
                         if (isGet)
                         {
-                            getFn = new FnDefineNode($"get_{variableName}", new List<FnDefineParameter>() { }, dataType, body, isStatic, level);
+                            getFn = new FnDefineNode($"get_{variableName}", new List<FnDefineParameter>() { },
+                                dataType, body, isStatic, lastLevel ?? level);
                         }
                         else
                         {
@@ -353,8 +369,9 @@ namespace HanabiLang.Parses
                                 new List<FnDefineParameter>()
                                 {
                                     new FnDefineParameter("value", dataType)
-                                }, new NullNode(), body, isStatic, level);
+                                }, new NullNode(), body, isStatic, lastLevel ?? level);
                         }
+                        lastLevel = null;
                     }
                     else
                     {
@@ -1085,27 +1102,28 @@ namespace HanabiLang.Parses
             }
         }
 
+        private AccessibilityLevels ToAccessibilityLevel(string level)
+        {
+            switch (level)
+            {
+                case "private":
+                    return AccessibilityLevels.Private;
+                case "protected":
+                    return AccessibilityLevels.Protected;
+                case "internal":
+                    return AccessibilityLevels.Internal;
+                case "public":
+                default:
+                    return AccessibilityLevels.Public;
+            }
+        }
+
         private AstNode CheckAccessibilityLevel(string level)
         {
             this.Expect(TokenType.KEYWORD);
             bool isStatic = level.Equals("static");
-            AccessibilityLevels accessibilityLevel = AccessibilityLevels.Public;
-            switch (level)
-            {
-                case "private":
-                    accessibilityLevel = AccessibilityLevels.Private;
-                    break;
-                case "protected":
-                    accessibilityLevel = AccessibilityLevels.Protected;
-                    break;
-                case "internal":
-                    accessibilityLevel = AccessibilityLevels.Internal;
-                    break;
-                case "public":
-                default:
-                    accessibilityLevel = AccessibilityLevels.Public;
-                    break;
-            }
+            AccessibilityLevels accessibilityLevel = ToAccessibilityLevel(level);
+
             while (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type == TokenType.KEYWORD)
             {

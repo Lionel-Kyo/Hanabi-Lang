@@ -36,6 +36,7 @@ namespace Testing
         public int B => 12345;
 
         public int BA { get; set; }
+        public int BB { get; private set; }
 
         public int c;
         public const string Hi = "Hi";

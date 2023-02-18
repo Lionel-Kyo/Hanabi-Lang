@@ -66,7 +66,7 @@ namespace HanabiLang.Interprets
 
                     bool isStatic = csharpType.IsAbstract && csharpType.IsSealed;
 
-                    scriptClass = new ScriptClass(className, null, new ScriptScope(ScopeType.Class), isStatic);
+                    scriptClass = new ScriptClass(className, null, new ScriptScope(ScopeType.Class), isStatic, AccessibilityLevels.Public);
                     BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType, isStatic);
                     ImportedItems.Types[csharpType] = scriptClass;
                 }
@@ -123,9 +123,9 @@ namespace HanabiLang.Interprets
 
                 var jsonData = interpreter.currentScope.Variables["jsonData"].Value;
                 if (string.IsNullOrEmpty(realNode.AsName))
-                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true);
+                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true, true, AccessibilityLevels.Public);
                 else
-                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, jsonData, true);
+                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, jsonData, true, true, AccessibilityLevels.Public);
             }
             else
             {
@@ -146,11 +146,11 @@ namespace HanabiLang.Interprets
                     if (string.IsNullOrEmpty(realNode.AsName))
                         interpretScope.Classes[fileNameWithoutExtension] = new
                             ScriptClass(fileNameWithoutExtension, interpreter.ast.Nodes,
-                            interpreter.currentScope, true, true);
+                                interpreter.currentScope, true, AccessibilityLevels.Public, true);
                     else
                         interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, interpreter.ast.Nodes,
-                            interpreter.currentScope, true, true);
+                                interpreter.currentScope, true, AccessibilityLevels.Public, true);
                 }
                 else
                 {
@@ -223,7 +223,7 @@ namespace HanabiLang.Interprets
                     if (realNode.GetFn.Body.Count == 0)
                     {
                         getFns = new ScriptFns($"get_{realNode.Name}");
-                        getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, null, args => setValue));
+                        getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, args => setValue, realNode.GetFn.IsStatic, realNode.GetFn.Level));
                     }
                     else
                     {
@@ -240,10 +240,10 @@ namespace HanabiLang.Interprets
                         setFns = new ScriptFns($"set_{realNode.Name}");
                         if (interpretScope.Type == ScopeType.Object)
                             setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
-                                null, null, args => setValue = args[1]));
+                                null, args => setValue = args[1], realNode.SetFn.IsStatic, realNode.SetFn.Level));
                         else
                             setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
-                                null, null, args => setValue = args[0]));
+                                null, args => setValue = args[0], realNode.SetFn.IsStatic, realNode.SetFn.Level));
                     }
                     else
                     {
@@ -256,13 +256,13 @@ namespace HanabiLang.Interprets
 
                 if (getFns != null || setFns != null)
                 {
-                    interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name, getFns, setFns, realNode.IsConstant);
+                    interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name, getFns, setFns,
+                        realNode.IsConstant, realNode.IsStatic, realNode.Level);
                 }
                 else
                 {
                     interpretScope.Variables[realNode.Name] = new ScriptVariable(realNode.Name,
-                                                                setValue,
-                                                                realNode.IsConstant);
+                        setValue,realNode.IsConstant, realNode.IsStatic, realNode.Level);
                 }
             }
             else if (node is VariableAssignmentNode)
@@ -303,7 +303,7 @@ namespace HanabiLang.Interprets
                 }
 
                 scriptFns.Fns.Add(new ScriptFn(fnParameters,
-                    realNode.Body, interpretScope, null));
+                    realNode.Body, interpretScope, realNode.IsStatic, realNode.Level));
             }
             else if (node is ClassDefineNode)
             {
@@ -319,7 +319,7 @@ namespace HanabiLang.Interprets
 
                 var scope = new ScriptScope(ScopeType.Class, interpretScope);
                 interpretScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
-                    scope, false);
+                    scope, realNode.IsStatic, realNode.Level);
             }
         }
 
@@ -747,7 +747,7 @@ namespace HanabiLang.Interprets
                     var scope = new ScriptScope(ScopeType.Loop, interpretScope);
 
                     scope.Variables[realNode.Initializer] =
-                        new ScriptVariable(realNode.Initializer, item, false);
+                        new ScriptVariable(realNode.Initializer, item, false, true, AccessibilityLevels.Private);
 
                     var hasContinue = false;
 
@@ -881,7 +881,7 @@ namespace HanabiLang.Interprets
                 }
                 var scriptFns = new ScriptFns(realNode.Name);
                 scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,
-                                interpretScope, null));
+                                interpretScope, realNode.IsStatic, realNode.Level));
                 return new ValueReference(new ScriptValue(scriptFns));
             }
             else if (node is TernaryNode)

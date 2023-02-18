@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptRange : ScriptClass
     {
         public ScriptRange() :
-            base("Range", null, new ScriptScope(ScopeType.Class), false)
+            base("Range", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {

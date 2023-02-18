@@ -49,13 +49,15 @@ namespace HanabiLang.Interprets.ScriptTypes
         public bool IsStatic { get; private set; }
         public AccessibilityLevels Level { get; private set; }
 
-        public ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn = null)
+        private ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevels level)
         {
             this.Parameters = parameters;
             this.ArgsMap = new Dictionary<string, int>();
             this.Body = body;
             this.Scope = scope;
             this.BuildInFn = fn;
+            this.IsStatic = isStatic;
+            this.Level = level;
 
             int count = 0;
             foreach (var param in this.Parameters)
@@ -68,6 +70,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                 count++;
             }
         }
+
+        public ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevels level) :
+            this(parameters, null, scope, fn, isStatic, level)
+        { }
+
+        public ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, bool isStatic, AccessibilityLevels level) :
+            this(parameters, body, scope, null, isStatic, level)
+        { }
+
     }
 
     class ScriptFns : ScriptType
@@ -198,13 +209,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                             multipleArguments.Add(value);
                             index++;
                         }
-                        variables.Add(new ScriptVariable(parameter.Name, new ScriptValue(multipleArguments), false));
+                        variables.Add(new ScriptVariable(parameter.Name, new ScriptValue(multipleArguments), false, false, AccessibilityLevels.Private));
                     }
                     else if (index >= args.Count)
                     {
                         if (parameter.DefaultValue == null)
                             break;
-                        variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false));
+                        variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevels.Private));
                     }
                     else
                     {
@@ -216,7 +227,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                             break;
                         if (parameter.DataType == null)
                             anyTypeCount ++;
-                        variables.Add(new ScriptVariable(parameter.Name, value, false));
+                        variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevels.Private));
                     }
                     index++;
                 }

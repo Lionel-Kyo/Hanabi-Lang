@@ -51,15 +51,15 @@ namespace HanabiLang.Interprets
         {
             scope.Functions["print"] = new ScriptFns("print");
             scope.Functions["print"].Fns.Add(new ScriptFn(
-                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, null, Print));
+                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, Print, true, AccessibilityLevels.Public));
 
             scope.Functions["println"] = new ScriptFns("println");
             scope.Functions["println"].Fns.Add(new ScriptFn(
-                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, null, Println));
+                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, Println, true, AccessibilityLevels.Public));
 
             scope.Functions["input"] = new ScriptFns("input");
             scope.Functions["input"].Fns.Add(new ScriptFn(
-                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, null, Input));
+                new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, Input, true, AccessibilityLevels.Public));
         }
 
         public static List<FnParameter> GetBuildInFnParams(ScriptFnType fn)

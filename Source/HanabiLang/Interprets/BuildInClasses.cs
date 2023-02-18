@@ -276,7 +276,7 @@ namespace HanabiLang.Interprets
                 try
                 {
                     var scriptFn = ToScriptFn(fn);
-                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, null, classScope, scriptFn.Item2));
+                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevels.Public));
                 }
                 catch (NotImplementedException) { }
             }
@@ -298,8 +298,9 @@ namespace HanabiLang.Interprets
                     return FromCsObject(value);
                 };
 
+                AccessibilityLevels level = field.IsPublic ? AccessibilityLevels.Public : AccessibilityLevels.Private;
                 var getFns = new ScriptFns(field.Name);
-                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, null, getFn));
+                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, field.IsStatic, level));
 
                 BuildInFns.ScriptFnType setFn = args =>
                 {
@@ -321,14 +322,17 @@ namespace HanabiLang.Interprets
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
                     {
                         new FnParameter("value")
-                    }, null, null, setFn));
+                    }, null, setFn, field.IsStatic, level));
 
-                classScope.Variables[field.Name] = new ScriptVariable(field.Name, getFns, setFns, false);
+                classScope.Variables[field.Name] = new ScriptVariable(field.Name, getFns, setFns, false, field.IsStatic, level);
             }
 
             foreach (var property in properties)
             {
                 BuildInFns.ScriptFnType getFn = null;
+                ScriptFns getFns = null;
+                BuildInFns.ScriptFnType setFn = null;
+                ScriptFns setFns = null;
 
                 if (property.CanRead)
                 {
@@ -348,10 +352,12 @@ namespace HanabiLang.Interprets
                     };
                 }
 
-                var getFns = new ScriptFns(property.Name);
-                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, null, getFn));
+                AccessibilityLevels getLevel = property.CanRead && property.GetMethod.IsPublic ? 
+                    AccessibilityLevels.Public : AccessibilityLevels.Private;
 
-                BuildInFns.ScriptFnType setFn = null;
+                getFns = new ScriptFns(property.Name);
+                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, property.CanRead ? property.GetMethod.IsStatic : true, getLevel));
+
                 if (property.CanWrite)
                 {
                     setFn = args =>
@@ -371,13 +377,25 @@ namespace HanabiLang.Interprets
                     };
                 }
 
-                var setFns = new ScriptFns(property.Name);
-                setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
-                    {
-                        new FnParameter("value")
-                    }, null, null, setFn));
+                AccessibilityLevels setLevel = property.CanWrite && property.SetMethod.IsPublic ? 
+                    AccessibilityLevels.Public : AccessibilityLevels.Private;
 
-                classScope.Variables[property.Name] = new ScriptVariable(property.Name, getFns, setFns, false);
+                AccessibilityLevels overAllLevel = (int)getLevel < (int)setLevel ? getLevel : setLevel;
+
+                bool overAllIsStatic = true;
+
+                if (property.CanRead)
+                    overAllIsStatic = property.GetMethod.IsStatic;
+                else if (property.CanWrite)
+                    overAllIsStatic = property.GetMethod.IsStatic;
+
+                setFns = new ScriptFns(property.Name);
+                setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
+                {
+                    new FnParameter("value")
+                }, null, setFn, property.CanWrite ? property.GetMethod.IsStatic : true, setLevel));
+
+                classScope.Variables[property.Name] = new ScriptVariable(property.Name, getFns, setFns, false, overAllIsStatic, overAllLevel);
             }
 
 
@@ -397,7 +415,7 @@ namespace HanabiLang.Interprets
                     try
                     {
                         var scriptFn = ToScriptFn(fn);
-                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, null, classScope, scriptFn.Item2));
+                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevels.Public));
                     }
                     catch (NotImplementedException) { }
                 }
@@ -407,7 +425,7 @@ namespace HanabiLang.Interprets
                     try
                     {
                         var scriptConstructor = ToScriptConstructor(scriptClass, constructor);
-                        scriptClass.BuildInConstructor.Fns.Add(new ScriptFn(scriptConstructor.Item1, null, classScope, scriptConstructor.Item2));
+                        scriptClass.BuildInConstructor.Fns.Add(new ScriptFn(scriptConstructor.Item1, classScope, scriptConstructor.Item2, isStatic, AccessibilityLevels.Public));
                     }
                     catch (NotImplementedException) { }
                 }

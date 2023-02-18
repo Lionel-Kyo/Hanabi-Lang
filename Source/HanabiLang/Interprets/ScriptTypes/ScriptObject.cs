@@ -18,7 +18,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             this.ClassType = objectClass;
             this.Scope = new ScriptScope(ScopeType.Object, null, objectClass.Scope);
-            this.Scope.Variables["this"] = new ScriptVariable("this", new ScriptValue(this), true);
+            this.Scope.Variables["this"] = new ScriptVariable("this", new ScriptValue(this), true, false, AccessibilityLevels.Private);
             this.BuildInObject = buildInObject;
         }
 

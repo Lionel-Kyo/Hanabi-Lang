@@ -20,13 +20,14 @@ namespace HanabiLang.Interprets.ScriptTypes
         public bool IsBuildIn => this.Body == null;
 
         public ScriptClass(string name, List<AstNode> body,
-            ScriptScope scope, bool isStatic, bool ignoreInitialize = false)
+            ScriptScope scope, bool isStatic, AccessibilityLevels level, bool ignoreInitialize = false)
         {
             this.Name = name;
             this.Body = body;
             this.Scope = scope;
             this.BuildInConstructor = new ScriptFns(this.Name);
             this.IsStatic = isStatic;
+            this.Level = level;
             this.AddBasicFns();
 
             if (this.Body != null && !ignoreInitialize)
@@ -48,14 +49,15 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        protected void AddObjectFn(string name, List<FnParameter> parameters, BuildInFns.ScriptFnType fn)
+        protected void AddObjectFn(string name, List<FnParameter> parameters, BuildInFns.ScriptFnType fn,
+            bool isStatic = false, AccessibilityLevels level = AccessibilityLevels.Public)
         {
             if (!this.Scope.Functions.TryGetValue(name, out ScriptFns scriptFns))
             {
                 scriptFns = new ScriptFns(name);
                 this.Scope.Functions[name] = scriptFns;
             }
-            scriptFns.Fns.Add(new ScriptFn(parameters, null, this.Scope, fn));
+            scriptFns.Fns.Add(new ScriptFn(parameters, this.Scope, fn, isStatic, level));
         }
 
         private void AddBasicFns()

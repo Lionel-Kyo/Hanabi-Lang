@@ -17,19 +17,23 @@ namespace HanabiLang.Interprets.ScriptTypes
         public bool IsStatic { get; private set; }
         public AccessibilityLevels Level { get; private set; }
 
-        public ScriptVariable(string name, ScriptValue value, bool isConstant)
+        public ScriptVariable(string name, ScriptValue value, bool isConstant, bool isStatic, AccessibilityLevels level)
         {
             this.Name = name;
             this.Value = value;
             this.IsConstant = isConstant;
+            this.IsStatic = isStatic;
+            this.Level = level;
         }
 
-        public ScriptVariable(string name, ScriptFns Get, ScriptFns Set, bool isConstant)
+        public ScriptVariable(string name, ScriptFns Get, ScriptFns Set, bool isConstant, bool isStatic, AccessibilityLevels level)
         {
             this.Name = name;
             this.Get = Get;
             this.Set = Set;
             this.IsConstant = isConstant;
+            this.IsStatic = isStatic;
+            this.Level = level;
         }
 
         public override string ToString()

@@ -11,7 +11,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptBool : ScriptClass
     {
         public ScriptBool() : 
-            base("bool", null, new ScriptScope(ScopeType.Class), false)
+            base("bool", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {

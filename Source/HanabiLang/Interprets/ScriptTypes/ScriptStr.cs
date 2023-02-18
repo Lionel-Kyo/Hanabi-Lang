@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptStr : ScriptClass
     {
         public ScriptStr() :
-            base("str", null, new ScriptScope(ScopeType.Class), false)
+            base("str", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevels.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>() 
             {
