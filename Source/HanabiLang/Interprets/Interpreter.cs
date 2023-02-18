@@ -358,10 +358,15 @@ namespace HanabiLang.Interprets
                             {
                                 var fn = ((ScriptFns)scriptType);
                                 var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
+                                if ((int)accessLevel < (int)fnInfo.Item1.Level)
+                                    throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
                                 return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
                             }
                             else if (scriptType is ScriptClass)
                             {
+                                var _class = ((ScriptClass)scriptType);
+                                if ((int)accessLevel < (int)_class.Level)
+                                    throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
                                 return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args));
                             }
                             else if (scriptType is ScriptVariable &&
