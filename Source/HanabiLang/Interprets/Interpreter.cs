@@ -400,12 +400,30 @@ namespace HanabiLang.Interprets
                                 var variable = (ScriptVariable)scriptType;
                                 if ((int)accessLevel < (int)variable.Level)
                                     throw new SystemException($"Cannot access {variable.Level} {variable.Name}");
+
                                 if (variable.Value == null)
                                 {
                                     ScriptObject _this = isStaticAccess ? null : (ScriptObject)left.Value;
                                     return new ValueReference(
-                                        () => variable.Get.Call(_this),
-                                        x => variable.Set.Call(_this, x));
+                                        () =>
+                                        {
+                                            if (variable.Get == null)
+                                                throw new SystemException($"{variable.Name} cannot be read");
+                                            var fnInfo = variable.Get.GetFnInfo();
+                                            if ((int)accessLevel < (int)fnInfo.Item1.Level)
+                                                throw new SystemException($"{variable.Name} cannot be read");
+                                            return variable.Get.Call(_this, fnInfo);
+                                        },
+                                        x =>
+                                        {
+                                            if (variable.Set == null)
+                                                throw new SystemException($"{variable.Name} cannot be written");
+                                            var fnInfo = variable.Set.GetFnInfo(x);
+                                            if ((int)accessLevel < (int)fnInfo.Item1.Level)
+                                                throw new SystemException($"{variable.Name} cannot be written");
+                                            variable.Set.Call(_this, fnInfo);
+                                        }
+                                    );
                                 }
                                 return new ValueReference(() => variable.Value, x => variable.Value = x);
                             }
