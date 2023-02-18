@@ -14,21 +14,22 @@ namespace HanabiLang.Interprets.ScriptTypes
         public string Name { get; private set; }
         public List<AstNode> Body { get; private set; }
         public ScriptScope Scope { get; private set; }
+        public ScriptClass SuperClass { get; protected set; }
         public ScriptFns BuildInConstructor { get; private set; }
         public bool IsStatic { get; private set; }
         public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn => this.Body == null;
 
-        public ScriptClass(string name, List<AstNode> body,
-            ScriptScope scope, bool isStatic, AccessibilityLevel level, bool ignoreInitialize = false)
+        public ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, ScriptClass superClass,
+            bool isStatic, AccessibilityLevel level, bool ignoreInitialize = false)
         {
             this.Name = name;
             this.Body = body;
-            this.Scope = scope;
+            this.Scope = new ScriptScope(this, currentScope);
+            this.SuperClass = superClass;
             this.BuildInConstructor = new ScriptFns(this.Name);
             this.IsStatic = isStatic;
             this.Level = level;
-            this.AddBasicFns();
 
             if (this.Body != null && !ignoreInitialize)
             {
@@ -36,13 +37,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                 {
                     if (bodyNode is FnDefineNode || bodyNode is ClassDefineNode)
                     {
-                        Interpreter.InterpretChild(scope, bodyNode);
+                        Interpreter.InterpretChild(this.Scope, bodyNode);
                     }
                     else if (bodyNode is VariableDefinitionNode)
                     {
                         if (((VariableDefinitionNode)bodyNode).IsConstant)
                         {
-                            Interpreter.InterpretChild(scope, bodyNode);
+                            Interpreter.InterpretChild(this.Scope, bodyNode);
                         }
                     }
                 }
@@ -60,10 +61,24 @@ namespace HanabiLang.Interprets.ScriptTypes
             scriptFns.Fns.Add(new ScriptFn(parameters, this.Scope, fn, isStatic, level));
         }
 
-        private void AddBasicFns()
+        protected void AddVariable(string name, BuildInFns.ScriptFnType getFn, BuildInFns.ScriptFnType setFn, bool isStatic, ScriptClass dataType)
         {
-            AddObjectFn("ToStr", new List<FnParameter>(), 
-                args => new ScriptValue(ToStr((ScriptObject)args[0].Value)));
+            ScriptFns getFns = null;
+            ScriptFns setFns = null;
+
+            if (getFn != null)
+            {
+                getFns = new ScriptFns($"get_{name}");
+                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, isStatic, AccessibilityLevel.Public));
+            }
+
+            if (setFn != null)
+            {
+                setFns = new ScriptFns($"set_{name}");
+                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value", dataType) }, null, getFn, isStatic, AccessibilityLevel.Public));
+            }
+
+            this.Scope.Variables.Add(name, new ScriptVariable(name, getFns, setFns, false, isStatic, AccessibilityLevel.Public));
         }
 
         public virtual ScriptObject Not(ScriptObject left)
@@ -161,7 +176,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (_this.BuildInObject != null)
                 return BasicTypes.Str.Create(_this.BuildInObject.ToString());
-            return BasicTypes.Str.Create($"<object: {this.Name}>");
+            return BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>");
         }
 
         public virtual string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)

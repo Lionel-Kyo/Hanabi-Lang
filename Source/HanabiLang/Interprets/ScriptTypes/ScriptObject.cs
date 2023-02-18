@@ -17,13 +17,17 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptObject(ScriptClass objectClass, object buildInObject = null)
         {
             this.ClassType = objectClass;
-            this.Scope = new ScriptScope(ScopeType.Object, objectClass.Scope);
+            this.Scope = new ScriptScope(this, objectClass.Scope);
             this.Scope.Variables["this"] = new ScriptVariable("this", new ScriptValue(this), true, false, AccessibilityLevel.Private);
             this.BuildInObject = buildInObject;
         }
 
         public override string ToString()
         {
+            if (this.Scope.Parent.Functions.TryGetValue("ToStr", out ScriptFns fns))
+            {
+                return (string)((ScriptObject)fns.Call(this).Value).BuildInObject;
+            }
             return (string)ClassType.ToStr(this).BuildInObject;
         }
 

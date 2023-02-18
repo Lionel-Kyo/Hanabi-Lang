@@ -23,54 +23,46 @@ namespace HanabiLang.Interprets
         public Dictionary<string, ScriptFns> Functions { get; private set; }
         public Dictionary<string, ScriptClass> Classes { get; private set; }
         public ScriptScope Parent { get; set; }
-        //public ScriptScope ClassScope { get; private set; }
-        public ScopeType Type { get; private set; }
-        public ScriptScope(ScopeType Type, ScriptScope parent = null/*, ScriptScope classScope = null*/)
+        //public ScopeType Type { get; private set; }
+        public ScriptType Type { get; private set; }
+        public ScriptScope(ScriptType type, ScriptScope parent = null)
         {
-            this.Type = Type;
+            this.Type = type;
             this.Parent = parent;
             this.Variables = new Dictionary<string, ScriptVariable>();
             this.Functions = new Dictionary<string, ScriptFns>();
             this.Classes = new Dictionary<string, ScriptClass>();
-            /*this.ClassScope = classScope;
-            if (this.Type == ScopeType.Object && this.ClassScope == null)
-            {
-                throw new SystemException("Object cannot be created without class");
-            }*/
         }
-
-        /*public ScriptScope Copy()
-        {
-            ScriptScope result = new ScriptScope(this.Type, this.Parent, ClassScope);
-            result.Variables = this.Variables;
-            result.Functions = this.Functions;
-            result.Classes = this.Classes;
-            return result;
-        }*/
 
         public bool TryGetValue(string name, out ScriptType value)
         {
-            if (this.Type == ScopeType.Object)
+            if (this.Type is ScriptObject)
             {
-                if (this.Parent.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
-                {
-                    value = interpretedFunction;
-                    return true;
-                }
-                else if (this.Parent.Classes.TryGetValue(name, out ScriptClass interpretedClass))
-                {
-                    value = interpretedClass;
-                    return true;
-                }
-                else if (this.Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
+                ScriptObject scriptObject = (ScriptObject)this.Type;
+
+                if (this.Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
                 {
                     value = interpretedVariable;
                     return true;
                 }
-                else if (this.Parent.Variables.TryGetValue(name, out ScriptVariable interpretedVariable2))
+
+                for (ScriptClass cls = scriptObject.ClassType; cls != null; cls = cls.SuperClass)
                 {
-                    value = interpretedVariable2;
-                    return true;
+                    if (cls.Scope.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
+                    {
+                        value = interpretedFunction;
+                        return true;
+                    }
+                    else if (cls.Scope.Classes.TryGetValue(name, out ScriptClass interpretedClass))
+                    {
+                        value = interpretedClass;
+                        return true;
+                    }
+                    else if (cls.Scope.Variables.TryGetValue(name, out ScriptVariable interpretedVariable2))
+                    {
+                        value = interpretedVariable2;
+                        return true;
+                    }
                 }
             }
             else

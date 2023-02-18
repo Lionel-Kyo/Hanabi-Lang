@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptFloat : ScriptClass
     {
         public ScriptFloat() :
-            base("float", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
+            base("float", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {

@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptEnumerator : ScriptClass
     {
         public ScriptEnumerator() :
-            base("Enumerator", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
+            base("Enumerator", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>()
             {

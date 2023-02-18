@@ -189,7 +189,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         private Tuple<ScriptFn, List<ScriptVariable>> FindFnInfo(Dictionary<string, ScriptValue> args)
         {
             var fns = new List<Tuple<ScriptFn, List<ScriptVariable>, int>>();
-
             foreach (var fn in this.Fns)
             {
                 if ((args.Count < fn.MinArgs || args.Count > fn.Parameters.Count) && !fn.HasMultiArgs)
@@ -299,7 +298,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 parentScope.Parent = _this.Scope.ClassScope;
             }*/
 
-            var fnScope = new ScriptScope(ScopeType.Function, parentScope);
+            var fnScope = new ScriptScope(null, parentScope);
 
             foreach (var variable in args)
             {

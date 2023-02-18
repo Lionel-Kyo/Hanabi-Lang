@@ -25,7 +25,7 @@ namespace HanabiLang.Interprets
         public Interpreter(AbstractSyntaxTree ast, string path, bool isMain)
         {
             this.ast = ast;
-            this.currentScope = new ScriptScope(ScopeType.Normal);
+            this.currentScope = new ScriptScope(null);
             this.Path = path;
             this.currentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
             this.currentScope.Classes.Add("str", BasicTypes.Str);
@@ -66,7 +66,7 @@ namespace HanabiLang.Interprets
 
                     bool isStatic = csharpType.IsAbstract && csharpType.IsSealed;
 
-                    scriptClass = new ScriptClass(className, null, new ScriptScope(ScopeType.Class), isStatic, AccessibilityLevel.Public);
+                    scriptClass = new ScriptClass(className, null, null, BasicTypes.ObjectClass, isStatic, AccessibilityLevel.Public);
                     BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType, isStatic);
                     ImportedItems.Types[csharpType] = scriptClass;
                 }
@@ -146,11 +146,11 @@ namespace HanabiLang.Interprets
                     if (string.IsNullOrEmpty(realNode.AsName))
                         interpretScope.Classes[fileNameWithoutExtension] = new
                             ScriptClass(fileNameWithoutExtension, interpreter.ast.Nodes,
-                                interpreter.currentScope, true, AccessibilityLevel.Public, true);
+                                interpreter.currentScope, BasicTypes.ObjectClass, true, AccessibilityLevel.Public, true);
                     else
                         interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, interpreter.ast.Nodes,
-                                interpreter.currentScope, true, AccessibilityLevel.Public, true);
+                                interpreter.currentScope, BasicTypes.ObjectClass, true, AccessibilityLevel.Public, true);
                 }
                 else
                 {
@@ -238,7 +238,7 @@ namespace HanabiLang.Interprets
                     if (realNode.GetFn.Body.Count == 0)
                     {
                         setFns = new ScriptFns($"set_{realNode.Name}");
-                        if (interpretScope.Type == ScopeType.Object)
+                        if (interpretScope.Type is ScriptObject)
                             setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
                                 null, args => setValue = args[1], realNode.SetFn.IsStatic, realNode.SetFn.Level));
                         else
@@ -317,9 +317,9 @@ namespace HanabiLang.Interprets
                     }
                 }
 
-                var scope = new ScriptScope(ScopeType.Class, interpretScope);
+                //var scope = new ScriptScope(ScopeType.Class, interpretScope);
                 interpretScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
-                    scope, realNode.IsStatic, realNode.Level);
+                    interpretScope, BasicTypes.ObjectClass, realNode.IsStatic, realNode.Level);
             }
         }
 
@@ -597,7 +597,7 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (IfNode)node;
 
-                var scope = new ScriptScope(ScopeType.Conditon, interpretScope);
+                var scope = new ScriptScope(null, interpretScope);
 
                 var compareResult = InterpretExpression(scope, realNode.Condition).Ref;
 
@@ -651,7 +651,7 @@ namespace HanabiLang.Interprets
                             hasMatchCase = true;
                             foreach (var item in caseNode.Body)
                             {
-                                var scope = new ScriptScope(ScopeType.Conditon, interpretScope);
+                                var scope = new ScriptScope(null, interpretScope);
                                 if (item is ReturnNode)
                                 {
                                     var returnNode = (ReturnNode)item;
@@ -680,7 +680,7 @@ namespace HanabiLang.Interprets
 
                 if (realNode.DefaultCase == null || hasMatchCase)
                     return ValueReference.Empty;
-                var defaultScope = new ScriptScope(ScopeType.Conditon, interpretScope);
+                var defaultScope = new ScriptScope(null, interpretScope);
                 foreach (var item in realNode.DefaultCase.Body)
                 {
                     if (item is ReturnNode)
@@ -710,7 +710,7 @@ namespace HanabiLang.Interprets
 
                 while ((bool)((ScriptObject)(InterpretExpression(interpretScope, condition).Ref.Value)).BuildInObject)
                 {
-                    var scope = new ScriptScope(ScopeType.Loop, interpretScope);
+                    var scope = new ScriptScope(null, interpretScope);
                     var hasBreak = false;
 
                     foreach (var bodyNode in realNode.Body)
@@ -782,7 +782,7 @@ namespace HanabiLang.Interprets
 
                 foreach (var item in list)
                 {
-                    var scope = new ScriptScope(ScopeType.Loop, interpretScope);
+                    var scope = new ScriptScope(null, interpretScope);
 
                     scope.Variables[realNode.Initializer] =
                         new ScriptVariable(realNode.Initializer, item, false, true, AccessibilityLevel.Private);

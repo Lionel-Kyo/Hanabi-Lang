@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptStr : ScriptClass
     {
         public ScriptStr() :
-            base("str", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
+            base("str", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
         {
             this.AddObjectFn(this.Name, new List<FnParameter>() 
             {
@@ -50,11 +50,11 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(((string)_this.BuildInObject).Substring((int)startIndex, (int)length));
             });
 
-            this.AddObjectFn("Length", new List<FnParameter>(), args =>
+            AddVariable("Length", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((List<ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
-            });
+                return new ScriptValue(((string)((ScriptObject)args[0].Value).BuildInObject).Length);
+            }, null, true, null);
 
             this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
             {

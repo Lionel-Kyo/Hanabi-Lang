@@ -12,13 +12,20 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptList : ScriptClass
     {
         public ScriptList() : 
-            base("List", null, new ScriptScope(ScopeType.Class), false, AccessibilityLevel.Public)
+            base("List", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
         {
-            this.AddObjectFn("Length", new List<FnParameter>(), args =>
+            /*this.AddObjectFn("Length", new List<FnParameter>(), args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Count);
-            });
+            });*/
+
+            AddVariable("Length", args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Count);
+            }, null, true, null);
+
             this.AddObjectFn("Add", new List<FnParameter>()
             {
                 new FnParameter("list", BasicTypes.List)

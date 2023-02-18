@@ -8,6 +8,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 {
     internal class BasicTypes
     {
+        public static ScriptObjectClass ObjectClass = new ScriptObjectClass();
         public static ScriptInt Int = new ScriptInt();
         public static ScriptFloat Float = new ScriptFloat();
         public static ScriptDecimal Decimal = new ScriptDecimal();

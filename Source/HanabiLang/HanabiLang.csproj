@@ -62,6 +62,7 @@
     <Compile Include="Interprets\BuildInClasses.cs" />
     <Compile Include="Interprets\ScriptTypes\BasicTypes.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptEnumerator.cs" />
+    <Compile Include="Interprets\ScriptTypes\ScriptObjectClass.cs" />
     <Compile Include="Interprets\ScriptValue.cs" />
     <Compile Include="Interprets\BuildInFns.cs" />
     <Compile Include="Interprets\ImportedFiles.cs" />
