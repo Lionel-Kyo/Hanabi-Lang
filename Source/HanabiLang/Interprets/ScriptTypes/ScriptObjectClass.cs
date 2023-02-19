@@ -13,6 +13,12 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             AddObjectFn("ToStr", new List<FnParameter>(),
                 args => new ScriptValue(ToStr((ScriptObject)args[0].Value)));
+
+            AddVariable("Type", args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(_this.ClassType);
+            }, null, true, null);
         }
     }
 }

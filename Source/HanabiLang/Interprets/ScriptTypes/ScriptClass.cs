@@ -41,7 +41,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     }
                     else if (bodyNode is VariableDefinitionNode)
                     {
-                        if (((VariableDefinitionNode)bodyNode).IsConstant)
+                        if (((VariableDefinitionNode)bodyNode).IsStatic)
                         {
                             Interpreter.InterpretChild(this.Scope, bodyNode);
                         }
@@ -274,7 +274,8 @@ namespace HanabiLang.Interprets.ScriptTypes
             { 
                 foreach (var bodyNode in this.Body)
                 {
-                    if (bodyNode is VariableDefinitionNode)
+                    if (bodyNode is VariableDefinitionNode &&
+                        !((VariableDefinitionNode)bodyNode).IsStatic)
                     {
                         Interpreter.InterpretChild(_object.Scope, bodyNode);
                     }
