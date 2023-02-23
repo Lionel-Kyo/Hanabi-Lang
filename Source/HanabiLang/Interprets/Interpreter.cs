@@ -627,16 +627,48 @@ namespace HanabiLang.Interprets
             else if (node is FnReferenceCallNode)
             {
                 var realNode = (FnReferenceCallNode)node;
-                var fnRef = InterpretExpression(interpretScope, realNode.Reference);
-                if (fnRef.Ref.IsFunction)
+                string specialAccess = "";
+                if (realNode.Reference is VariableReferenceNode)
                 {
-                    var fn = (ScriptFns)fnRef.Ref.Value;
+                    string rawRef = ((VariableReferenceNode)realNode.Reference).Name;
+                    if (rawRef.Equals("this") || rawRef.Equals("super"))
+                        specialAccess = rawRef;
+                }
+
+                ScriptValue fnRef = specialAccess.Length <= 0 ? InterpretExpression(interpretScope, realNode.Reference).Ref : null;
+
+                if (fnRef == null)
+                {
+                    if (!(interpretScope.Type is ScriptFn))
+                        throw new SystemException("Cannot call this/super function out of function");
+                    if (!(interpretScope.Parent.Type is ScriptObject))
+                        throw new SystemException("Cannot call this/super function out of object");
+
+                    var scriptObject = (ScriptObject)interpretScope.Parent.Type;
+                    if (specialAccess.Equals("this") && 
+                        scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.Name, out ScriptType thisFns))
+                    {
+                        var fn = (ScriptFns)thisFns;
+                        var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
+                        return new ValueReference(fn.Call(scriptObject, fnInfo));
+                    }
+                    else if (specialAccess.Equals("super") && 
+                        scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.Name, out ScriptType superFns))
+                    {
+                        var fn = (ScriptFns)superFns;
+                        var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
+                        return new ValueReference(fn.Call(scriptObject, fnInfo));
+                    }
+                }
+                else if (fnRef.IsFunction)
+                {
+                    var fn = (ScriptFns)fnRef.Value;
                     var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
                     return new ValueReference(fn.Call(null, fnInfo));
                 }
-                else if (fnRef.Ref.IsClass)
+                else if (fnRef.IsClass)
                 {
-                    var _class = (ScriptClass)fnRef.Ref.Value;
+                    var _class = (ScriptClass)fnRef.Value;
                     return new ValueReference(_class.Call(interpretScope, realNode.Args));
                 }
 
