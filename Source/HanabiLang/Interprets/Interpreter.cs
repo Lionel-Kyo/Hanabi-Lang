@@ -8,6 +8,7 @@ using HanabiLang.Parses;
 using HanabiLang.Lexers;
 using HanabiLang.Interprets.ScriptTypes;
 using HanabiLang.Parses.Nodes;
+using System.Threading;
 
 namespace HanabiLang.Interprets
 {
@@ -43,9 +44,22 @@ namespace HanabiLang.Interprets
 
         public void Interpret()
         {
-            foreach (var child in this.ast.Nodes)
+            try
             {
-                InterpretChild(this.currentScope, child);
+                foreach (var child in this.ast.Nodes)
+                {
+                    InterpretChild(this.currentScope, child);
+                }
+            }
+            catch (Exception ex)
+            {
+                StringBuilder result = new StringBuilder();
+                for (Exception exception = ex; exception != null; exception = exception.InnerException)
+                {
+                    result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
+                }
+                Console.Error.WriteLine(result.ToString());
+                Environment.ExitCode = ex.HResult;
             }
         }
 
