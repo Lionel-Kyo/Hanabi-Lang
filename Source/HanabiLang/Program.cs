@@ -42,7 +42,7 @@ namespace HanabiLang
             var ast = parser.Parse();
             foreach (var item in ast.Nodes)
             {
-                 //Console.WriteLine(item);
+                 // Console.WriteLine(item);
             }
             //Console.WriteLine();
             Interpreter.Arguments = args;

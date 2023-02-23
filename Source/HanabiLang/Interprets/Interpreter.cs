@@ -545,6 +545,17 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (VariableReferenceNode)node;
 
+                if (realNode.Name.Equals("this"))
+                {
+                    if (interpretScope.Type is ScriptObject)
+                        return new ValueReference(new ScriptValue((ScriptObject)interpretScope.Type));
+                    else if (interpretScope.Type is ScriptFn && interpretScope.Parent.Type is ScriptObject)
+                        return new ValueReference(new ScriptValue((ScriptObject)interpretScope.Parent.Type));
+                    throw new SystemException($"Unexpected keyword this");
+                }
+                else if (realNode.Name.Equals("super"))
+                    throw new SystemException($"super keyword cannot used without reference to its member");
+
                 // Checking if the variable is defined in any scope above the current one
                 for (var scope = interpretScope; scope != null; scope = scope.Parent)
                 {
