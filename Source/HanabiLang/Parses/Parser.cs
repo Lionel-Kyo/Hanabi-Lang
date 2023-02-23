@@ -188,7 +188,12 @@ namespace HanabiLang.Parses
 
                 this.Expect(TokenType.OPERATOR, TokenType.DOT);
 
-                left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), currentToken.Raw);
+                /*if (left is VariableReferenceNode && ((VariableReferenceNode)left).Name.Equals("this"))
+                    left = new ObjectAccessNode(false, this.Factor(skipIndexers, skipArrowFn));
+                else if (left is VariableReferenceNode && ((VariableReferenceNode)left).Name.Equals("super"))
+                    left = new ObjectAccessNode(true, this.Factor(skipIndexers, skipArrowFn));
+                else*/
+               left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), currentToken.Raw);
             }
 
             // For function calling
@@ -1251,7 +1256,7 @@ namespace HanabiLang.Parses
                             this.currentTokenIndex++;
                             result = new ContinueNode();
                         }
-                        else if (token.Raw.Equals("this"))
+                        else if (token.Raw.Equals("this") || token.Raw.Equals("super"))
                         {
                             var expression = this.Expression();
                             expression.Line = token.Line;

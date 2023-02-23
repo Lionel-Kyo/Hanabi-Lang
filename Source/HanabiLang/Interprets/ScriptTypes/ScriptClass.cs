@@ -21,7 +21,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         public bool IsStatic { get; private set; }
         public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn => this.Body == null;
-        public bool IsSuperClass => this.SuperClass == null;
 
         public ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> superClasses,
             bool isStatic, AccessibilityLevel level, bool isImported = false)

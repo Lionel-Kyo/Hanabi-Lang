@@ -339,24 +339,35 @@ namespace HanabiLang.Interprets
                 var realNode = (ExpressionNode)node;
 
                 var _operater = realNode.Operator;
-                var left = InterpretExpression(interpretScope, realNode.Left).Ref;
+                string specialAccess = "";
+                if (realNode.Left is VariableReferenceNode)
+                {
+                    string rawRef = ((VariableReferenceNode)realNode.Left).Name;
+                    if (rawRef.Equals("this") || rawRef.Equals("super"))
+                        specialAccess = rawRef;
+                }
+
+                ScriptValue left = specialAccess.Length <= 0 ? InterpretExpression(interpretScope, realNode.Left).Ref : 
+                    new ScriptValue((ScriptObject)interpretScope.Parent.Type);
+
                 if (_operater == ".")
                 {
+                    bool isStaticAccess = left.Value is ScriptClass;
+
                     ScriptScope leftScope = null;
-                    if (left.Value is ScriptClass)
-                        leftScope = ((ScriptClass)left.Value).Scope;
-                    else if (left.Value is ScriptFns)
-                        throw new SystemException("Function cannot use operator '.'");
-                    else
+                    if (specialAccess.Equals("this"))
                         leftScope = ((ScriptObject)left.Value).Scope;
+                    else if (specialAccess.Equals("super"))
+                        leftScope = ((ScriptObject)left.Value).ClassType.SuperClass.Scope;
+                    else if (left.Value is ScriptObject)
+                        leftScope = ((ScriptObject)left.Value).Scope;
+                    else if (left.Value is ScriptClass)
+                        leftScope = ((ScriptClass)left.Value).Scope;
+                    else/* if (left.Value is ScriptFns)*/
+                        throw new SystemException("Function cannot use operator '.'");
 
                     bool isPrivateAccess = interpretScope.ContainsScope(leftScope);
                     AccessibilityLevel accessLevel = isPrivateAccess ? AccessibilityLevel.Private : AccessibilityLevel.Public;
-                    bool isStaticAccess = left.Value is ScriptClass;
-                    if (isStaticAccess && ((ScriptClass)left.Value).IsSuperClass)
-                    {
-                        Console.WriteLine();
-                    }
 
                     if (realNode.Right is FnReferenceCallNode)
                     {
@@ -373,6 +384,7 @@ namespace HanabiLang.Interprets
                                 var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
                                 if ((int)accessLevel < (int)fnInfo.Item1.Level)
                                     throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
+
                                 return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
                             }
                             else if (scriptType is ScriptClass)
@@ -387,6 +399,7 @@ namespace HanabiLang.Interprets
                             {
                                 var fn = ((ScriptFns)scriptType);
                                 var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
+
                                 return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
                             }
                             else

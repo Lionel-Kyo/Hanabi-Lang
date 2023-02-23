@@ -87,6 +87,7 @@
     <Compile Include="Lexers\InterpolatedStringToken.cs" />
     <Compile Include="Parses\AbstractSyntaxTree.cs" />
     <Compile Include="Parses\Nodes\EmptyNode.cs" />
+    <Compile Include="Parses\Nodes\ExpressionNode.cs" />
     <Compile Include="Parses\Nodes\FnReferenceCallNode.cs" />
     <Compile Include="Parses\Nodes\InterpolatedStringNode.cs" />
     <Compile Include="Parses\Nodes\ThrowNode.cs" />
@@ -99,7 +100,6 @@
     <Compile Include="Parses\Nodes\BreakNode.cs" />
     <Compile Include="Parses\Nodes\ClassDefineNode.cs" />
     <Compile Include="Parses\Nodes\ContinueNode.cs" />
-    <Compile Include="Parses\Nodes\ExpressionNode.cs" />
     <Compile Include="Parses\Nodes\FloatNode.cs" />
     <Compile Include="Parses\Nodes\ForNode.cs" />
     <Compile Include="Parses\Nodes\FnCallNode.cs" />
