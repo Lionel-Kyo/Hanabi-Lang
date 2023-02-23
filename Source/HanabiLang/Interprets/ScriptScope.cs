@@ -36,34 +36,49 @@ namespace HanabiLang.Interprets
 
         public bool TryGetValue(string name, out ScriptType value)
         {
+            if (name.Equals("this"))
+            {
+                if (this.Type is ScriptObject)
+                {
+                    value = this.Type;
+                    return true;
+                }
+                else if (this.Type is ScriptFn && this.Parent.Type is ScriptObject)
+                {
+                    value = this.Parent.Type;
+                    return true;
+                }
+                else
+                {
+                    throw new SystemException("Cannot use this out of object");
+                }
+            }
             if (this.Type is ScriptObject)
             {
                 ScriptObject scriptObject = (ScriptObject)this.Type;
 
+                // Check if it exists in current class
                 if (this.Variables.TryGetValue(name, out ScriptVariable interpretedVariable))
                 {
                     value = interpretedVariable;
                     return true;
                 }
-
-                for (ScriptClass cls = scriptObject.ClassType; cls != null; cls = cls.SuperClass)
+                else if (scriptObject.ClassType.Scope.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
                 {
-                    if (cls.Scope.Functions.TryGetValue(name, out ScriptFns interpretedFunction))
-                    {
-                        value = interpretedFunction;
-                        return true;
-                    }
-                    else if (cls.Scope.Classes.TryGetValue(name, out ScriptClass interpretedClass))
-                    {
-                        value = interpretedClass;
-                        return true;
-                    }
-                    else if (cls.Scope.Variables.TryGetValue(name, out ScriptVariable interpretedVariable2))
-                    {
-                        value = interpretedVariable2;
-                        return true;
-                    }
+                    value = interpretedFunction;
+                    return true;
                 }
+                else if (scriptObject.ClassType.Scope.Classes.TryGetValue(name, out ScriptClass interpretedClass))
+                {
+                    value = interpretedClass;
+                    return true;
+                }
+                else if (scriptObject.ClassType.Scope.Variables.TryGetValue(name, out interpretedVariable))
+                {
+                    value = interpretedVariable;
+                    return true;
+                }
+
             }
             else
             {

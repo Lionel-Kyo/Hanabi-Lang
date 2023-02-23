@@ -28,6 +28,7 @@ namespace HanabiLang.Interprets
             this.currentScope = new ScriptScope(null);
             this.Path = path;
             this.currentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
+            this.currentScope.Classes.Add("object", BasicTypes.ObjectClass);
             this.currentScope.Classes.Add("str", BasicTypes.Str);
             this.currentScope.Classes.Add("int", BasicTypes.Int);
             this.currentScope.Classes.Add("float", BasicTypes.Float);
@@ -66,7 +67,7 @@ namespace HanabiLang.Interprets
 
                     bool isStatic = csharpType.IsAbstract && csharpType.IsSealed;
 
-                    scriptClass = new ScriptClass(className, null, null, BasicTypes.ObjectClass, isStatic, AccessibilityLevel.Public);
+                    scriptClass = new ScriptClass(className, null, null, null, isStatic, AccessibilityLevel.Public);
                     BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType, isStatic);
                     ImportedItems.Types[csharpType] = scriptClass;
                 }
@@ -146,11 +147,11 @@ namespace HanabiLang.Interprets
                     if (string.IsNullOrEmpty(realNode.AsName))
                         interpretScope.Classes[fileNameWithoutExtension] = new
                             ScriptClass(fileNameWithoutExtension, interpreter.ast.Nodes,
-                                interpreter.currentScope, BasicTypes.ObjectClass, true, AccessibilityLevel.Public, true);
+                                interpreter.currentScope, null, true, AccessibilityLevel.Public, true);
                     else
                         interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, interpreter.ast.Nodes,
-                                interpreter.currentScope, BasicTypes.ObjectClass, true, AccessibilityLevel.Public, true);
+                                interpreter.currentScope, null, true, AccessibilityLevel.Public, true);
                 }
                 else
                 {
@@ -317,9 +318,17 @@ namespace HanabiLang.Interprets
                     }
                 }
 
-                //var scope = new ScriptScope(ScopeType.Class, interpretScope);
+                List<ScriptClass> superClasses = new List<ScriptClass>();
+                foreach (var item in realNode.SuperClasses)
+                {
+                    var superClass = InterpretExpression(interpretScope, item);
+                    if (!superClass.Ref.IsClass)
+                        throw new SystemException($"{superClass} cannot be inherited");
+                    superClasses.Add((ScriptClass)superClass.Ref.Value);
+                }
+
                 interpretScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
-                    interpretScope, BasicTypes.ObjectClass, realNode.IsStatic, realNode.Level);
+                    interpretScope, superClasses, realNode.IsStatic, realNode.Level);
             }
         }
 
@@ -344,6 +353,10 @@ namespace HanabiLang.Interprets
                     bool isPrivateAccess = interpretScope.ContainsScope(leftScope);
                     AccessibilityLevel accessLevel = isPrivateAccess ? AccessibilityLevel.Private : AccessibilityLevel.Public;
                     bool isStaticAccess = left.Value is ScriptClass;
+                    if (isStaticAccess && ((ScriptClass)left.Value).IsSuperClass)
+                    {
+                        Console.WriteLine();
+                    }
 
                     if (realNode.Right is FnReferenceCallNode)
                     {
@@ -437,7 +450,27 @@ namespace HanabiLang.Interprets
                     }
                     throw new SystemException($"Unexcepted operation {left}'.'");
                 }
-                var right = InterpretExpression(interpretScope, realNode.Right).Ref;
+
+                ScriptValue right = null;
+
+                if (_operater == "&&")
+                {
+                    if (left.IsObject && ((ScriptObject)left.Value).ClassType is ScriptBool &&
+                        !(bool)((ScriptObject)left.Value).BuildInObject)
+                        return new ValueReference(new ScriptValue(false));
+                    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                    return new ValueReference(ScriptValue.And(left, right));
+                }
+                else if (_operater == "||")
+                {
+                    if (left.IsObject && ((ScriptObject)left.Value).ClassType is ScriptBool &&
+                        (bool)((ScriptObject)left.Value).BuildInObject)
+                        return new ValueReference(new ScriptValue(true));
+                    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                    return new ValueReference(ScriptValue.Or(left, right));
+                }
+
+                right = InterpretExpression(interpretScope, realNode.Right).Ref;
                 if (_operater == "+") return new ValueReference(left + right);
                 else if (_operater == "-") return new ValueReference(left - right);
                 else if (_operater == "*") return new ValueReference(left * right);
@@ -449,8 +482,6 @@ namespace HanabiLang.Interprets
                 else if (_operater == ">") return new ValueReference(left > right);
                 else if (_operater == "<=") return new ValueReference(left <= right);
                 else if (_operater == ">=") return new ValueReference(left >= right);
-                else if (_operater == "&&") return new ValueReference(ScriptValue.And(left, right));
-                else if (_operater == "||") return new ValueReference(ScriptValue.Or(left, right));
                 else throw new SystemException("Unknown operator " + _operater);
             }
             else if (node is IntNode)
@@ -526,6 +557,11 @@ namespace HanabiLang.Interprets
                                     });
                             }
                             return new ValueReference(() => variable.Value, x => variable.Value = x);
+                        }
+                        else if (scriptType is ScriptObject)
+                        {
+                            var _object = (ScriptObject)scriptType;
+                            return new ValueReference(new ScriptValue(_object));
                         }
                         else if (scriptType is ScriptFns)
                         {

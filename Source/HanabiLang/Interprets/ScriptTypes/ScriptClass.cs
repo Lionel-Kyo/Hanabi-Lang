@@ -12,28 +12,58 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptClass : ScriptType
     {
         public string Name { get; private set; }
+        // With non static variable definition node only
         public List<AstNode> Body { get; private set; }
         public ScriptScope Scope { get; private set; }
+        public List<ScriptClass> SuperClasses { get; protected set; }
         public ScriptClass SuperClass { get; protected set; }
         public ScriptFns BuildInConstructor { get; private set; }
         public bool IsStatic { get; private set; }
         public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn => this.Body == null;
+        public bool IsSuperClass => this.SuperClass == null;
 
-        public ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, ScriptClass superClass,
-            bool isStatic, AccessibilityLevel level, bool ignoreInitialize = false)
+        public ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> superClasses,
+            bool isStatic, AccessibilityLevel level, bool isImported = false)
         {
             this.Name = name;
-            this.Body = body;
-            this.Scope = new ScriptScope(this, currentScope);
-            this.SuperClass = superClass;
-            this.BuildInConstructor = new ScriptFns(this.Name);
             this.IsStatic = isStatic;
+            if (isImported)
+                this.Scope = currentScope;
+            else
+                this.Scope = new ScriptScope(this, currentScope);
+
+            if (!this.IsStatic && !this.Name.Equals("object"))
+            {
+                this.SuperClasses = superClasses;
+
+                if (this.SuperClasses == null || this.SuperClasses.Count <= 0)
+                    this.SuperClasses = new List<ScriptClass>() { BasicTypes.ObjectClass };
+
+                this.SuperClass = new ScriptClass($"super_{name}", true);
+                this.SuperClass.Level = AccessibilityLevel.Private;
+                this.SuperClass.Body = new List<AstNode>();
+
+                foreach (var _class in this.SuperClasses)
+                { 
+                    if (_class.BuildInConstructor.Fns.Count != 0)
+                        throw new SystemException("Inherit from C# class is not supported");
+
+                    if (_class.SuperClass != null)
+                        AddClassMember(_class.SuperClass, this.SuperClass, true);
+
+                    AddClassMember(_class, this.SuperClass, true);
+                }
+
+            }
+
+            this.BuildInConstructor = new ScriptFns(this.Name);
             this.Level = level;
 
-            if (this.Body != null && !ignoreInitialize)
+            if (body != null && !isImported)
             {
-                foreach (var bodyNode in this.Body)
+                this.Body = new List<AstNode>();
+                foreach (var bodyNode in body)
                 {
                     if (bodyNode is FnDefineNode || bodyNode is ClassDefineNode)
                     {
@@ -45,10 +75,93 @@ namespace HanabiLang.Interprets.ScriptTypes
                         {
                             Interpreter.InterpretChild(this.Scope, bodyNode);
                         }
+                        else
+                        {
+                            this.Body.Add(bodyNode);
+                        }
                     }
                 }
             }
+
+            if (this.SuperClass != null)
+                AddClassMember(this.SuperClass, this, false);
         }
+
+        private static void AddClassMember(ScriptClass from, ScriptClass to, bool replaceMember)
+        {
+            foreach (var fns in from.Scope.Functions)
+            {
+                // Console.WriteLine($"{from.Name} -> {to.Name} ({fns.Key})");
+                string fnName = fns.Key.Equals(from.Name) ? to.Name : fns.Key;
+                if (!to.Scope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
+                {
+                    scriptFns = new ScriptFns(fnName);
+                    to.Scope.Functions[fnName] = scriptFns;
+                }
+                scriptFns.AddFns(fns.Value.Fns, replaceMember);
+            }
+
+            foreach (var variable in from.Scope.Variables)
+            {
+                if (to.Scope.Variables.ContainsKey(variable.Key))
+                {
+                    if (replaceMember)
+                        to.Scope.Variables[variable.Key] = variable.Value;
+                }
+                else
+                {
+                    to.Scope.Variables[variable.Key] = variable.Value;
+                }
+            }
+
+            if (from.Body != null)
+            {
+                foreach (VariableDefinitionNode variableDefine in from.Body)
+                {
+                    int varNameIndex = to.Body.FindIndex
+                        (x => ((VariableDefinitionNode)x).Name.Equals(variableDefine.Name));
+                    if (varNameIndex == -1)
+                        to.Body.Add(variableDefine);
+                    else if (replaceMember)
+                        to.Body[varNameIndex] = variableDefine;
+                }
+            }
+        }
+
+        private static List<ScriptClass> GetSuperClasses(ScriptClass _class)
+        {
+            if (_class.SuperClasses == null)
+                return null;
+            List<ScriptClass> result = new List<ScriptClass>();
+            foreach (ScriptClass superClass in _class.SuperClasses)
+            {
+                result.Add(superClass);
+                var classes = GetSuperClasses(superClass);
+                if (classes != null)
+                {
+                    foreach (ScriptClass interClass in classes)
+                    {
+                        if (!result.Contains(interClass))
+                            result.Add(interClass);
+                    }
+                }
+                    
+            }
+            return result;
+        }
+
+        public ScriptClass(string name, List<ScriptClass> superClasses, bool isStatic, AccessibilityLevel level) :
+            this(name, null, null, superClasses, isStatic, level, false)
+        { }
+        public ScriptClass(string name, List<ScriptClass> superClasses, bool isStatic) :
+            this(name, null, null, superClasses, isStatic, AccessibilityLevel.Public, false)
+        { }
+        public ScriptClass(string name, bool isStatic) :
+            this(name, null, null, null, isStatic, AccessibilityLevel.Public, false)
+        { }
+        public ScriptClass(string name, bool isStatic, AccessibilityLevel level) :
+            this(name, null, null, null, isStatic, level, false)
+        { }
 
         protected void AddObjectFn(string name, List<FnParameter> parameters, BuildInFns.ScriptFnType fn,
             bool isStatic = false, AccessibilityLevel level = AccessibilityLevel.Public)
@@ -250,6 +363,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             if (this.IsStatic)
                 throw new SystemException($"Static class({this.Name}) cannot create an object");
 
+            // C# class
             if (this.BuildInConstructor.Fns.Count != 0)
             {
                 var fnInfo = this.BuildInConstructor.GetFnInfo(currentScope, callArgs);
@@ -257,7 +371,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
 
             ScriptObject _object = Create();
-            
+
 
             // Data Class
             /*var index = 0;
@@ -269,17 +383,11 @@ namespace HanabiLang.Interprets.ScriptTypes
                 index++;
             }*/
 
-
             if (this.Body != null)
             { 
                 foreach (var bodyNode in this.Body)
                 {
-                    if (bodyNode is VariableDefinitionNode &&
-                        !((VariableDefinitionNode)bodyNode).IsStatic)
-                    {
-                        Interpreter.InterpretChild(_object.Scope, bodyNode);
-                    }
-                    // interpreter.InterpretChild(bodyNode);
+                    Interpreter.InterpretChild(_object.Scope, bodyNode);
                 }
             }
 

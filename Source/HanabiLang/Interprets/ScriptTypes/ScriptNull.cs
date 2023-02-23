@@ -11,7 +11,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptNull : ScriptClass
     {
         public ScriptNull() :
-            base("bool", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
+            base("bool", isStatic: false)
         {
 
         }

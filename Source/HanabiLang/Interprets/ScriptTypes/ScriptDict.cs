@@ -12,13 +12,13 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptDict : ScriptClass
     {
         public ScriptDict() :
-            base("Dict", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
+            base("Dict", isStatic: false)
         {
             AddVariable("Length", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
-            }, null, true, null);
+            }, null, false, null);
 
             this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
             {

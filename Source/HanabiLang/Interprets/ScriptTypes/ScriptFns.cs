@@ -36,11 +36,14 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
     }
 
-    class ScriptFn
+    class ScriptFn : ScriptType
     {
         public List<FnParameter> Parameters { get; private set; }
         private Dictionary<string, int> ArgsMap { get; set; }
         public List<AstNode> Body { get; private set; }
+        /// <summary>
+        /// The scope when the function is created 
+        /// </summary>
         public ScriptScope Scope { get; private set; }
         public BuildInFns.ScriptFnType BuildInFn { get; private set; }
         public bool IsBuildIn => BuildInFn != null;
@@ -94,70 +97,39 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Fns = new List<ScriptFn>();
         }
 
-        /*public ScriptValue Call(ScriptScope currentScope, params ScriptValue[] values)
+        public int IndexOfOverridableFn(ScriptFn fn) => this.Fns.FindIndex(x =>
         {
-            ScriptFn fn = this.Fns[0]; 
-            if (fn.IsBuildIn)
+            if (x.Parameters.Count != fn.Parameters.Count)
+                return false;
+            for (int i = 0; i < x.Parameters.Count; i++)
             {
-                return fn.BuildInFn(values.ToList());
+                if (x.Parameters[i].DataType != fn.Parameters[i].DataType)
+                    return false;
             }
+            return true;
+        });
 
-            var fnScope = new ScriptScope(ScopeType.Function, fn.Scope);
-
-            var index = 0;
-            foreach (var parameter in fn.Parameters)
+        public void AddFn(ScriptFn fn, bool addOverridable)
+        {
+            int overrideIndex = IndexOfOverridableFn(fn);
+            if (overrideIndex == -1)
             {
-                var variable = new ScriptVariable(parameter.Name, values[index], false);
-                if (parameter.DefaultValue != null)
-                    variable.Value = parameter.DefaultValue;
-                fnScope.Variables[parameter.Name] = variable;
-
-                if (index >= values.Length && parameter.DefaultValue != null)
-                {
-                    fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name,
-                                                            parameter.DefaultValue, false);
-                }
-                else
-                {
-                    fnScope.Variables[parameter.Name] = new ScriptVariable(parameter.Name, values[index], false);
-                }
-                index++;
+                this.Fns.Add(fn);
             }
-
-
-            foreach (var bodyNode in fn.Body)
+            else if (addOverridable)
             {
-                if (bodyNode is ReturnNode)
-                {
-                    var returnNode = (ReturnNode)bodyNode;
-
-                    if (returnNode.Value != null)
-                    {
-                        var value = Interpreter.InterpretExpression(currentScope, returnNode.Value);
-
-                        // Returning the value
-                        return value.Ref;
-                    }
-
-                    // Returning the value
-                    return new ScriptValue();
-                }
-                if (bodyNode is IfNode || bodyNode is SwitchCaseNode || 
-                    bodyNode is ForNode || bodyNode is WhileNode)
-                {
-                    var value = Interpreter.InterpretExpression(currentScope, bodyNode);
-                    if (!value.IsEmpty)
-                    {
-                        return value.Ref;
-                    }
-                }
-                else
-                {
-                    Interpreter.InterpretChild(currentScope, bodyNode);
-                }
+                this.Fns.RemoveAt(overrideIndex);
+                this.Fns.Add(fn);
             }
-            return new ScriptValue();
-        }*/
+        }
+
+        public void AddFns(IEnumerable<ScriptFn> fns, bool addOverridable)
+        {
+            foreach (var fn in fns)
+            {
+                AddFn(fn, addOverridable);
+            }
+        }
 
         private static Dictionary<string, ScriptValue> GetArgs(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
         {
@@ -190,7 +162,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             var fns = new List<Tuple<ScriptFn, List<ScriptVariable>, int>>();
             foreach (var fn in this.Fns)
+            //for (int i = this.Fns.Count - 1; i >= 0; i--)
             {
+                //var fn = this.Fns[i];
                 if ((args.Count < fn.MinArgs || args.Count > fn.Parameters.Count) && !fn.HasMultiArgs)
                     continue;
 
@@ -225,7 +199,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                             (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
                             break;
                         if (parameter.DataType == null)
-                            anyTypeCount ++;
+                            anyTypeCount++;
                         variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
                     }
                     index++;
@@ -236,7 +210,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
 
             if (fns.Count <= 0)
-                throw new SystemException($"Match function call for {this.Name} does not exists");
+                throw new NotImplementedException($"Match function call for {this.Name} does not exists");
 
             var scriptfn = MinScriptFn(fns);
             return Tuple.Create(scriptfn.Item1, scriptfn.Item2);
@@ -283,13 +257,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                 {
                     valueArgs.Add(arg.Value);
                 }
-                if (_this != null)
+                if (!fn.IsStatic && _this != null)
                 {
                     valueArgs.Insert(0, new ScriptValue(_this));
                 }
                 return fn.BuildInFn(valueArgs);
             }
 
+            // if it is a object call, set the scope to object
+            // else if it is a static class call or it is a normal scope call, set the scope to the class scope / normal scope
             ScriptScope parentScope = _this == null ? fn.Scope : _this.Scope;
             /*ScriptScope parentScope = fn.Scope;
             if (_this != null)
@@ -298,7 +274,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 parentScope.Parent = _this.Scope.ClassScope;
             }*/
 
-            var fnScope = new ScriptScope(null, parentScope);
+            var fnScope = new ScriptScope(fn, parentScope);
 
             foreach (var variable in args)
             {

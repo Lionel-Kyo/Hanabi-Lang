@@ -9,16 +9,20 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptObjectClass : ScriptClass
     {
         public ScriptObjectClass():
-            base("object", null, null, null, false, AccessibilityLevel.Public)
+            base("object", isStatic: false)
         {
             AddObjectFn("ToStr", new List<FnParameter>(),
-                args => new ScriptValue(ToStr((ScriptObject)args[0].Value)));
+                args =>
+                {
+                    ScriptObject _this = (ScriptObject)args[0].Value;
+                    return new ScriptValue(_this.ClassType.ToStr(_this));
+                });
 
             AddVariable("Type", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 return new ScriptValue(_this.ClassType);
-            }, null, true, null);
+            }, null, false, null);
         }
     }
 }

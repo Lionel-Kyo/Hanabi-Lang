@@ -21,7 +21,15 @@ namespace HanabiLang.Parses.Nodes
         public override string ToString()
         {
             StringBuilder result = new StringBuilder();
-            result.Append($"{this.NodeName}({Values})");
+            result.Append($"{this.NodeName}(");
+            foreach(var value in Values)
+            {
+                if (value == null)
+                    result.Append("{}");
+                else
+                    result.Append($"{value} ");
+            }
+            result.Append(")");
             //result.AppendLine("  ");
             return result.ToString();
         }

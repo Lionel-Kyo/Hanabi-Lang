@@ -103,23 +103,6 @@ namespace HanabiLang.Interprets
         public bool IsObject => this.value is ScriptObject;
         public bool IsNull => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptNull;
 
-        private static bool CheckLRType(ScriptValue a, Func<ScriptValue, bool> checkA,
-            ScriptValue b, Func<ScriptValue, bool> checkB, out Tuple<ScriptType, ScriptType> orderdValue)
-        {
-            if (checkA(a) && checkB(b))
-            {
-                orderdValue = Tuple.Create(a.value, b.value);
-                return true;
-            }
-            else if (checkB(a) && checkA(b))
-            {
-                orderdValue = Tuple.Create(b.value, a.value);
-                return true;
-            }
-            orderdValue = null;
-            return false;
-        }
-
         public static ScriptValue operator !(ScriptValue a)
         {
             if (a.value is ScriptObject)
@@ -152,10 +135,10 @@ namespace HanabiLang.Interprets
         {
             if (a.value is ScriptObject && b.value is ScriptObject)
             {
-                if (a.value is ScriptStr || b.value is ScriptStr)
-                    return new ScriptValue(a.value.ToString() + b.value.ToString());
                 var left = (ScriptObject)a.value;
                 var right = (ScriptObject)b.value;
+                if (left.ClassType is ScriptStr ||right.ClassType is ScriptStr)
+                    return new ScriptValue(left.ToString() + right.ToString());
                 return new ScriptValue(left.ClassType.Add(left, right));
             }
             throw new SystemException($"cannot + value between {a.value} and {b.value}");

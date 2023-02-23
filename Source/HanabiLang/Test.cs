@@ -10,9 +10,9 @@ namespace Testing
     {
         public static object[] PrintLn(object[] arg)
         {
-            DateTime dt = DateTime.Now; 
+            DateTime dt = DateTime.Now;
             object[] lines = (object[])arg;
-            foreach (object line in lines) 
+            foreach (object line in lines)
             {
                 Console.WriteLine(line);
             }
@@ -21,7 +21,7 @@ namespace Testing
 
         public static Dictionary<object, object> PrintDict(object arg)
         {
-            Dictionary<object, object> lines = (Dictionary<object, object>) arg; 
+            Dictionary<object, object> lines = (Dictionary<object, object>)arg;
             foreach (var kv in lines)
             {
                 Console.WriteLine($"{kv.Key}: {kv.Value}");

@@ -9,9 +9,9 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptScript : ScriptClass
     {
         public ScriptScript(bool isMain, IEnumerable<string> args) : 
-            base("Script", null, null, null, true, AccessibilityLevel.Public)
+            base("Script", isStatic: true)
         {
-            this.Scope.Variables["IsMain"] = new ScriptVariable("IsMain", new ScriptValue(isMain), true, true, AccessibilityLevel.Public);
+            this.Scope.Variables["IsMain"] = new ScriptVariable("IsMain", new ScriptValue(BasicTypes.Bool.Create(isMain)), true, true, AccessibilityLevel.Public);
             List<ScriptValue> scriptArgs = new List<ScriptValue>();
             foreach (string arg in args)
             {

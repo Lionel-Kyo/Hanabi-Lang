@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     class ScriptList : ScriptClass
     {
         public ScriptList() : 
-            base("List", null, null, BasicTypes.ObjectClass, false, AccessibilityLevel.Public)
+            base("List", isStatic: false)
         {
             /*this.AddObjectFn("Length", new List<FnParameter>(), args =>
             {
@@ -24,7 +24,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Count);
-            }, null, true, null);
+            }, null, false, null);
 
             this.AddObjectFn("Add", new List<FnParameter>()
             {
@@ -33,6 +33,33 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 ((List<ScriptValue>)_this.BuildInObject).Add(args[1]);
+                return ScriptValue.Null;
+            });
+
+            ScriptFns sortDefaultFns = new ScriptFns("");
+            sortDefaultFns.Fns.Add(new ScriptFn(
+                new List<FnParameter> { new FnParameter("left"), new FnParameter("right") }, null,
+            args =>
+            {
+                if ((bool)((ScriptObject)(args[0] < args[1]).Value).BuildInObject)
+                    return new ScriptValue(-1);
+                else if (args[0].Equals(args[1]))
+                    return new ScriptValue(0);
+                return new ScriptValue(1);
+            }, true, AccessibilityLevel.Public));
+
+            this.AddObjectFn("Sort", new List<FnParameter>()
+            {
+                new FnParameter("compareFn", defaultValue:new ScriptValue(sortDefaultFns))
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns fns = (ScriptFns)args[1].Value;
+                ((List<ScriptValue>)_this.BuildInObject).Sort((x, y) => 
+                {
+                    ScriptObject compare = (ScriptObject)fns.Call(_this, x, y).Value;
+                    return (int)(long)compare.BuildInObject;
+                });
                 return ScriptValue.Null;
             });
             this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
