@@ -89,12 +89,13 @@ namespace HanabiLang.Interprets.ScriptTypes
         public string Name { get; private set; }
 
         public List<ScriptFn> Fns { get; private set; }
-        public ScriptFns(string name)
+        public ScriptFns(string name, params ScriptFn[] fns)
         {
             this.Name = name;
             if (string.IsNullOrEmpty(this.Name))
                 this.Name = "Lambda";
             this.Fns = new List<ScriptFn>();
+            this.Fns.AddRange(fns);
         }
 
         public int IndexOfOverridableFn(ScriptFn fn) => this.Fns.FindIndex(x =>
@@ -299,8 +300,8 @@ namespace HanabiLang.Interprets.ScriptTypes
                     // Returning the value
                     return new ScriptValue();
                 }
-                if (node is IfNode || node is SwitchCaseNode || 
-                    node is ForNode || node is WhileNode)
+                if (node is IfNode || node is SwitchCaseNode ||
+                    node is ForNode || node is WhileNode || node is TryCatchNode)
                 {
                     var value = Interpreter.InterpretExpression(fnScope, node);
                     if (!value.IsEmpty) 

@@ -108,6 +108,7 @@
     <Compile Include="Parses\Nodes\ImportNode.cs" />
     <Compile Include="Parses\Nodes\IntNode.cs" />
     <Compile Include="Parses\Nodes\NullNode.cs" />
+    <Compile Include="Parses\Nodes\TryCatchNode.cs" />
     <Compile Include="Parses\Parser.cs" />
     <Compile Include="Parses\Nodes\ReturnNode.cs" />
     <Compile Include="Parses\Nodes\StringNode.cs" />
