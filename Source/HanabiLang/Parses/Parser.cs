@@ -500,6 +500,30 @@ namespace HanabiLang.Parses
             return new IfNode(condition, thenBody, elseBody);
         }
 
+        private void AddBody(List<AstNode> body)
+        {
+            if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            {
+                this.Expect(TokenType.DOUBLE_ARROW);
+                AstNode child = this.ParseChild();
+                if (child != null)
+                    body.Add(child);
+            }
+            else
+            {
+                this.Expect(TokenType.OPEN_CURLY_BRACKET);
+
+                while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                {
+                    AstNode child = this.ParseChild();
+                    if (child != null)
+                        body.Add(child);
+                }
+
+                this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+            }
+        }
+
         private AstNode TryCatchStatement()
         {
             this.Expect(TokenType.KEYWORD);
@@ -507,47 +531,20 @@ namespace HanabiLang.Parses
             List<AstNode> catchBody = null;
             List<AstNode> finallyBody = null;
 
-            this.Expect(TokenType.OPEN_CURLY_BRACKET);
-
-            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
-            {
-                AstNode child = this.ParseChild();
-                if (child != null)
-                    tryBody.Add(child);
-            }
-
-            this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+            AddBody(tryBody);
 
             if (HasNextToken && NextToken.Raw.Equals("catch"))
             {
                 this.Expect(TokenType.KEYWORD);
-                this.Expect(TokenType.OPEN_CURLY_BRACKET);
-
                 catchBody = new List<AstNode>();
-                while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
-                {
-                    AstNode child = this.ParseChild();
-                    if (child != null)
-                        catchBody.Add(child);
-                }
-
-                this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+                AddBody(catchBody);
             }
 
             if (HasNextToken && NextToken.Raw.Equals("finally"))
             {
                 this.Expect(TokenType.KEYWORD);
-                this.Expect(TokenType.OPEN_CURLY_BRACKET);
-
                 finallyBody = new List<AstNode>();
-                while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
-                {
-                    AstNode child = this.ParseChild();
-                    if (child != null)
-                        finallyBody.Add(child);
-                }
-
-                this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+                AddBody(finallyBody);
             }
 
             if (catchBody == null && finallyBody == null)

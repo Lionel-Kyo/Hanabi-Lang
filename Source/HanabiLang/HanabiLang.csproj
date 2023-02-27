@@ -60,6 +60,8 @@
   <ItemGroup>
     <Compile Include="AccessibilityLevel.cs" />
     <Compile Include="Interprets\BuildInClasses.cs" />
+    <Compile Include="Interprets\Exceptions\HanibiException.cs" />
+    <Compile Include="Interprets\Exceptions\ScriptException.cs" />
     <Compile Include="Interprets\ScriptTypes\BasicTypes.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptEnumerator.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptObjectClass.cs" />

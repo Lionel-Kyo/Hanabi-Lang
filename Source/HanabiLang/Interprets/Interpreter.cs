@@ -7,6 +7,7 @@ using System.IO;
 using HanabiLang.Parses;
 using HanabiLang.Lexers;
 using HanabiLang.Interprets.ScriptTypes;
+using HanabiLang.Interprets.Exceptions;
 using HanabiLang.Parses.Nodes;
 using System.Threading;
 
@@ -39,6 +40,7 @@ namespace HanabiLang.Interprets
             this.currentScope.Classes.Add("List", BasicTypes.List);
             this.currentScope.Classes.Add("Dict", BasicTypes.Dict);
             this.currentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
+            this.currentScope.Classes.Add("Exception", BasicTypes.Exception);
             BuildInFns.AddBasicFunctions(this.currentScope);
         }
 
@@ -56,7 +58,10 @@ namespace HanabiLang.Interprets
                 StringBuilder result = new StringBuilder();
                 for (Exception exception = ex; exception != null; exception = exception.InnerException)
                 {
-                    result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
+                    if (exception is HanibiException)
+                        result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
+                    else
+                        result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
                 }
                 Console.Error.WriteLine(result.ToString());
                 Environment.ExitCode = ex.HResult;
@@ -330,14 +335,14 @@ namespace HanabiLang.Interprets
             }
             else if (node is ThrowNode)
             {
-               /* var realNode = (ThrowNode)node;
-                var result = this.InterpretExpression(realNode.Value);
+                var realNode = (ThrowNode)node;
+                var result = InterpretExpression(interpretScope, realNode.Value);
                 if (!result.Ref.IsObject)
                     throw new SystemException($"{result.Ref} is not exception type");
-                ScriptClass objClass = ((ScriptObject)result.Ref.Value).ObjectClass;
-                if (!objClass.IsBuildIn)
+                object exception = ((ScriptObject)result.Ref.Value).BuildInObject;
+                if (!(exception is Exception))
                     throw new SystemException($"{result.Ref} is not exception type");
-                throw (ScriptValue)result.Ref.Value;*/
+                throw (Exception)exception;
             }
             else if (node is VariableDefinitionNode)
             {
@@ -1087,7 +1092,7 @@ namespace HanabiLang.Interprets
                 }
                 else
                 {
-                    throw new SystemException("The variable is not enumerable");
+                    throw new SystemException("The variable cannot use indexer");
                 }
             }
             else if (node is NullNode)
