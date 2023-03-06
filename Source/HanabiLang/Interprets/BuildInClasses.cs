@@ -124,8 +124,11 @@ namespace HanabiLang.Interprets
 
         private static object ToCsObject(ScriptValue value, Type csType)
         {
-            if (value.IsClass || value.IsFunction)
-                throw new SystemException("Class and function is not supported");
+            /*if (value.IsClass || value.IsFunction)
+                throw new SystemException("Class and function is not supported");*/
+            if (csType == typeof(ScriptValue))
+                return value;
+
             var obj = (ScriptObject)value.Value;
 
             if (obj.ClassType is ScriptNull)
@@ -434,7 +437,9 @@ namespace HanabiLang.Interprets
 
         private static ScriptClass ToScriptType(Type type)
         {
-            if (type == typeof(sbyte))
+            if (type == typeof(ScriptValue))
+                return null;
+            else if (type == typeof(sbyte))
                 return BasicTypes.Int;
             else if (type == typeof(short))
                 return BasicTypes.Int;

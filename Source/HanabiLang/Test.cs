@@ -1,4 +1,6 @@
-﻿using System;
+﻿using HanabiLang.Interprets;
+using HanabiLang.Interprets.ScriptTypes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +10,15 @@ namespace Testing
 {
     public static class Test
     {
+        public static void TestFn(ScriptValue scriptValue)
+        {
+            if (scriptValue.IsFunction)
+            {
+                var fns = (ScriptFns)scriptValue.Value;
+                fns.Call(null);
+            }
+        }
+
         public static int[] PrintLn2(params int[] arg)
         {
             foreach (int line in arg)

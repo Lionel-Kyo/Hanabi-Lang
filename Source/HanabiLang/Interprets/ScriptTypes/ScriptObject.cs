@@ -8,9 +8,9 @@ using HanabiLang.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptObject : ScriptType
+    public class ScriptObject : ScriptType
     {
-        public ScriptScope Scope { get; private set; }
+        internal ScriptScope Scope { get; private set; }
         public ScriptClass ClassType { get; private set; }
         public object BuildInObject { get; set; }
 

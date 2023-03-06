@@ -7,7 +7,7 @@ using HanabiLang.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets
 {
-    class ScriptValue
+    public class ScriptValue
     {
         private ScriptType value { get; set; }
         public ScriptType Value => value;

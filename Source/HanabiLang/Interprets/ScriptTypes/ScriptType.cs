@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    abstract class ScriptType
+    public abstract class ScriptType
     {
 
     }

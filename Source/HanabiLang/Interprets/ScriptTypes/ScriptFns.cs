@@ -15,7 +15,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         Set
     }
 
-    class FnParameter
+    public class FnParameter
     {
         public string Name { get; private set; }
         public ScriptClass DataType { get; private set; }
@@ -36,15 +36,15 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
     }
 
-    class ScriptFn : ScriptType
+    public class ScriptFn : ScriptType
     {
         public List<FnParameter> Parameters { get; private set; }
         private Dictionary<string, int> ArgsMap { get; set; }
-        public List<AstNode> Body { get; private set; }
+        internal List<AstNode> Body { get; private set; }
         /// <summary>
         /// The scope when the function is created 
         /// </summary>
-        public ScriptScope Scope { get; private set; }
+        internal ScriptScope Scope { get; private set; }
         public BuildInFns.ScriptFnType BuildInFn { get; private set; }
         public bool IsBuildIn => BuildInFn != null;
         public int MinArgs { get; private set; }
@@ -74,17 +74,17 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        public ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
+        internal ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
             this(parameters, null, scope, fn, isStatic, level)
         { }
 
-        public ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, bool isStatic, AccessibilityLevel level) :
+        internal ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, bool isStatic, AccessibilityLevel level) :
             this(parameters, body, scope, null, isStatic, level)
         { }
 
     }
 
-    class ScriptFns : ScriptType
+    public class ScriptFns : ScriptType
     {
         public string Name { get; private set; }
 
@@ -231,17 +231,17 @@ namespace HanabiLang.Interprets.ScriptTypes
             return Tuple.Create(scriptfn.Item1, scriptfn.Item2);
         }
 
-        public Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(ScriptScope scope, Dictionary<string, AstNode> nodeArgs)
+        internal Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(ScriptScope scope, Dictionary<string, AstNode> nodeArgs)
         {
             return FindFnInfo(GetArgs(scope, nodeArgs));
         }
 
-        public Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(Dictionary<string, ScriptValue> args)
+        internal Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(Dictionary<string, ScriptValue> args)
         {
             return FindFnInfo(args);
         }
 
-        public Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(params ScriptValue[] values)
+        internal Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(params ScriptValue[] values)
         {
             Dictionary<string, ScriptValue> args = new Dictionary<string, ScriptValue>();
             for (int i = 0; i < values.Length; i++)
@@ -251,7 +251,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             return FindFnInfo(args); ;
         }
 
-        public ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> fnInfo)
+        internal ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> fnInfo)
         {
             return Call(fnInfo.Item1, _this, fnInfo.Item2);
         }

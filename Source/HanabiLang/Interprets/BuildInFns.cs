@@ -9,7 +9,7 @@ using HanabiLang.Parses.Nodes;
 
 namespace HanabiLang.Interprets
 {
-    class BuildInFns
+    public class BuildInFns
     {
         public delegate ScriptValue ScriptFnType(List<ScriptValue> parameters);
         //public static Dictionary<string, ScriptFnType> Fns = new Dictionary<string, ScriptFnType>();
@@ -47,7 +47,7 @@ namespace HanabiLang.Interprets
             return new ScriptValue(Console.ReadLine());
         }
 
-        public static void AddBasicFunctions(ScriptScope scope)
+        internal static void AddBasicFunctions(ScriptScope scope)
         {
             scope.Functions["print"] = new ScriptFns("print");
             scope.Functions["print"].Fns.Add(new ScriptFn(

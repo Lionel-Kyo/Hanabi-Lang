@@ -9,12 +9,12 @@ using HanabiLang.Parses.Nodes;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    class ScriptClass : ScriptType
+    public class ScriptClass : ScriptType
     {
         public string Name { get; private set; }
         // With non static variable definition node only
-        public List<AstNode> Body { get; private set; }
-        public ScriptScope Scope { get; private set; }
+        internal List<AstNode> Body { get; private set; }
+        internal ScriptScope Scope { get; private set; }
         public List<ScriptClass> SuperClasses { get; protected set; }
         public ScriptClass SuperClass { get; protected set; }
         public ScriptFns BuildInConstructor { get; private set; }
@@ -22,7 +22,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn => this.Body == null;
 
-        public ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> superClasses,
+        internal ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> superClasses,
             bool isStatic, AccessibilityLevel level, bool isImported = false)
         {
             this.Name = name;
@@ -357,7 +357,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public virtual ScriptObject Create() => new ScriptObject(this);
 
-        public ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
+        internal ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
         {
             if (this.IsStatic)
                 throw new SystemException($"Static class({this.Name}) cannot create an object");
