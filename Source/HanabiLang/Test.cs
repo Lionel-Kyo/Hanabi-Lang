@@ -10,13 +10,14 @@ namespace Testing
 {
     public static class Test
     {
-        public static void TestFn(ScriptValue scriptValue)
+        public static ScriptValue TestFn(ScriptValue scriptValue)
         {
             if (scriptValue.IsFunction)
             {
                 var fns = (ScriptFns)scriptValue.Value;
                 fns.Call(null);
             }
+            return new ScriptValue(BasicTypes.List.Create(new List<ScriptValue>() { ScriptValue.Null, new ScriptValue("Fake"), new ScriptValue(3.14) }));
         }
 
         public static int[] PrintLn2(params int[] arg)

@@ -208,6 +208,9 @@ namespace HanabiLang.Interprets
                 return ScriptValue.Null;
             Type csType = csObj.GetType();
 
+            if (csType == typeof(ScriptValue))
+                return (ScriptValue)csObj;
+
             if (csType == typeof(sbyte))
                 return new ScriptValue((sbyte)csObj);
             else if (csType == typeof(short))
