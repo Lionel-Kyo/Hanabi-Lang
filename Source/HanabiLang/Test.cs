@@ -8,6 +8,25 @@ namespace Testing
 {
     public static class Test
     {
+        public static int[] PrintLn2(params int[] arg)
+        {
+            foreach (int line in arg)
+            {
+                Console.WriteLine(line);
+            }
+            return arg;
+        }
+        public static object[] PrintLn2(params object[] arg)
+        {
+            DateTime dt = DateTime.Now;
+            object[] lines = (object[])arg;
+            foreach (object line in lines)
+            {
+                Console.WriteLine(line);
+            }
+            return lines;
+        }
+
         public static object[] PrintLn(object[] arg)
         {
             DateTime dt = DateTime.Now;

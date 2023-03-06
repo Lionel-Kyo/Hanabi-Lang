@@ -172,6 +172,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 int index = 0;
                 int anyTypeCount = 0;
                 var variables = new List<ScriptVariable>();
+                bool isMatchFn = true;
                 foreach (var parameter in fn.Parameters)
                 {
                     if (parameter.IsMultiArgs)
@@ -180,6 +181,12 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                         while (args.TryGetValue(index.ToString(), out ScriptValue value))
                         {
+                            if (parameter.DataType != null &&
+                                (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
+                            {
+                                isMatchFn = false;
+                                break;
+                            }
                             multipleArguments.Add(value);
                             index++;
                         }
@@ -188,7 +195,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                     else if (index >= args.Count)
                     {
                         if (parameter.DefaultValue == null)
+                        {
+                            isMatchFn = false;
                             break;
+                        }
                         variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevel.Private));
                     }
                     else
@@ -198,7 +208,10 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                         if (parameter.DataType != null && 
                             (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
+                        {
+                            isMatchFn = false;
                             break;
+                        }
                         if (parameter.DataType == null)
                             anyTypeCount++;
                         variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
@@ -206,7 +219,8 @@ namespace HanabiLang.Interprets.ScriptTypes
                     index++;
                 }
 
-                if (index == fn.Parameters.Count || fn.HasMultiArgs)
+                // if (index == fn.Parameters.Count || fn.HasMultiArgs)
+               if (isMatchFn)
                     fns.Add(Tuple.Create(fn, variables, anyTypeCount));
             }
 

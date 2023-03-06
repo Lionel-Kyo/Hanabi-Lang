@@ -20,8 +20,8 @@ namespace HanabiLang
             //string path = "./Test3.txt";
             //string path = "./Test4.txt";
             //string path = "./BubbleSort.txt";
-            //string path = "./CsImport.txt";
-            string path = "./CsImport2.txt";
+            string path = "./CsImport.txt";
+            //string path = "./CsImport2.txt";
             //string path = "./FnInClass.txt";
             //string path = "./InterpolatedString.txt";
             //string path = "./ImportJson.txt";

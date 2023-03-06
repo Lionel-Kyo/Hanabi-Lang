@@ -491,9 +491,11 @@ namespace HanabiLang.Interprets
             {
                 string name = parameter.Name;
                 Type type = parameter.ParameterType;
-                object defaultValue = parameter.DefaultValue;
+                ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
+                bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 csParameters.Add(type);
-                scriptParameters.Add(new FnParameter(name, ToScriptType(type)));
+                ScriptClass scriptType = isMultipleArgs ? ToScriptType(type.GetElementType()) : ToScriptType(type);
+                scriptParameters.Add(new FnParameter(name, scriptType, defaultValue, isMultipleArgs));
             }
 
             BuildInFns.ScriptFnType fn = args =>
