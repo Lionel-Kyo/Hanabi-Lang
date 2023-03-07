@@ -7,7 +7,7 @@ using System.IO;
 
 namespace HanabiLang.Lexers
 {
-    public static class Lexer
+    internal static class Lexer
     {
         /// <summary>
         /// Identifier not allowed charachers

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Lexers
 {
-    public enum TokenType
+    internal enum TokenType
     {
         OPERATOR,
         OPEN_ROUND_BRACKET,

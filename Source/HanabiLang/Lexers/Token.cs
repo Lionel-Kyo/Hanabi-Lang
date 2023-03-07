@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace HanabiLang.Lexers
 {
 
-    public class Token
+    internal class Token
     {
         public TokenType Type { get; private set; }
         public string Raw { get; private set; }

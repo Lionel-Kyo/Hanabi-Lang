@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace HanabiLang.Lexers
 {
 
-    public class InterpolatedStringToken: Token
+    internal class InterpolatedStringToken: Token
     {
         public List<string> Texts { get; private set; }
         public List<List<Token>> InterpolatedTokens { get; private set; }
