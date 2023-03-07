@@ -34,7 +34,7 @@ namespace HanabiLang.Interprets
             for (int i = 0; i < list.Count; i++)
             {
 
-                result.Add(ToCsObject(list[i], valueType), valueType);
+                result.Add(ToCsObject(list[i], valueType));
             }
             return result;
         }
