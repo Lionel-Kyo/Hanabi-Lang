@@ -20,6 +20,11 @@ namespace Testing
             return new ScriptValue(BasicTypes.List.Create(new List<ScriptValue>() { ScriptValue.Null, new ScriptValue("Fake"), new ScriptValue(3.14) }));
         }
 
+        public static List<List<int>> ListList()
+        {
+            return new List<List<int>> { new List<int> { 1, 2, 3 }, new List<int> { 4, 5, 6 } };
+        }
+
         public static int[] PrintLn2(params int[] arg)
         {
             foreach (int line in arg)

@@ -11,48 +11,52 @@ namespace HanabiLang.Interprets
 {
     class BuildInClasses
     {
-        private static T[] GetCsArray<T>(ScriptObject scriptList, T defaultValue)
+        private static dynamic GetCsArray(ScriptObject scriptList, Type valueType)
         {
             List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
-            T[] result = new T[list.Count];
-            var valueType = result.GetType().GetElementType();
+            dynamic result = Array.CreateInstance(valueType, list.Count);
             for (int i = 0; i < list.Count; i++)
             {
 
-                result[i] = (T)ToCsObject(list[i], valueType);
+                result[i] = ToCsObject(list[i], valueType);
             }
             return result;
         }
 
-        private static List<T> GetCsList<T>(ScriptObject scriptList, T defaultValue)
+        private static dynamic GetCsList(ScriptObject scriptList, Type valueType)
         {
             List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
-            List<T> result = new List<T>(list.Count);
-            var valueType = result.GetType().GenericTypeArguments[0];
+
+            Type genericListType = typeof(List<>);
+            Type concreteListType = genericListType.MakeGenericType(valueType);
+            dynamic result = Activator.CreateInstance(concreteListType, new object[] { });
+
             for (int i = 0; i < list.Count; i++)
             {
-                result.Add((T)ToCsObject(list[i], valueType));
+
+                result.Add(ToCsObject(list[i], valueType), valueType);
             }
             return result;
         }
 
-        private static Dictionary<TKey,TValue> GetCsDictionary<TKey, TValue>(ScriptObject scriptDict, TKey defaultKey, TValue defaultValue)
+        private static dynamic GetCsDictionary(ScriptObject scriptDict, Type keyType, Type valueType)
         {
             var dict = (Dictionary<ScriptValue, ScriptValue>)scriptDict.BuildInObject;
-            var result = new Dictionary<TKey, TValue>();
-            var keyType = result.GetType().GenericTypeArguments[0];
-            var valueType = result.GetType().GenericTypeArguments[1];
+
+            Type genericDictType = typeof(Dictionary<,>);
+            Type concreteDictType = genericDictType.MakeGenericType(keyType, valueType);
+            dynamic result = Activator.CreateInstance(concreteDictType, new object[] { });
             foreach (var keyValue in dict)
             {
-                result[(TKey)ToCsObject(keyValue.Key, keyType)] = (TValue)ToCsObject(keyValue.Value, valueType);
+                result[ToCsObject(keyValue.Key, keyType)] = ToCsObject(keyValue.Value, valueType);
             }
             return result;
         }
 
-        private static ScriptValue FromCsArray<T>(object obj, T defaultValue)
+        private static ScriptValue FromCsArray(object obj)
         {
             List<ScriptValue> scriptList = new List<ScriptValue>();
-            T[] arr = (T[])obj;
+            dynamic arr = obj;
             for (int i = 0; i < arr.Length; i++)
             {
                 scriptList.Add(FromCsObject(arr[i]));
@@ -60,10 +64,10 @@ namespace HanabiLang.Interprets
             return new ScriptValue(scriptList);
         }
 
-        private static ScriptValue FromCsList<T>(object obj, T defaultValue)
+        private static ScriptValue FromCsList(object obj)
         {
             List<ScriptValue> scriptList = new List<ScriptValue>();
-            List<T> list = (List<T>)obj;
+            dynamic list = obj;
             for (int i = 0; i < list.Count; i++)
             {
                 scriptList.Add(FromCsObject(list[i]));
@@ -71,11 +75,10 @@ namespace HanabiLang.Interprets
             return new ScriptValue(scriptList);
         }
 
-        private static ScriptValue FromCsDictionary<TKey, TValue>(object obj, TKey defaultKey, TValue defaultValue)
+        private static ScriptValue FromCsDictionary(object obj)
         {
-            ScriptDict result = new ScriptDict();
             Dictionary<ScriptValue, ScriptValue> scriptDict = new Dictionary<ScriptValue, ScriptValue>();
-            Dictionary<TKey, TValue> dict = (Dictionary<TKey, TValue>)obj;
+            dynamic dict = obj;
             foreach (var keyValue in dict)
             {
                 scriptDict[FromCsObject(keyValue.Key)] = FromCsObject(keyValue.Value);
@@ -83,46 +86,7 @@ namespace HanabiLang.Interprets
             return new ScriptValue(scriptDict);
         }
 
-        private static dynamic GetDefaultValue(Type type)
-        {
-            if (type == typeof(sbyte))
-                return (sbyte)0;
-            else if (type == typeof(short))
-                return (short)0;
-            else if (type == typeof(int))
-                return (int)0;
-            else if (type == typeof(long))
-                return (long)0;
-            else if (type == typeof(byte))
-                return (byte)0;
-            else if (type == typeof(ushort))
-                return (ushort)0;
-            else if (type == typeof(uint))
-                return (uint)0;
-            else if (type == typeof(ulong))
-                return (ulong)0;
-
-            else if (type == typeof(string))
-                return (string)"";
-            else if (type == typeof(StringBuilder))
-                return new StringBuilder();
-
-            else if (type == typeof(bool))
-                return (bool)false;
-
-            else if (type == typeof(float))
-                return (float)0.0f;
-            else if (type == typeof(double))
-                return (double)0.0d;
-            else if (type == typeof(decimal))
-                return (decimal)0.0m;
-            else if (type == typeof(object))
-                return new object();
-
-            throw new SystemException($"Unexpected type: {type.Name}");
-        }
-
-        private static object ToCsObject(ScriptValue value, Type csType)
+        private static dynamic ToCsObject(ScriptValue value, Type csType)
         {
             /*if (value.IsClass || value.IsFunction)
                 throw new SystemException("Class and function is not supported");*/
@@ -179,24 +143,24 @@ namespace HanabiLang.Interprets
                 Type[] genericArgs = csType.GenericTypeArguments;
                 if (genericType == typeof(List<>))
                 {
-                    return GetCsList(obj, GetDefaultValue(genericArgs[0]));
+                    return GetCsList(obj, genericArgs[0]);
                 }
                 else if (genericType == typeof(Dictionary<,>))
                 {
-                    return GetCsDictionary(obj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
+                    return GetCsDictionary(obj, genericArgs[0], genericArgs[1]);
                 }
             }
             else if (csType == typeof(object) && obj.ClassType is ScriptList)
             {
-                return GetCsList(obj, new object());
+                return GetCsList(obj, typeof(object));
             }
             else if (csType == typeof(object) && obj.ClassType is ScriptDict)
             {
-                return GetCsDictionary(obj, new object(), new object());
+                return GetCsDictionary(obj, typeof(object), typeof(object));
             }
             else if (csType.IsArray && obj.ClassType is ScriptList)
             {
-                return GetCsArray(obj, GetDefaultValue(csType.GetElementType()));
+                return GetCsArray(obj, csType.GetElementType());
             }
 
             throw new SystemException($"Expected type: {csType.Name}");
@@ -246,19 +210,19 @@ namespace HanabiLang.Interprets
             else if (csType.IsGenericType)
             {
                 Type genericType = csType.GetGenericTypeDefinition();
-                Type[] genericArgs = csType.GenericTypeArguments;
+                // Type[] genericArgs = csType.GenericTypeArguments;
                 if (genericType == typeof(List<>))
                 {
-                    return FromCsList(csObj, GetDefaultValue(genericArgs[0]));
+                    return FromCsList(csObj);
                 }
                 else if (genericType == typeof(Dictionary<,>))
                 {
-                    return FromCsDictionary(csObj, GetDefaultValue(genericArgs[0]), GetDefaultValue(genericArgs[1]));
+                    return FromCsDictionary(csObj);
                 }
             }
             else if (csType.IsArray)
             {
-                return FromCsArray(csObj, GetDefaultValue(csType.GetElementType()));
+                return FromCsArray(csObj);
             }
 
             throw new SystemException($"Unexpected type: {csType.Name}");
