@@ -14,11 +14,31 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptList() : 
             base("List", isStatic: false)
         {
-            /*this.AddObjectFn("Length", new List<FnParameter>(), args =>
+            this.AddObjectFn(this.Name, new List<FnParameter>(), args => ScriptValue.Null);
+
+            this.AddObjectFn(this.Name, new List<FnParameter>()
+            {
+                new FnParameter("value")
+            }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Count);
-            });*/
+                ScriptObject value = (ScriptObject)args[1].Value;
+
+                if (!value.Scope.TryGetValue("GetEnumerator", out ScriptType getEnumerator))
+                    throw new SystemException("For loop running failed, variable is not enumerable");
+
+                if (!(getEnumerator is ScriptFns))
+                    throw new SystemException("For loop running failed, variable is not enumerable");
+
+                var enumerator = ((ScriptFns)getEnumerator).Call(value);
+
+                if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
+                    throw new SystemException("For loop running failed, variable is not enumerable");
+
+                var enumerable = (IEnumerable<ScriptValue>)(((ScriptObject)enumerator.Value).BuildInObject);
+                _this.BuildInObject = enumerable.ToList();
+                return ScriptValue.Null;
+            });
 
             AddVariable("Length", args =>
             {
@@ -28,12 +48,383 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddObjectFn("Add", new List<FnParameter>()
             {
-                new FnParameter("list", BasicTypes.List)
+                new FnParameter("item")
             }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 ((List<ScriptValue>)_this.BuildInObject).Add(args[1]);
                 return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("AddRange", new List<FnParameter>()
+            {
+                new FnParameter("list", BasicTypes.List)
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject collection = (ScriptObject)args[1].Value;
+                ((List<ScriptValue>)_this.BuildInObject).AddRange((List<ScriptValue>)collection.BuildInObject);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("Clear", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ((List<ScriptValue>)_this.BuildInObject).Clear();
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("Contains", new List<FnParameter>()
+            {
+                new FnParameter("item")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Contains(args[1]));
+            });
+
+            this.AddObjectFn("Exists", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).Exists(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("Find", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).Find(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return result;
+            });
+
+            this.AddObjectFn("FindLast", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindLast(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return result;
+            });
+
+            this.AddObjectFn("FindAll", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindAll(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("FindIndex", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindIndex(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("FindIndex", new List<FnParameter>()
+            {
+                new FnParameter("startIndex", BasicTypes.Int),
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                ScriptFns match = (ScriptFns)args[2].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindIndex((int)startIndex, x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("FindIndex", new List<FnParameter>()
+            {
+                new FnParameter("startIndex", BasicTypes.Int),
+                new FnParameter("count", BasicTypes.Int),
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                long count = (long)((ScriptObject)args[2].Value).BuildInObject;
+                ScriptFns match = (ScriptFns)args[3].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindIndex((int)startIndex, (int)count, x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("FindLastIndex", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindLastIndex(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("FindLastIndex", new List<FnParameter>()
+            {
+                new FnParameter("startIndex", BasicTypes.Int),
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                ScriptFns match = (ScriptFns)args[2].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindLastIndex((int)startIndex, x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("FindLastIndex", new List<FnParameter>()
+            {
+                new FnParameter("startIndex", BasicTypes.Int),
+                new FnParameter("count", BasicTypes.Int),
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                long count = (long)((ScriptObject)args[2].Value).BuildInObject;
+                ScriptFns match = (ScriptFns)args[3].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).FindLastIndex((int)startIndex, (int)count, x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("ForEach", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                ((List<ScriptValue>)_this.BuildInObject).ForEach(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                });
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("GetRange", new List<FnParameter>()
+            {
+                new FnParameter("index", BasicTypes.Int),
+                new FnParameter("count", BasicTypes.Int),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
+                long count = (long)((ScriptObject)args[2].Value).BuildInObject;
+                var result = ((List<ScriptValue>)_this.BuildInObject).GetRange((int)startIndex, (int)count);
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("IndexOf", new List<FnParameter>()
+            {
+                new FnParameter("item"),
+                new FnParameter("index", BasicTypes.Int, new ScriptValue(0)),
+                new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue item = args[1];
+                long startIndex = (long)((ScriptObject)args[2].Value).BuildInObject;
+                if (args[3].IsNull)
+                {
+                    return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).IndexOf(item, (int)startIndex));
+                }
+                long count = (long)((ScriptObject)args[3].Value).BuildInObject;
+                var result = ((List<ScriptValue>)_this.BuildInObject).IndexOf(item, (int)startIndex, (int)count);
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("LastIndexOf", new List<FnParameter>()
+            {
+                new FnParameter("item"),
+                new FnParameter("index", BasicTypes.Int, new ScriptValue(0)),
+                new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue item = args[1];
+                long startIndex = (long)((ScriptObject)args[2].Value).BuildInObject;
+                if (args[3].IsNull)
+                {
+                    return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).LastIndexOf(item, (int)startIndex));
+                }
+                long count = (long)((ScriptObject)args[3].Value).BuildInObject;
+                var result = ((List<ScriptValue>)_this.BuildInObject).LastIndexOf(item, (int)startIndex, (int)count);
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("Insert", new List<FnParameter>()
+            {
+                new FnParameter("index", BasicTypes.Int),
+                new FnParameter("item")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long index = (long)((ScriptObject)args[1].Value).BuildInObject;
+                ScriptValue item = args[2];
+                ((List<ScriptValue>)_this.BuildInObject).Insert((int)index, item);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("InsertRange", new List<FnParameter>()
+            {
+                new FnParameter("index", BasicTypes.Int),
+                new FnParameter("collection", BasicTypes.List)
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long index = (long)((ScriptObject)args[1].Value).BuildInObject;
+                var collection = (List<ScriptValue>)((ScriptObject)args[2].Value).BuildInObject;
+                ((List<ScriptValue>)_this.BuildInObject).InsertRange((int)index, collection);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("Remove", new List<FnParameter>()
+            {
+                new FnParameter("item")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue item = args[1];
+                return new ScriptValue(((List<ScriptValue>)_this.BuildInObject).Remove(item));
+            });
+
+            this.AddObjectFn("RemoveAll", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).RemoveAll(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
+            });
+
+            this.AddObjectFn("RemoveAt", new List<FnParameter>()
+            {
+                new FnParameter("index", BasicTypes.Int),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long index = (long)((ScriptObject)args[1].Value).BuildInObject;
+                ((List<ScriptValue>)_this.BuildInObject).RemoveAt((int)index);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("RemoveRange", new List<FnParameter>()
+            {
+                new FnParameter("index", BasicTypes.Int),
+                new FnParameter("count", BasicTypes.Int),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long index = (long)((ScriptObject)args[1].Value).BuildInObject;
+                long count = (long)((ScriptObject)args[2].Value).BuildInObject;
+                ((List<ScriptValue>)_this.BuildInObject).RemoveRange((int)index, (int)count);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("Reverse", new List<FnParameter>()
+            {
+                new FnParameter("index", BasicTypes.Int),
+                new FnParameter("count", BasicTypes.Int),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                long index = (long)((ScriptObject)args[1].Value).BuildInObject;
+                long count = (long)((ScriptObject)args[2].Value).BuildInObject;
+                ((List<ScriptValue>)_this.BuildInObject).Reverse((int)index, (int)count);
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("Reverse", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ((List<ScriptValue>)_this.BuildInObject).Reverse();
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("TrimExcess", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ((List<ScriptValue>)_this.BuildInObject).TrimExcess();
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("TrueForAll", new List<FnParameter>()
+            {
+                new FnParameter("match")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptFns match = (ScriptFns)args[1].Value;
+                var result = ((List<ScriptValue>)_this.BuildInObject).TrueForAll(x =>
+                {
+                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    return (bool)matchResult.BuildInObject;
+                });
+                return new ScriptValue(result);
             });
 
             ScriptFns sortDefaultFns = new ScriptFns("");
@@ -61,7 +452,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     return (int)(long)compare.BuildInObject;
                 });
                 return ScriptValue.Null;
-            });
+            });;
             this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;

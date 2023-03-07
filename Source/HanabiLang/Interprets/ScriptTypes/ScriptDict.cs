@@ -20,6 +20,43 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
             }, null, false, null);
 
+            this.AddObjectFn("Clear", new List<FnParameter>(), args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Clear();
+                return ScriptValue.Null;
+            });
+
+            this.AddObjectFn("ContainsKey", new List<FnParameter>()
+            {
+                new FnParameter("key")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue key = args[1];
+                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).ContainsKey(key));
+            });
+
+            this.AddObjectFn("ContainsValue", new List<FnParameter>()
+            {
+                new FnParameter("value")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue value = args[1];
+                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).ContainsValue(value));
+            });
+
+            this.AddObjectFn("Remove", new List<FnParameter>()
+            {
+                new FnParameter("key")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue key = args[1];
+                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Remove(key));
+            });
+
             this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
