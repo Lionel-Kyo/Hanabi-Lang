@@ -87,7 +87,7 @@ namespace HanabiLang.Interprets
                     bool isStatic = csharpType.IsAbstract && csharpType.IsSealed;
 
                     scriptClass = new ScriptClass(className, null, null, null, isStatic, AccessibilityLevel.Public);
-                    BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType, isStatic);
+                    BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType);
                     ImportedItems.Types[csharpType] = scriptClass;
                 }
 

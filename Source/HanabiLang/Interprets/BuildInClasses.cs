@@ -264,8 +264,15 @@ namespace HanabiLang.Interprets
             throw new SystemException($"Unexpected type: {csType.Name}");
         }
 
-        public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type, bool isStatic)
+        public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type)
         {
+            CSharpClassToScriptClass(scriptClass, type, null);
+        }
+
+        public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type, object createdObject)
+        {
+            bool isStatic = type.IsAbstract && type.IsSealed;
+
             var staticFns = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
             var fields = type.GetFields(); // non get set variables
             var properties = type.GetProperties(); // get set variables
@@ -296,6 +303,10 @@ namespace HanabiLang.Interprets
                     {
                         value = field.GetValue(null);
                     }
+                    else if (createdObject != null)
+                    {
+                        value = field.GetValue(createdObject);
+                    }
                     else
                     {
                         object _this = ((ScriptObject)args[0].Value).BuildInObject;
@@ -315,6 +326,11 @@ namespace HanabiLang.Interprets
                         object value = ToCsObject(args[0], field.FieldType);
                         field.SetValue(null, value);
                     }
+                    else if (createdObject != null)
+                    {
+                        object value = ToCsObject(args[0], field.FieldType);
+                        field.SetValue(createdObject, value);
+                    }
                     else
                     {
                         object _this = ((ScriptObject)args[0].Value).BuildInObject;
@@ -324,11 +340,12 @@ namespace HanabiLang.Interprets
                     return ScriptValue.Null;
                 };
 
+
                 var setFns = new ScriptFns(field.Name);
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
                     {
                         new FnParameter("value")
-                    }, null, setFn, field.IsStatic, level));
+                    }, null, setFn, createdObject != null ? true : field.IsStatic, level));
 
                 classScope.Variables[field.Name] = new ScriptVariable(field.Name, getFns, setFns, false, field.IsStatic, level);
             }
@@ -349,6 +366,10 @@ namespace HanabiLang.Interprets
                         {
                             value = property.GetValue(null);
                         }
+                        else if (createdObject != null)
+                        {
+                            value = property.GetValue(createdObject);
+                        }
                         else
                         {
                             object _this = ((ScriptObject)args[0].Value).BuildInObject;
@@ -361,8 +382,14 @@ namespace HanabiLang.Interprets
                 AccessibilityLevel getLevel = property.CanRead && property.GetMethod.IsPublic ? 
                     AccessibilityLevel.Public : AccessibilityLevel.Private;
 
+                bool isGetFnStatic = true;
+                if (createdObject != null)
+                    isGetFnStatic = true;
+                else if (property.CanRead)
+                    isGetFnStatic = property.GetMethod.IsStatic;
+
                 getFns = new ScriptFns(property.Name);
-                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, property.CanRead ? property.GetMethod.IsStatic : true, getLevel));
+                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, isGetFnStatic, getLevel));
 
                 if (property.CanWrite)
                 {
@@ -372,6 +399,11 @@ namespace HanabiLang.Interprets
                         {
                             object value = ToCsObject(args[0], property.PropertyType);
                             property.SetValue(null, value);
+                        }
+                        else if (createdObject != null)
+                        {
+                            object value = ToCsObject(args[0], property.PropertyType);
+                            property.SetValue(createdObject, value);
                         }
                         else
                         {
@@ -386,11 +418,19 @@ namespace HanabiLang.Interprets
                 AccessibilityLevel setLevel = property.CanWrite && property.SetMethod.IsPublic ? 
                     AccessibilityLevel.Public : AccessibilityLevel.Private;
 
+                bool isSetFnStatic = true;
+                if (createdObject != null)
+                    isSetFnStatic = true;
+                else if (property.CanWrite)
+                    isSetFnStatic = property.SetMethod.IsStatic;
+
                 AccessibilityLevel overAllLevel = (int)getLevel < (int)setLevel ? getLevel : setLevel;
 
                 bool overAllIsStatic = true;
 
-                if (property.CanRead)
+                if (createdObject != null)
+                    overAllIsStatic = true;
+                else if (property.CanRead)
                     overAllIsStatic = property.GetMethod.IsStatic;
                 else if (property.CanWrite)
                     overAllIsStatic = property.GetMethod.IsStatic;
@@ -399,7 +439,7 @@ namespace HanabiLang.Interprets
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
                 {
                     new FnParameter("value")
-                }, null, setFn, property.CanWrite ? property.GetMethod.IsStatic : true, setLevel));
+                }, null, setFn, isSetFnStatic, setLevel));
 
                 classScope.Variables[property.Name] = new ScriptVariable(property.Name, getFns, setFns, false, overAllIsStatic, overAllLevel);
             }
@@ -420,8 +460,8 @@ namespace HanabiLang.Interprets
                     }
                     try
                     {
-                        var scriptFn = ToScriptFn(fn);
-                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevel.Public));
+                        var scriptFn = ToScriptFn(fn, createdObject);
+                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, createdObject != null ? true : isStatic, AccessibilityLevel.Public));
                     }
                     catch (NotImplementedException) { }
                 }
@@ -487,9 +527,11 @@ namespace HanabiLang.Interprets
                 return BasicTypes.List;
 
             throw new NotImplementedException($"Not supported datatype {type.Name}");
-        } 
+        }
 
-        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method)
+        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method) => ToScriptFn(method, null);
+
+        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method, object createdObject)
         {
             var returnType = method.ReturnType;
             var isStatic = method.IsStatic;
@@ -508,7 +550,7 @@ namespace HanabiLang.Interprets
 
             BuildInFns.ScriptFnType fn = args =>
             {
-                if (isStatic)
+                if (isStatic || createdObject != null)
                 {
                     if (args.Count != csParameters.Count)
                         throw new SystemException($"Required {csParameters.Count}, recevied {args.Count}");
@@ -521,13 +563,27 @@ namespace HanabiLang.Interprets
 
                 object[] csObjects = new object[csParameters.Count];
 
-                int startCount = isStatic ? 0 : 1;
+                int startCount = (isStatic || createdObject != null) ? 0 : 1;
                 for (int i = startCount; i < csParameters.Count; i++)
                 {
                     csObjects[i] = ToCsObject(args[i], csParameters[i]);
                 }
 
-                object returnObj = method.Invoke(isStatic ? null : ((ScriptObject)args[0].Value).BuildInObject, csObjects);
+                object invokeObject = null;
+                if (createdObject != null)
+                {
+                    invokeObject = createdObject;
+                }
+                else if (isStatic)
+                {
+                    invokeObject = null;
+                }
+                else
+                {
+                    invokeObject = ((ScriptObject)args[0].Value).BuildInObject;
+                }
+
+                object returnObj = method.Invoke(invokeObject, csObjects);
 
                 return FromCsObject(returnObj);
             };

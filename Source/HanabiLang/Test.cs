@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Testing
 {
-    public static class Test
+    internal static class Test
     {
         public static ScriptValue TestFn(ScriptValue scriptValue)
         {
@@ -87,6 +87,20 @@ namespace Testing
         }
 
         public static string Nyan() => "Nyan";
+    }
+
+    public class TestClass2
+    {
+        public string Message { get; private set; }
+        public TestClass2(string message)
+        {
+            this.Message = message;
+        }
+
+        public override string ToString()
+        {
+            return this.Message;
+        }
     }
 
     public enum ENUMMM
