@@ -2,18 +2,18 @@
 A Programming Language that use C# as interpreter  
 
 ## Basic Types  
-# Primitive  
+### Primitive  
 * int  
 * bool  
 * str  
 * float  
 * decimal  
-# Non-Primitive Types
+### Non-Primitive Types
 * List  
 * Dict  
 
 ## Define variables  
-# Mutable  
+### Mutable  
 var varableName = value;  
 ```
 Type not prvided:  
@@ -29,7 +29,7 @@ var values: List = [1, 2, 3, 4, 5];
 var keyValues: Dict = { "a": 1, "b": 2 };  
 ```
 
-# Immutable  
+### Immutable  
 Note that elements in List and Dict are still mutable, due to it is not reassigning the variable.  
 var varableName = value;  
 ```
@@ -51,7 +51,7 @@ const keyValues: Dict = { "a": 1, "b": 2 };
 ## Define functions  
 Every function default return null value.  
 
-# Normal function  
+### Normal function  
 fn functionName() {  
     println("Hello World");  
 }   
@@ -66,7 +66,7 @@ fn Add(left: int, right: int) {
 }  
 ```
 
-# Normal one line function  
+### Normal one line function  
 In one line function, it default return a value of the following expression.  
 fn functionName() => println("Hello World");  
 
@@ -76,7 +76,7 @@ fn Add(left, right) => left + right;
 fn Add(left: int, right: int) => left + right;  
 ```
 
-# Lambda function  
+### Lambda function  
 const functionName = () => {  
     println("Hello World");  
 }   
@@ -91,7 +91,7 @@ const Add = (left: int, right: int) => {
 }  
 ```
 
-# Lambda one line function  
+### Lambda one line function  
 In one line function, it default return a value of the following expression.  
 fn functionName() => println("Hello World");  
 
