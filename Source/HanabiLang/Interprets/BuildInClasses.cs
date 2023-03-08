@@ -11,7 +11,7 @@ namespace HanabiLang.Interprets
 {
     class BuildInClasses
     {
-        private static dynamic GetCsArray(ScriptObject scriptList, Type valueType)
+        private static object GetCsArray(ScriptObject scriptList, Type valueType)
         {
             List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
             dynamic result = Array.CreateInstance(valueType, list.Count);
@@ -23,7 +23,7 @@ namespace HanabiLang.Interprets
             return result;
         }
 
-        private static dynamic GetCsList(ScriptObject scriptList, Type valueType)
+        private static object GetCsList(ScriptObject scriptList, Type valueType)
         {
             List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
 
@@ -39,7 +39,7 @@ namespace HanabiLang.Interprets
             return result;
         }
 
-        private static dynamic GetCsDictionary(ScriptObject scriptDict, Type keyType, Type valueType)
+        private static object GetCsDictionary(ScriptObject scriptDict, Type keyType, Type valueType)
         {
             var dict = (Dictionary<ScriptValue, ScriptValue>)scriptDict.BuildInObject;
 
@@ -59,7 +59,7 @@ namespace HanabiLang.Interprets
             dynamic arr = obj;
             for (int i = 0; i < arr.Length; i++)
             {
-                scriptList.Add(FromCsObject(arr[i]));
+                scriptList.Add(FromCsObject((object)arr[i]));
             }
             return new ScriptValue(scriptList);
         }
@@ -70,7 +70,7 @@ namespace HanabiLang.Interprets
             dynamic list = obj;
             for (int i = 0; i < list.Count; i++)
             {
-                scriptList.Add(FromCsObject(list[i]));
+                scriptList.Add(FromCsObject((object)list[i]));
             }
             return new ScriptValue(scriptList);
         }
@@ -81,12 +81,12 @@ namespace HanabiLang.Interprets
             dynamic dict = obj;
             foreach (var keyValue in dict)
             {
-                scriptDict[FromCsObject(keyValue.Key)] = FromCsObject(keyValue.Value);
+                scriptDict[FromCsObject((object)keyValue.Key)] = FromCsObject((object)keyValue.Value);
             }
             return new ScriptValue(scriptDict);
         }
 
-        private static dynamic ToCsObject(ScriptValue value, Type csType)
+        private static object ToCsObject(ScriptValue value, Type csType)
         {
             /*if (value.IsClass || value.IsFunction)
                 throw new SystemException("Class and function is not supported");*/
