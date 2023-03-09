@@ -16,13 +16,13 @@ A Programming Language that use C# as interpreter
 ### Mutable  
 var varableName = value;  
 ```
-Type not prvided:  
+Type not provided:  
 var text = "Hello World";  
 var value = 12345;  
 var values = [1, 2, 3, 4, 5];  
 var keyValues = { "a": 1, "b": 2 };  
 
-Type prvided:  
+Type provided:  
 var text: str = "Hello World";  
 var value: int = 12345;  
 var values: List = [1, 2, 3, 4, 5];  
@@ -33,14 +33,14 @@ var keyValues: Dict = { "a": 1, "b": 2 };
 Note that elements in List and Dict are still mutable, due to it is not reassigning the variable.  
 var varableName = value;  
 ```
-Type not prvided:  
+Type not provided:  
 const text = "Hello World";  
 const value = 12345;  
 const pi = 3.14;  
 const values = [1, 2, 3, 4, 5];  
 const keyValues = { "a": 1, "b": 2 };  
 
-Type prvided:  
+Type provided:  
 const text: str = "Hello World";  
 const value: int = 12345;  
 const pi: float = 3.14;  
