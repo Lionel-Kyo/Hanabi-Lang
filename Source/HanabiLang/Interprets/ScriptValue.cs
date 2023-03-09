@@ -57,7 +57,7 @@ namespace HanabiLang.Interprets
         }
         public ScriptValue(float value)
         {
-            this.value = BasicTypes.Float.Create(value); 
+            this.value = BasicTypes.Float.Create(value);
         }
         public ScriptValue(double value)
         {
@@ -91,17 +91,32 @@ namespace HanabiLang.Interprets
         {
             this.value = BasicTypes.Dict.Create(value);
         }
+
+        public ScriptValue(BreakType breakType)
+        {
+            this.value = breakType;
+        }
+
+        public ScriptValue(ContinueType continueType)
+        {
+            this.value = continueType;
+        }
+
         public ScriptValue()
         {
             this.value = BasicTypes.NullValue;
         }
 
         public static ScriptValue Null => new ScriptValue();
+        public static ScriptValue Break => new ScriptValue(new BreakType());
+        public static ScriptValue Continue => new ScriptValue(new ContinueType());
 
         public bool IsFunction => this.value is ScriptFns;
         public bool IsClass => this.value is ScriptClass;
         public bool IsObject => this.value is ScriptObject;
         public bool IsNull => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptNull;
+        public bool IsBreak => this.value is BreakType;
+        public bool IsContinue => this.value is ContinueType;
 
         public static ScriptValue operator !(ScriptValue a)
         {

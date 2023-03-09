@@ -10,4 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     {
 
     }
+
+    public class BreakType: ScriptType { }
+    public class ContinueType: ScriptType { }
 }

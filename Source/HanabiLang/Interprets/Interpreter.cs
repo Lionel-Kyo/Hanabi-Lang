@@ -673,7 +673,7 @@ namespace HanabiLang.Interprets
 
                 if (fnRef == null)
                 {
-                    if (!(interpretScope.Type is ScriptFn))
+                    if (!(interpretScope.Type is ScriptFns))
                         throw new SystemException("Cannot call this/super function out of function");
                     if (!(interpretScope.Parent.Type is ScriptObject))
                         throw new SystemException("Cannot call this/super function out of object");
@@ -732,6 +732,14 @@ namespace HanabiLang.Interprets
                             }
                             return new ValueReference(ScriptValue.Null);
                         }
+                        else if (item is BreakNode)
+                        {
+                            return new ValueReference(ScriptValue.Break);
+                        }
+                        else if (item is ContinueNode)
+                        {
+                            return new ValueReference(ScriptValue.Continue);
+                        }
                         else
                         {
                             InterpretChild(tryScope, item);
@@ -755,15 +763,23 @@ namespace HanabiLang.Interprets
 
                             if (returnNode.Value != null)
                             {
-                                var value = InterpretExpression(catchScope, returnNode.Value);
+                                var value = InterpretExpression(tryScope, returnNode.Value);
 
                                 return value;
                             }
                             return new ValueReference(ScriptValue.Null);
                         }
+                        else if (item is BreakNode)
+                        {
+                            return new ValueReference(ScriptValue.Break);
+                        }
+                        else if (item is ContinueNode)
+                        {
+                            return new ValueReference(ScriptValue.Continue);
+                        }
                         else
                         {
-                            InterpretChild(catchScope, item);
+                            InterpretChild(tryScope, item);
                         }
                     }
                 }
@@ -779,17 +795,28 @@ namespace HanabiLang.Interprets
 
                             if (returnNode.Value != null)
                             {
-                                var value = InterpretExpression(finallyScope, returnNode.Value);
-
+                                var value = InterpretExpression(tryScope, returnNode.Value);
                                 if (exception != null && realNode.CatchBranch == null)
                                     throw exception;
                                 return value;
                             }
                             return new ValueReference(ScriptValue.Null);
                         }
+                        else if (item is BreakNode)
+                        {
+                            if (exception != null && realNode.CatchBranch == null)
+                                throw exception;
+                            return new ValueReference(ScriptValue.Break);
+                        }
+                        else if (item is ContinueNode)
+                        {
+                            if (exception != null && realNode.CatchBranch == null)
+                                throw exception;
+                            return new ValueReference(ScriptValue.Continue);
+                        }
                         else
                         {
-                            InterpretChild(finallyScope, item);
+                            InterpretChild(tryScope, item);
                         }
                     }
                 }
@@ -832,6 +859,14 @@ namespace HanabiLang.Interprets
                             return value;
                         }
                         return new ValueReference(ScriptValue.Null);
+                    }
+                    else if (item is BreakNode)
+                    {
+                        return new ValueReference(ScriptValue.Break);
+                    }
+                    else if (item is ContinueNode)
+                    {
+                        return new ValueReference(ScriptValue.Continue);
                     }
                     else
                     {
@@ -921,8 +956,16 @@ namespace HanabiLang.Interprets
 
                     foreach (var bodyNode in realNode.Body)
                     {
-                        var hasContinue = false;
-                        if (bodyNode is ReturnNode)
+                        if (bodyNode is BreakNode)
+                        {
+                            hasBreak = true;
+                            break;
+                        }
+                        else if (bodyNode is ContinueNode)
+                        {
+                            break;
+                        }
+                        else if (bodyNode is ReturnNode)
                         {
                             var returnNode = (ReturnNode)bodyNode;
 
@@ -932,20 +975,31 @@ namespace HanabiLang.Interprets
 
                                 return value;
                             }
+
                             return new ValueReference(ScriptValue.Null);
                         }
-
-                        if (bodyNode is BreakNode)
-                            hasBreak = true;
-
-                        if (bodyNode is ContinueNode)
-                            hasContinue = true;
-
-                        if (!hasBreak && !hasContinue)
+                        else if (bodyNode is IfNode || bodyNode is SwitchCaseNode ||
+                            bodyNode is ForNode || bodyNode is WhileNode || bodyNode is TryCatchNode)
+                        {
+                            var value = InterpretExpression(scope, bodyNode);
+                            if (!value.IsEmpty)
+                            {
+                                if (value.Ref.IsBreak)
+                                {
+                                    hasBreak = true;
+                                    break;
+                                }
+                                else if (value.Ref.IsContinue)
+                                {
+                                    break;
+                                }
+                                return value;
+                            }
+                        }
+                        else
+                        {
                             InterpretChild(scope, bodyNode);
-
-                        /*if (((ScriptBool)(this.InterpretExpression(condition).Ref.Value)).Value)
-                            break;*/
+                        }
                     }
 
                     if (hasBreak)
@@ -993,11 +1047,18 @@ namespace HanabiLang.Interprets
                     scope.Variables[realNode.Initializer] =
                         new ScriptVariable(realNode.Initializer, item, false, true, AccessibilityLevel.Private);
 
-                    var hasContinue = false;
-
                     foreach (var bodyNode in realNode.Body)
                     {
-                        if (bodyNode is ReturnNode)
+                        if (bodyNode is BreakNode)
+                        {
+                            hasBreak = true;
+                            break;
+                        }
+                        else if (bodyNode is ContinueNode)
+                        {
+                            break;
+                        }
+                        else if (bodyNode is ReturnNode)
                         {
                             var returnNode = (ReturnNode)bodyNode;
 
@@ -1010,15 +1071,28 @@ namespace HanabiLang.Interprets
 
                             return new ValueReference(ScriptValue.Null);
                         }
-
-                        if (bodyNode is BreakNode)
-                            hasBreak = true;
-
-                        if (bodyNode is ContinueNode)
-                            hasContinue = true;
-
-                        if (!hasBreak && !hasContinue)
+                        else if (bodyNode is IfNode || bodyNode is SwitchCaseNode ||
+                            bodyNode is ForNode || bodyNode is WhileNode || bodyNode is TryCatchNode)
+                        {
+                            var value = InterpretExpression(scope, bodyNode);
+                            if (!value.IsEmpty)
+                            {
+                                if (value.Ref.IsBreak)
+                                {
+                                    hasBreak = true;
+                                    break;
+                                }
+                                else if (value.Ref.IsContinue)
+                                {
+                                    break;
+                                }
+                                return value;
+                            }
+                        }
+                        else
+                        {
                             InterpretChild(scope, bodyNode);
+                        }
                     }
 
                     if (hasBreak)
