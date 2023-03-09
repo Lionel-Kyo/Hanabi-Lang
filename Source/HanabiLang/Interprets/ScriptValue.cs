@@ -71,6 +71,85 @@ namespace HanabiLang.Interprets
         {
             this.value = BasicTypes.Bool.Create(value);
         }
+
+        public ScriptValue(byte? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(ushort? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(uint? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(sbyte? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(short? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(int? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(long? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Int.Create(value.Value);
+        }
+        public ScriptValue(float? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Float.Create(value.Value);
+        }
+        public ScriptValue(double? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Float.Create(value.Value);
+        }
+        public ScriptValue(decimal? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Decimal.Create(value.Value);
+        }
+        public ScriptValue(bool? value)
+        {
+            if (!value.HasValue)
+                this.value = BasicTypes.NullValue;
+            else
+                this.value = BasicTypes.Bool.Create(value.Value);
+        }
+
         public ScriptValue(string value)
         {
             this.value = BasicTypes.Str.Create(value);

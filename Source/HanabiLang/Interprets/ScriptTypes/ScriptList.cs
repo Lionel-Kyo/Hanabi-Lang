@@ -92,7 +92,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).Exists(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -107,7 +107,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).Find(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return result;
@@ -122,7 +122,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindLast(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return result;
@@ -137,7 +137,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindAll(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -152,7 +152,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindIndex(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -169,7 +169,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[2].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindIndex((int)startIndex, x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -188,7 +188,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[3].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindIndex((int)startIndex, (int)count, x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -203,7 +203,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindLastIndex(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -220,7 +220,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[2].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindLastIndex((int)startIndex, x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -239,7 +239,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[3].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).FindLastIndex((int)startIndex, (int)count, x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -254,7 +254,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 ((List<ScriptValue>)_this.BuildInObject).ForEach(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                 });
                 return ScriptValue.Null;
             });
@@ -355,7 +355,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).RemoveAll(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -421,7 +421,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns match = (ScriptFns)args[1].Value;
                 var result = ((List<ScriptValue>)_this.BuildInObject).TrueForAll(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(_this, x).Value;
+                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return (bool)matchResult.BuildInObject;
                 });
                 return new ScriptValue(result);
@@ -448,7 +448,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptFns fns = (ScriptFns)args[1].Value;
                 ((List<ScriptValue>)_this.BuildInObject).Sort((x, y) => 
                 {
-                    ScriptObject compare = (ScriptObject)fns.Call(_this, x, y).Value;
+                    ScriptObject compare = (ScriptObject)fns.Call(null, x, y).Value;
                     return (int)(long)compare.BuildInObject;
                 });
                 return ScriptValue.Null;

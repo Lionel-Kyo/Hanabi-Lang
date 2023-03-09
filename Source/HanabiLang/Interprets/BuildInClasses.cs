@@ -115,6 +115,23 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(ulong) && obj.ClassType is ScriptInt)
                 return (ulong)((long)obj.BuildInObject);
 
+            else if (csType == typeof(sbyte?) && obj.ClassType is ScriptInt)
+                return (sbyte?)((long)obj.BuildInObject);
+            else if (csType == typeof(short?) && obj.ClassType is ScriptInt)
+                return (short?)((long)obj.BuildInObject);
+            else if (csType == typeof(int?) && obj.ClassType is ScriptInt)
+                return (int?)((long)obj.BuildInObject);
+            else if ((csType == typeof(long?) || csType == typeof(object)) && obj.ClassType is ScriptInt)
+                return (long?)((long)obj.BuildInObject);
+            else if (csType == typeof(byte?) && obj.ClassType is ScriptInt)
+                return (byte?)((long)obj.BuildInObject);
+            else if (csType == typeof(ushort?) && obj.ClassType is ScriptInt)
+                return (ushort?)((long)obj.BuildInObject);
+            else if (csType == typeof(uint?) && obj.ClassType is ScriptInt)
+                return (uint?)((long)obj.BuildInObject);
+            else if (csType == typeof(ulong?) && obj.ClassType is ScriptInt)
+                return (ulong?)((long)obj.BuildInObject);
+
             else if ((csType == typeof(string) || csType == typeof(object)) && obj.ClassType is ScriptStr)
                 return (string)obj.BuildInObject;
             else if (csType == typeof(StringBuilder) && obj.ClassType is ScriptStr)
@@ -123,11 +140,21 @@ namespace HanabiLang.Interprets
             else if ((csType == typeof(bool) || csType == typeof(object)) && obj.ClassType is ScriptBool)
                 return (bool)obj.BuildInObject;
 
+            else if ((csType == typeof(bool?) || csType == typeof(object)) && obj.ClassType is ScriptBool)
+                return (bool?)obj.BuildInObject;
+
             else if (csType == typeof(float) && obj.ClassType is ScriptFloat)
                 return (float)obj.BuildInObject;
             else if ((csType == typeof(double) || csType == typeof(object)) && obj.ClassType is ScriptFloat)
                 return (double)obj.BuildInObject;
             else if (csType == typeof(decimal) && obj.ClassType is ScriptFloat)
+                return (decimal)obj.BuildInObject;
+
+            else if (csType == typeof(float?) && obj.ClassType is ScriptFloat)
+                return (float)obj.BuildInObject;
+            else if ((csType == typeof(double?) || csType == typeof(object)) && obj.ClassType is ScriptFloat)
+                return (double)obj.BuildInObject;
+            else if (csType == typeof(decimal?) && obj.ClassType is ScriptFloat)
                 return (decimal)obj.BuildInObject;
 
             else if (csType == typeof(float) && obj.ClassType is ScriptDecimal)
@@ -192,6 +219,23 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(ulong))
                 return new ScriptValue((long)(ulong)csObj);
 
+            if (csType == typeof(sbyte?))
+                return new ScriptValue((sbyte?)csObj);
+            else if (csType == typeof(short?))
+                return new ScriptValue((short?)csObj);
+            else if (csType == typeof(int?))
+                return new ScriptValue((int?)csObj);
+            else if (csType == typeof(long?))
+                return new ScriptValue((long?)csObj);
+            else if (csType == typeof(byte?))
+                return new ScriptValue((byte?)csObj);
+            else if (csType == typeof(ushort?))
+                return new ScriptValue((ushort)csObj);
+            else if (csType == typeof(uint?))
+                return new ScriptValue((uint?)csObj);
+            else if (csType == typeof(ulong?))
+                return new ScriptValue((long?)(ulong)csObj);
+
             else if (csType == typeof(string))
                 return new ScriptValue((string)csObj);
             else if (csType == typeof(StringBuilder))
@@ -200,12 +244,22 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(bool))
                 return new ScriptValue((bool)csObj);
 
+            else if (csType == typeof(bool?))
+                return new ScriptValue((bool?)csObj);
+
             else if (csType == typeof(float))
                 return new ScriptValue((float)csObj);
             else if (csType == typeof(double))
                 return new ScriptValue((double)csObj);
             else if (csType == typeof(decimal))
                 return new ScriptValue((decimal)csObj);
+
+            else if (csType == typeof(float?))
+                return new ScriptValue((float?)csObj);
+            else if (csType == typeof(double?))
+                return new ScriptValue((double?)csObj);
+            else if (csType == typeof(decimal?))
+                return new ScriptValue((decimal?)csObj);
 
             else if (csType.IsGenericType)
             {
