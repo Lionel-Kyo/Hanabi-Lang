@@ -206,7 +206,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                         if (!args.TryGetValue(parameter.Name, out ScriptValue value))
                             value = args[index.ToString()];
 
-                        if (parameter.DataType != null && 
+                        if (parameter.DataType != null &&
                             (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
                         {
                             isMatchFn = false;
@@ -220,7 +220,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
 
                 // if (index == fn.Parameters.Count || fn.HasMultiArgs)
-               if (isMatchFn)
+                if (isMatchFn)
                     fns.Add(Tuple.Create(fn, variables, anyTypeCount));
             }
 
@@ -306,19 +306,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                     if (returnNode.Value != null)
                     {
                         var value = Interpreter.InterpretExpression(fnScope, returnNode.Value);
-
-                        // Returning the value
                         return value.Ref;
                     }
-
-                    // Returning the value
-                    return new ScriptValue();
+                    return ScriptValue.Null;
                 }
-                if (node is IfNode || node is SwitchCaseNode ||
-                    node is ForNode || node is WhileNode || node is TryCatchNode)
+                if (Interpreter.IsStatementNode(node))
                 {
-                    var value = Interpreter.InterpretExpression(fnScope, node);
-                    if (!value.IsEmpty) 
+                    var value = Interpreter.InterpretStatement(fnScope, node);
+                    if (!value.IsEmpty)
                     {
                         return value.Ref;
                     }
