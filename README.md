@@ -82,11 +82,12 @@ fn Add(left: int, right: int) => left + right;
 ```
 
 ### Lambda function  
-const functionName = () => {  
-    println("Hello World");  
-}   
 
 ```
+// const functionName = () => {  
+//     println("Hello World");  
+// }   
+
 const Add = (left, right) => {  
     return left + right;  
 }  
