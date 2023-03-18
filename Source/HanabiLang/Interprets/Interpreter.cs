@@ -388,18 +388,20 @@ namespace HanabiLang.Interprets
 
         public static bool IsExpressionNode(AstNode node)
         {
-            return node is ExpressionNode || node is IntNode ||
-                node is FloatNode || node is InterpolatedString ||
-                node is UnaryNode || node is StringNode || node is VariableAssignmentNode ||
-                node is VariableReferenceNode || node is FnCallNode || node is FnReferenceCallNode;
+            Type nodeType = node.GetType();
+            return nodeType == typeof(ExpressionNode) || nodeType == typeof(IntNode) ||
+                nodeType == typeof(FloatNode) || nodeType == typeof(InterpolatedString) ||
+                nodeType == typeof(UnaryNode) || nodeType == typeof(StringNode) || nodeType == typeof(VariableAssignmentNode) ||
+                nodeType == typeof(VariableReferenceNode) || nodeType == typeof(FnCallNode) || nodeType == typeof(FnReferenceCallNode);
         }
 
         public static bool IsStatementNode(AstNode node)
         {
-            return node is ForNode || node is WhileNode ||
-                node is SwitchNode || node is IfNode || node is TryCatchNode ||
-                node is ImportNode || node is ThrowNode || node is VariableDefinitionNode ||
-                node is FnDefineNode || node is ClassDefineNode;
+            Type nodeType = node.GetType();
+            return nodeType == typeof(ForNode) || nodeType == typeof(WhileNode) ||
+                nodeType == typeof(SwitchNode) || nodeType == typeof(IfNode) || nodeType == typeof(TryCatchNode) ||
+                nodeType == typeof(ImportNode) || nodeType == typeof(ThrowNode) || nodeType == typeof(VariableDefinitionNode) ||
+                nodeType == typeof(FnDefineNode) || nodeType == typeof(ClassDefineNode);
         }
 
         public static void InterpretChild(ScriptScope interpretScope, AstNode node)
