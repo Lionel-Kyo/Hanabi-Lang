@@ -56,11 +56,12 @@ const keyValues: Dict = { "a": 1, "b": 2 };
 Every function default return null value.  
 
 ### Normal function  
-fn functionName() {  
-    println("Hello World");  
-}   
 
 ```
+// fn functionName() {  
+//     println("Hello World");  
+// }   
+
 fn Add(left, right) {  
     return left + right;  
 }  
