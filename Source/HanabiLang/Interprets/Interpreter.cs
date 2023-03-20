@@ -414,6 +414,16 @@ namespace HanabiLang.Interprets
                 throw new SystemException("Unexcepted child: " + node.NodeName);
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="interpretScope"></param>
+        /// <param name="node"></param>
+        /// <returns>
+        /// Empty = Normal Statement<br/>
+        /// Empty AND Ref.IsBreak = Break<br/>
+        /// Empty AND NOT Ref.IsContinue = Continue<br/>
+        /// Empty AND NOT Ref.IsBreak AND NOT Ref.IsContinue = return value
+        /// </returns>
         public static ValueReference InterpretStatement(ScriptScope interpretScope, AstNode node)
         {
             if (node is TryCatchNode)
@@ -928,7 +938,6 @@ namespace HanabiLang.Interprets
             }
             throw new SystemException("Unexcepted interpret statement: " + node.NodeName);
         }
-
         public static ValueReference InterpretExpression(ScriptScope interpretScope, AstNode node)
         {
             if (node is ExpressionNode)
@@ -1058,7 +1067,7 @@ namespace HanabiLang.Interprets
                 if (_operater == "+") return new ValueReference(left + right);
                 else if (_operater == "-") return new ValueReference(left - right);
                 else if (_operater == "*") return new ValueReference(left * right);
-                else if (_operater == "/") return new ValueReference(left % right);
+                else if (_operater == "/") return new ValueReference(left / right);
                 else if (_operater == "%") return new ValueReference(left % right);
                 else if (_operater == "==") return new ValueReference(new ScriptValue(left.Equals(right)));
                 else if (_operater == "!=") return new ValueReference(new ScriptValue(!left.Equals(right)));
