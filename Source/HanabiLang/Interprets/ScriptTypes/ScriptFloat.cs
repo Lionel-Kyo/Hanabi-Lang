@@ -21,19 +21,19 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject value = (ScriptObject)args[1].Value;
                 if (value.ClassType is ScriptInt)
                 {
-                    _this.BuildInObject = (float)value.BuildInObject;
+                    _this.BuildInObject = (double)(long)value.BuildInObject;
                 }
                 else if (value.ClassType is ScriptDecimal)
                 {
-                    _this.BuildInObject = (float)value.BuildInObject;
+                    _this.BuildInObject = (double)(decimal)value.BuildInObject;
                 }
                 else if (value.ClassType is ScriptFloat)
                 {
-                    _this.BuildInObject = (float)value.BuildInObject;
+                    _this.BuildInObject = (double)value.BuildInObject;
                 }
                 else if (value.ClassType is ScriptStr)
                 {
-                    _this.BuildInObject = float.Parse((string)value.BuildInObject);
+                    _this.BuildInObject = double.Parse((string)value.BuildInObject);
                 }
                 return ScriptValue.Null;
             });
@@ -63,11 +63,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptInt)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject + (long)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject + (long)value.BuildInObject);
             }
             else if (value.ClassType is ScriptFloat)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject + (double)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject + (double)value.BuildInObject);
             }
             else if (value.ClassType is ScriptDecimal)
             {
@@ -79,11 +79,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptInt)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject - (long)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject - (long)value.BuildInObject);
             }
             else if (value.ClassType is ScriptFloat)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject - (double)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject - (double)value.BuildInObject);
             }
             else if (value.ClassType is ScriptDecimal)
             {
@@ -95,11 +95,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptInt)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject * (long)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject * (long)value.BuildInObject);
             }
             else if (value.ClassType is ScriptFloat)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject * (double)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject * (double)value.BuildInObject);
             }
             else if (value.ClassType is ScriptDecimal)
             {
@@ -111,11 +111,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptInt)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject / (long)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject / (long)value.BuildInObject);
             }
             else if (value.ClassType is ScriptFloat)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject / (double)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject / (double)value.BuildInObject);
             }
             else if (value.ClassType is ScriptDecimal)
             {
@@ -127,11 +127,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptInt)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject % (long)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject % (long)value.BuildInObject);
             }
             else if (value.ClassType is ScriptFloat)
             {
-                return BasicTypes.Decimal.Create((double)_this.BuildInObject % (double)value.BuildInObject);
+                return BasicTypes.Float.Create((double)_this.BuildInObject % (double)value.BuildInObject);
             }
             else if (value.ClassType is ScriptDecimal)
             {
