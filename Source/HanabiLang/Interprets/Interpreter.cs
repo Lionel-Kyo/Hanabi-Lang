@@ -386,6 +386,139 @@ namespace HanabiLang.Interprets
             return left;
         }
 
+        private static ValueReference FnReferenceCall(FnReferenceCallNode realNode, ScriptScope interpretScope)
+        {
+            string specialAccess = "";
+            if (realNode.Reference is VariableReferenceNode)
+            {
+                string rawRef = ((VariableReferenceNode)realNode.Reference).Name;
+                if (rawRef.Equals("this") || rawRef.Equals("super"))
+                    specialAccess = rawRef;
+            }
+
+            ScriptValue fnRef = specialAccess.Length <= 0 ? InterpretExpression(interpretScope, realNode.Reference).Ref : null;
+
+            if (fnRef == null)
+            {
+                if (!(interpretScope.Type is ScriptFns))
+                    throw new SystemException("Cannot call this/super function out of function");
+                if (!(interpretScope.Parent.Type is ScriptObject))
+                    throw new SystemException("Cannot call this/super function out of object");
+
+                var scriptObject = (ScriptObject)interpretScope.Parent.Type;
+                if (specialAccess.Equals("this") &&
+                    scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.Name, out ScriptType thisFns))
+                {
+                    var fn = (ScriptFns)thisFns;
+                    var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
+                    return new ValueReference(fn.Call(scriptObject, fnInfo));
+                }
+                else if (specialAccess.Equals("super") &&
+                    scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.Name, out ScriptType superFns))
+                {
+                    var fn = (ScriptFns)superFns;
+                    var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
+                    return new ValueReference(fn.Call(scriptObject, fnInfo));
+                }
+            }
+            else if (fnRef.IsFunction)
+            {
+                var fn = (ScriptFns)fnRef.Value;
+                var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
+                return new ValueReference(fn.Call(null, fnInfo));
+            }
+            else if (fnRef.IsClass)
+            {
+                var _class = (ScriptClass)fnRef.Value;
+                return new ValueReference(_class.Call(interpretScope, realNode.Args));
+            }
+
+            throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
+        }
+
+        private static ValueReference FnReferenceCall(FnReferenceCallNode fnCall, 
+            ScriptScope interpretScope, ScriptValue left, ScriptScope leftScope, 
+            AccessibilityLevel accessLevel, bool isStaticAccess)
+        {
+            if (fnCall.Reference is FnReferenceCallNode)
+            {
+                ScriptValue referenceCallResult =  FnReferenceCall((FnReferenceCallNode)fnCall.Reference, interpretScope, left,
+                    leftScope, accessLevel, isStaticAccess).Ref;
+                if (referenceCallResult.IsFunction)
+                {
+                    var fn = (ScriptFns)referenceCallResult.Value;
+                    var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
+                    return new ValueReference(fn.Call(null, fnInfo));
+                }
+                else if (referenceCallResult.IsClass)
+                {
+                    var _class = (ScriptClass)referenceCallResult.Value;
+                    return new ValueReference(_class.Call(interpretScope, fnCall.Args));
+                }
+
+                throw new SystemException($"Unexpected function call");
+            }
+
+            if (!(fnCall.Reference is VariableReferenceNode))
+                throw new SystemException($"Unexpected function call");
+
+            string fnName = ((VariableReferenceNode)fnCall.Reference).Name;
+
+            if (leftScope.TryGetValue(fnName, out ScriptType scriptType))
+            {
+                if (scriptType is ScriptFns)
+                {
+                    var fn = ((ScriptFns)scriptType);
+                    var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
+                    if ((int)accessLevel < (int)fnInfo.Item1.Level)
+                        throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
+
+                    return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
+                }
+                else if (scriptType is ScriptClass)
+                {
+                    var _class = ((ScriptClass)scriptType);
+                    if ((int)accessLevel < (int)_class.Level)
+                        throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
+                    return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args));
+                }
+                else if (scriptType is ScriptVariable)
+                {
+                    if (!(fnCall.Reference is VariableReferenceNode))
+                        throw new SystemException($"{fnName} is not callable");
+
+                    ScriptValue value = VariableReference((VariableReferenceNode)fnCall.Reference,
+                        left, leftScope, accessLevel, isStaticAccess).Ref;
+
+                    if (value.IsFunction)
+                    {
+                        var fn = (ScriptFns)value.Value;
+                        var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
+                        if ((int)accessLevel < (int)fnInfo.Item1.Level)
+                            throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
+
+                        return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
+                    }
+                    else if (value.IsClass)
+                    {
+                        var _class = (ScriptClass)value.Value;
+                        if ((int)accessLevel < (int)_class.Level)
+                            throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
+                        return new ValueReference(_class.Call(interpretScope, fnCall.Args));
+                    }
+                    throw new SystemException($"{fnName} is not callable");
+                }
+                else
+                {
+                    throw new SystemException($"{fnName} is not callable");
+                }
+            }
+            else
+            {
+                throw new SystemException($"{left} does not contains {fnName}");
+            }
+        }
+
         public static bool IsExpressionNode(AstNode node)
         {
             Type nodeType = node.GetType();
@@ -977,64 +1110,8 @@ namespace HanabiLang.Interprets
 
                     if (realNode.Right is FnReferenceCallNode)
                     {
-                        var fnCall = (FnReferenceCallNode)realNode.Right;
-                        if (!(fnCall.Reference is VariableReferenceNode))
-                            throw new SystemException($"Unexpected function call");
-                        string fnName = ((VariableReferenceNode)fnCall.Reference).Name;
-
-                        if (leftScope.TryGetValue(fnName, out ScriptType scriptType))
-                        {
-                            if (scriptType is ScriptFns)
-                            {
-                                var fn = ((ScriptFns)scriptType);
-                                var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
-                                if ((int)accessLevel < (int)fnInfo.Item1.Level)
-                                    throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
-
-                                return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
-                            }
-                            else if (scriptType is ScriptClass)
-                            {
-                                var _class = ((ScriptClass)scriptType);
-                                if ((int)accessLevel < (int)_class.Level)
-                                    throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                                return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args));
-                            }
-                            else if (scriptType is ScriptVariable)
-                            {
-                                if (!(fnCall.Reference is VariableReferenceNode))
-                                    throw new SystemException($"{fnName} is not callable");
-
-                                ScriptValue value = VariableReference((VariableReferenceNode)fnCall.Reference,
-                                    left, leftScope, accessLevel, isStaticAccess).Ref;
-
-                                if (value.IsFunction)
-                                {
-                                    var fn = (ScriptFns)value.Value;
-                                    var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
-                                    if ((int)accessLevel < (int)fnInfo.Item1.Level)
-                                        throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
-
-                                    return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
-                                }
-                                else if (value.IsClass)
-                                {
-                                    var _class = (ScriptClass)value.Value;
-                                    if ((int)accessLevel < (int)_class.Level)
-                                        throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                                    return new ValueReference(_class.Call(interpretScope, fnCall.Args));
-                                }
-                                throw new SystemException($"{fnName} is not callable");
-                            }
-                            else
-                            {
-                                throw new SystemException($"{fnName} is not callable");
-                            }
-                        }
-                        else
-                        {
-                            throw new SystemException($"{left} does not contains {fnName}");
-                        }
+                        return FnReferenceCall((FnReferenceCallNode)realNode.Right, interpretScope, left,
+                            leftScope, accessLevel, isStaticAccess);
                     }
                     else if (realNode.Right is VariableReferenceNode)
                     {
@@ -1127,53 +1204,7 @@ namespace HanabiLang.Interprets
             }
             else if (node is FnReferenceCallNode)
             {
-                var realNode = (FnReferenceCallNode)node;
-                string specialAccess = "";
-                if (realNode.Reference is VariableReferenceNode)
-                {
-                    string rawRef = ((VariableReferenceNode)realNode.Reference).Name;
-                    if (rawRef.Equals("this") || rawRef.Equals("super"))
-                        specialAccess = rawRef;
-                }
-
-                ScriptValue fnRef = specialAccess.Length <= 0 ? InterpretExpression(interpretScope, realNode.Reference).Ref : null;
-
-                if (fnRef == null)
-                {
-                    if (!(interpretScope.Type is ScriptFns))
-                        throw new SystemException("Cannot call this/super function out of function");
-                    if (!(interpretScope.Parent.Type is ScriptObject))
-                        throw new SystemException("Cannot call this/super function out of object");
-
-                    var scriptObject = (ScriptObject)interpretScope.Parent.Type;
-                    if (specialAccess.Equals("this") &&
-                        scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.Name, out ScriptType thisFns))
-                    {
-                        var fn = (ScriptFns)thisFns;
-                        var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
-                        return new ValueReference(fn.Call(scriptObject, fnInfo));
-                    }
-                    else if (specialAccess.Equals("super") &&
-                        scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.Name, out ScriptType superFns))
-                    {
-                        var fn = (ScriptFns)superFns;
-                        var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
-                        return new ValueReference(fn.Call(scriptObject, fnInfo));
-                    }
-                }
-                else if (fnRef.IsFunction)
-                {
-                    var fn = (ScriptFns)fnRef.Value;
-                    var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
-                    return new ValueReference(fn.Call(null, fnInfo));
-                }
-                else if (fnRef.IsClass)
-                {
-                    var _class = (ScriptClass)fnRef.Value;
-                    return new ValueReference(_class.Call(interpretScope, realNode.Args));
-                }
-
-                throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
+                return FnReferenceCall((FnReferenceCallNode)node, interpretScope);
             }
             else if (node is ListNode)
             {
