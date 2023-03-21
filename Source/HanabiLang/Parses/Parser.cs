@@ -116,7 +116,7 @@ namespace HanabiLang.Parses
                         // Unary operator
                         if (currentToken.Raw == "-" || currentToken.Raw == "+" || currentToken.Raw == "!")
                         {
-                            var expression = this.Factor(skipIndexers, skipArrowFn);
+                            var expression = this.TermDot(skipIndexers, skipArrowFn);
                             return new UnaryNode(expression, currentToken.Raw);
                         }
                         else
@@ -177,17 +177,30 @@ namespace HanabiLang.Parses
             return this.Identifier(skipIndexers);
         }
 
-        private AstNode Term(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermDot(bool skipIndexers, bool skipArrowFn)
         {
             var left = this.Factor(skipIndexers, skipArrowFn);
 
-            while (this.currentTokenIndex < this.tokens.Count &&
+            while (HasNextToken && NextTokenType == TokenType.DOT)
+            {
+                this.Expect(TokenType.DOT);
+                left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), ".");
+            }
+
+            return left;
+        }
+
+        private AstNode Term(bool skipIndexers, bool skipArrowFn)
+        {
+            var left = this.TermDot(skipIndexers, skipArrowFn);
+
+            while (HasNextToken &&
                    (this.tokens[this.currentTokenIndex].Raw == "*" || this.tokens[this.currentTokenIndex].Raw == "/"))
             {
                 var currentToken = this.tokens[this.currentTokenIndex];
 
                 this.Expect(TokenType.OPERATOR);
-               left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermDot(skipIndexers, skipArrowFn), currentToken.Raw);
             }
 
             // For function calling
@@ -1102,13 +1115,8 @@ namespace HanabiLang.Parses
 
             this.currentTokenIndex++;
 
-            if (HasNextToken && NextTokenType == TokenType.DOT)
-            {
-                this.Expect(TokenType.DOT);
-                return new ExpressionNode(new VariableReferenceNode(currentToken.Raw), this.Factor(skipIndexers, true), ".");
-            }
             // Function call
-            else if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+            if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
             {
                 //return FunctionCall(currentToken);
                 return FunctionCall(new VariableReferenceNode(currentToken.Raw));
@@ -1124,6 +1132,7 @@ namespace HanabiLang.Parses
 
                     if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
                         return FunctionCall(indexersAccess);
+
 
                     return indexersAccess;
                 }
