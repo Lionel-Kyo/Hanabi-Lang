@@ -138,8 +138,12 @@ namespace HanabiLang.Parses
                         {
                             elements.Add(this.Expression());
 
-                            if (this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
-                                this.currentTokenIndex++;
+                            if (HasNextToken && NextTokenType == TokenType.CLOSE_SQURE_BRACKET)
+                                break;
+                            else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                                Expect(TokenType.COMMA);
+                            else
+                                throw new SystemException("List expected ',' or ']'");
                         }
 
                         this.Expect(TokenType.CLOSE_SQURE_BRACKET);
@@ -154,16 +158,19 @@ namespace HanabiLang.Parses
 
                         this.currentTokenIndex++;
 
-                        while (this.currentTokenIndex <= this.tokens.Count &&
-                               this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+                        while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
                         {
                             AstNode key = this.Expression();
                             this.Expect(TokenType.COLON);
                             AstNode value = this.Expression();
                             keyValues.Add(Tuple.Create(key, value));
 
-                            if (this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
-                                this.currentTokenIndex++;
+                            if (HasNextToken && NextTokenType == TokenType.CLOSE_CURLY_BRACKET)
+                                break;
+                            else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                                Expect(TokenType.COMMA);
+                            else
+                                throw new SystemException("Dict expected ',' or '}'");
                         }
 
                         this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -1024,8 +1031,7 @@ namespace HanabiLang.Parses
             var arguments = new Dictionary<string, AstNode>();
             int argsCount = 0;
             bool isLastWithName = false;
-            while (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
+            while (HasNextToken && NextTokenType != TokenType.CLOSE_ROUND_BRACKET)
             {
                 if (this.currentTokenIndex + 1 < this.tokens.Count &&
                     this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER &&
@@ -1048,20 +1054,20 @@ namespace HanabiLang.Parses
                     argsCount++;
                 }
 
-                if (this.currentTokenIndex < this.tokens.Count &&
-                    this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
-                {
-                    this.currentTokenIndex++;
-                }
+                if (HasNextToken && NextTokenType == TokenType.CLOSE_ROUND_BRACKET)
+                    break;
+                else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                    Expect(TokenType.COMMA);
+                else
+                    throw new SystemException("Function call expected ',' or ')'");
             }
 
-            if (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
+            if (HasNextToken && NextTokenType != TokenType.CLOSE_ROUND_BRACKET)
             {
-                throw new SystemException("Expected ')'");
+                throw new SystemException("Function call expected ')'");
             }
 
-            this.currentTokenIndex++;
+            Expect(TokenType.CLOSE_ROUND_BRACKET);
 
             AstNode lastFnRefCall = new FnReferenceCallNode(node, arguments);
             while (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
