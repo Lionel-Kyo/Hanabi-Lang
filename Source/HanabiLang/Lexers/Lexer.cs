@@ -42,13 +42,14 @@ namespace HanabiLang.Lexers
         private static void BlockComment(ref int index, ref bool isBlockComment, string line)
         {
             int closeIndex = line.IndexOf("*/", index);
+            int length = line.Length;
             if (closeIndex == -1)
             {
                 index = line.Length;
             }
             else
             {
-                index = closeIndex + 2;
+                index = closeIndex + 1;
                 isBlockComment = false;
             }
         }
@@ -506,23 +507,23 @@ namespace HanabiLang.Lexers
                     if (SkipChars.Contains(c))
                         continue;
 
-                    if (c == '#')
+                    else if (c == '#')
                         break;
 
-                    if (isBlockComment)
+                    else if (isBlockComment)
                     {
                         BlockComment(ref i, ref isBlockComment, line);
                         if (i >= line.Length)
                             break;
                     }
 
-                    if (c == ';')
+                    else if (c == ';')
                     {
                         tokens.Add(new Token(TokenType.SEMI_COLON, ";", lineIndex));
                     }
 
                     // check int / float
-                    if (char.IsDigit(c))
+                    else if (char.IsDigit(c))
                     {
                         string number = "";
 
@@ -557,12 +558,10 @@ namespace HanabiLang.Lexers
                             tokens.Add(new Token(TokenType.FLOAT, number, lineIndex));
                         else if (dotNums == 0)
                             tokens.Add(new Token(TokenType.INT, number, lineIndex));
-
-                        continue;
                     }
 
                     // check identifier
-                    if (CheckIdentifier(c, true))
+                    else if (CheckIdentifier(c, true))
                     {
                         string identifier = "";
 
@@ -590,11 +589,10 @@ namespace HanabiLang.Lexers
                             tokens.Add(new Token(TokenType.IDENTIFIER, identifier, lineIndex));
                         }
 
-                        continue;
                     }
 
                     // !=, !
-                    if (c == '!')
+                    else if (c == '!')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
                         {
@@ -602,11 +600,10 @@ namespace HanabiLang.Lexers
                             i++;
                         }
                         else tokens.Add(new Token(TokenType.OPERATOR, "!", lineIndex));
-                        continue;
                     }
 
                     // ==, >=, =
-                    if (c == '=')
+                    else if (c == '=')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
                         {
@@ -623,7 +620,7 @@ namespace HanabiLang.Lexers
                     }
 
                     // <=, <
-                    if (c == '<')
+                    else if (c == '<')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
                         {
@@ -631,11 +628,10 @@ namespace HanabiLang.Lexers
                             i++;
                         }
                         else tokens.Add(new Token(TokenType.OPERATOR, "<", lineIndex));
-                        continue;
                     }
 
                     // >=, >
-                    if (c == '>')
+                    else if (c == '>')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
                         {
@@ -643,33 +639,30 @@ namespace HanabiLang.Lexers
                             i++;
                         }
                         else tokens.Add(new Token(TokenType.OPERATOR, ">", lineIndex));
-                        continue;
                     }
 
                     // ||
-                    if (c == '|')
+                    else if (c == '|')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '|')
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, "||", lineIndex));
                             i++;
                         }
-                        continue;
                     }
 
                     // &&
-                    if (c == '&')
+                    else if (c == '&')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '&')
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, "&&", lineIndex));
                             i++;
                         }
-                        continue;
                     }
 
                     // *, *=, %, %=
-                    if (c == '*' || c == '%')
+                    else if (c == '*' || c == '%')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
                         {
@@ -680,11 +673,10 @@ namespace HanabiLang.Lexers
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), lineIndex));
                         }
-                        continue;
                     }
 
                     // +, +=, ++, -, -=, --, ->
-                    if (c == '+' || c == '-')
+                    else if (c == '+' || c == '-')
                     {
                         // ->
                         if (i + 1 < line.Length && c == '-' && line[i + 1] == '>')
@@ -709,88 +701,77 @@ namespace HanabiLang.Lexers
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), lineIndex));
                         }
-                        continue;
                     }
 
                     // open round bracket
-                    if (c == '(')
+                    else if (c == '(')
                     {
                         tokens.Add(new Token(TokenType.OPEN_ROUND_BRACKET, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // close round bracket
-                    if (c == ')')
+                    else if (c == ')')
                     {
                         tokens.Add(new Token(TokenType.CLOSE_ROUND_BRACKET, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // open squre bracket
-                    if (c == '[')
+                    else if (c == '[')
                     {
                         tokens.Add(new Token(TokenType.OPEN_SQURE_BRACKET, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // close squre bracket
-                    if (c == ']')
+                    else if (c == ']')
                     {
                         tokens.Add(new Token(TokenType.CLOSE_SQURE_BRACKET, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // open curly bracket
-                    if (c == '{')
+                    else if (c == '{')
                     {
                         tokens.Add(new Token(TokenType.OPEN_CURLY_BRACKET, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // close curly bracket
-                    if (c == '}')
+                    else if (c == '}')
                     {
                         tokens.Add(new Token(TokenType.CLOSE_CURLY_BRACKET, c.ToString(), lineIndex));
                         continue;
                     }
 
                     // ?
-                    if (c == '?')
+                    else if (c == '?')
                     {
                         tokens.Add(new Token(TokenType.QUESTION_MARK, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // .
-                    if (c == '.')
+                    else if (c == '.')
                     {
                         tokens.Add(new Token(TokenType.DOT, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // ,
-                    if (c == ',')
+                    else if (c == ',')
                     {
                         tokens.Add(new Token(TokenType.COMMA, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // :
-                    if (c == ':')
+                    else if (c == ':')
                     {
                         tokens.Add(new Token(TokenType.COLON, c.ToString(), lineIndex));
-                        continue;
                     }
 
                     // string: "", ''
-                    if (c == '"' || c == '\'')
+                    else if (c == '"' || c == '\'')
                     {
                         i++;
                         tokens.Add(EscapeStringToken(c, ref i, line, lineIndex));
-                        continue;
                     }
 
-                    if (c == '$')
+                    else if (c == '$')
                     {
                         if (i + 1 < line.Length && (line[i + 1] == '@'))
                         {
@@ -804,18 +785,16 @@ namespace HanabiLang.Lexers
                                     break;
                             }
                             else throw new SystemException($"Unexpected Token $@");
-                            continue;
                         }
                         else if (i + 1 < line.Length && (line[i + 1] == '\'' || line[i + 1] == '\"'))
                         {
                             i += 2;
                             tokens.Add(InterpolatedEscapeStringToken(line[i - 1], ref i, line, lineIndex));
-                            continue;
                         }
                         else throw new SystemException($"Unexpected Token $");
                     }
 
-                    if (c == '@')
+                    else if (c == '@')
                     {
                         if (i + 1 < line.Length && (line[i + 1] == '$'))
                         {
@@ -829,7 +808,6 @@ namespace HanabiLang.Lexers
                                     break;
                             }
                             else throw new SystemException($"Unexpected Token @$");
-                            continue;
                         }
                         else if (i + 1 < line.Length && (line[i + 1] == '\'' || line[i + 1] == '\"'))
                         {
@@ -838,12 +816,11 @@ namespace HanabiLang.Lexers
                             tokens.Add(LiteralStringToken(line[i - 1], ref i, lines, ref lineIndex));
                             if (lineIndex > beforeLineIndex)
                                 break;
-                            continue;
                         }
                     }
 
                     // /=, /*, /
-                    if (c == '/')
+                    else if (c == '/')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
                         {
@@ -860,6 +837,8 @@ namespace HanabiLang.Lexers
                             BlockComment(ref i, ref isBlockComment, line);
                             if (i >= line.Length)
                                 break;
+                            else
+                                continue;
                         }
                         else
                         {
