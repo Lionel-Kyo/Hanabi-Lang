@@ -48,8 +48,8 @@ namespace HanabiLang.Interprets.ScriptTypes
                 if (end < 0 && step > 0)
                     step *= -1;
 
-                if (step == 0)
-                    throw new SystemException("step cannot be 0");
+                /*if (step == 0)
+                    throw new SystemException("step cannot be 0");*/
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
             });
@@ -69,8 +69,8 @@ namespace HanabiLang.Interprets.ScriptTypes
                 end = (long)((ScriptObject)args[2].Value).BuildInObject;
                 step = (long)((ScriptObject)args[3].Value).BuildInObject;
 
-                if (step == 0)
-                    throw new SystemException("step cannot be 0");
+                /*if (step == 0)
+                    throw new SystemException("step cannot be 0");*/
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
             });
@@ -93,14 +93,21 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             long x = start;
 
-            do
+            while (true)
+            {
+                if (step < 0 && x <= stop || 0 < step && stop <= x)
+                    break;
+                yield return new ScriptValue(x);
+                x += step;
+            }
+            /*do
             {
                 yield return new ScriptValue(x);
                 x += step;
                 if (step < 0 && x <= stop || 0 < step && stop <= x)
                     break;
             }
-            while (true);
+            while (true);*/
         }
 
         public override ScriptObject Equals(ScriptObject _this, ScriptObject value)

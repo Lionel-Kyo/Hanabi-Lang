@@ -477,8 +477,8 @@ namespace HanabiLang.Interprets.ScriptTypes
             if (right.ClassType is ScriptList)
             {
                 var list = ((List<ScriptValue>)left.BuildInObject);
-                List<ScriptValue> result = new List<ScriptValue>((List<ScriptValue>)left.BuildInObject);
-                result.AddRange(list);
+                List<ScriptValue> result = new List<ScriptValue>(list);
+                result.AddRange(((List<ScriptValue>)right.BuildInObject));
                 return BasicTypes.List.Create(result);
             }
             return base.Add(left, right);

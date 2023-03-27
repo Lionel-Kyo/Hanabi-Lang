@@ -489,24 +489,32 @@ namespace HanabiLang.Parses
             {
                 this.currentTokenIndex++;
 
-                if (this.currentTokenIndex < this.tokens.Count && 
-                    this.tokens[this.currentTokenIndex].Raw == "if")
+                if (HasNextToken && this.tokens[this.currentTokenIndex].Raw == "if")
                 {
                     elseBody.Add(this.IfStatement());
                 }
                 else
                 {
-                    this.Expect(TokenType.OPEN_CURLY_BRACKET);
-
-                    while (this.currentTokenIndex < this.tokens.Count &&
-                           this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+                    if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
                     {
+                        this.Expect(TokenType.DOUBLE_ARROW);
                         AstNode child = this.ParseChild();
                         if (child != null)
-                            elseBody.Add(child);
+                            thenBody.Add(child);
                     }
+                    else
+                    {
+                        this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                    this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+                        while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                        {
+                            AstNode child = this.ParseChild();
+                            if (child != null)
+                                elseBody.Add(child);
+                        }
+
+                        this.Expect(TokenType.CLOSE_CURLY_BRACKET);
+                    }
                 }
             }
 
