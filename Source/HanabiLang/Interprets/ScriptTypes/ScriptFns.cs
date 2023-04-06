@@ -204,7 +204,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                     else
                     {
                         if (!args.TryGetValue(parameter.Name, out ScriptValue value))
-                            value = args[index.ToString()];
+                        {
+                            if (!args.TryGetValue(index.ToString(), out value))
+                            {
+                                if (parameter.DefaultValue == null)
+                                    continue;
+                                value = parameter.DefaultValue;
+                            }
+                        }
 
                         if (parameter.DataType != null &&
                             (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
