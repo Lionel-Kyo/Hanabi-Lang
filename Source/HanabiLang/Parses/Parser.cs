@@ -1317,7 +1317,10 @@ namespace HanabiLang.Parses
                             return expression;
                         }
                         else throw new SystemException("Keyword is not implemented: " + token.Raw);
-
+                        while (HasNextToken && NextTokenType == TokenType.SEMI_COLON)
+                        {
+                            Expect(TokenType.SEMI_COLON);
+                        }
                         result.Line = token.Line;
                         return result;
                     }
