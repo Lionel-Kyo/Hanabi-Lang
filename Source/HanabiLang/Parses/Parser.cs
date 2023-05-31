@@ -500,7 +500,7 @@ namespace HanabiLang.Parses
                         this.Expect(TokenType.DOUBLE_ARROW);
                         AstNode child = this.ParseChild();
                         if (child != null)
-                            thenBody.Add(child);
+                            elseBody.Add(child);
                     }
                     else
                     {
