@@ -78,17 +78,7 @@ namespace HanabiLang.Interprets
 
                 if (!ImportedItems.Types.TryGetValue(csharpType, out ScriptClass scriptClass))
                 {
-                    bool isStruct = csharpType.IsValueType && !csharpType.IsEnum;
-                    bool isEnum = csharpType.IsValueType;
-                    bool isClass = csharpType.IsClass;
-                    if (!isClass && !isStruct/* && !isEnum*/)
-                        throw new SystemException("Only C# class/struct can be imported");
-
-                    bool isStatic = csharpType.IsAbstract && csharpType.IsSealed;
-
-                    scriptClass = new ScriptClass(className, null, null, null, isStatic, AccessibilityLevel.Public);
-                    BuildInClasses.CSharpClassToScriptClass(scriptClass, csharpType);
-                    ImportedItems.Types[csharpType] = scriptClass;
+                    scriptClass = BuildInClasses.CSharpClassToScriptClass(csharpType, className);
                 }
 
                 ScriptScope scriptScope = scriptClass.Scope;

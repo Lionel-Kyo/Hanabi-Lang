@@ -102,6 +102,11 @@ namespace Testing
             this.Message = message;
         }
 
+        public TestClass2 Add(TestClass2 value)
+        {
+            return new TestClass2(this.Message + value.Message);
+        }
+
         public override string ToString()
         {
             return this.Message;

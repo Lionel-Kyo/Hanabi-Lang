@@ -189,6 +189,10 @@ namespace HanabiLang.Interprets
             {
                 return GetCsArray(obj, csType.GetElementType());
             }
+            else if (ImportedItems.Types.ContainsValue(obj.ClassType))
+            {
+                return obj.BuildInObject;
+            }
 
             throw new SystemException($"Expected type: {csType.Name}");
         }
@@ -278,8 +282,28 @@ namespace HanabiLang.Interprets
             {
                 return FromCsArray(csObj);
             }
+            else if (ImportedItems.Types.TryGetValue(csType, out var scriptClass))
+            {
+                return new ScriptValue(new ScriptObject(scriptClass, csObj));
+            }
 
             throw new SystemException($"Unexpected type: {csType.Name}");
+        }
+
+        public static ScriptClass CSharpClassToScriptClass(Type type, string rename = null)
+        {
+            bool isStruct = type.IsValueType && !type.IsEnum;
+            bool isEnum = type.IsValueType;
+            bool isClass = type.IsClass;
+            if (!isClass && !isStruct/* && !isEnum*/)
+                throw new SystemException("Only C# class/struct can be imported");
+
+            bool isStatic = type.IsAbstract && type.IsSealed;
+
+            var scriptClass = new ScriptClass(string.IsNullOrEmpty(rename) ? type.Name : rename, null, null, null, isStatic, AccessibilityLevel.Public);
+            ImportedItems.Types[type] = scriptClass;
+            BuildInClasses.CSharpClassToScriptClass(scriptClass, type);
+            return scriptClass;
         }
 
         public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type)
@@ -543,8 +567,18 @@ namespace HanabiLang.Interprets
             }
             else if (type.IsArray)
                 return BasicTypes.List;
-
-            throw new NotImplementedException($"Not supported datatype {type.Name}");
+            else if (ImportedItems.Types.TryGetValue(type, out var scriptClass))
+            {
+                return scriptClass;
+            }
+            try
+            {
+                return CSharpClassToScriptClass(type);
+            }
+            catch
+            {
+                throw new NotImplementedException($"Not supported datatype {type.Name}");
+            }
         }
 
         public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method) => ToScriptFn(method, null);
@@ -581,10 +615,10 @@ namespace HanabiLang.Interprets
 
                 object[] csObjects = new object[csParameters.Count];
 
-                int startCount = (isStatic || createdObject != null) ? 0 : 1;
-                for (int i = startCount; i < csParameters.Count; i++)
+                int argsStartCount = (isStatic || createdObject != null) ? 0 : 1;
+                for (int i = 0; i < csObjects.Length; i++)
                 {
-                    csObjects[i] = ToCsObject(args[i], csParameters[i]);
+                    csObjects[i] = ToCsObject(args[i + argsStartCount], csParameters[i]);
                 }
 
                 object invokeObject = null;
