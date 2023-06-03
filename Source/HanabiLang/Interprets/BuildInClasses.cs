@@ -7,6 +7,8 @@ using System.Reflection;
 using HanabiLang.Parses.Nodes;
 using HanabiLang.Interprets.ScriptTypes;
 
+// To do: Script parameter with type defined cannot be pass null => C# nullable parameter cannot pass null in script calling
+
 namespace HanabiLang.Interprets
 {
     class BuildInClasses
@@ -115,7 +117,7 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(ulong) && obj.ClassType is ScriptInt)
                 return (ulong)((long)obj.BuildInObject);
 
-            else if (csType == typeof(sbyte?) && obj.ClassType is ScriptInt)
+            /*else if (csType == typeof(sbyte?) && obj.ClassType is ScriptInt)
                 return (sbyte?)((long)obj.BuildInObject);
             else if (csType == typeof(short?) && obj.ClassType is ScriptInt)
                 return (short?)((long)obj.BuildInObject);
@@ -130,7 +132,7 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(uint?) && obj.ClassType is ScriptInt)
                 return (uint?)((long)obj.BuildInObject);
             else if (csType == typeof(ulong?) && obj.ClassType is ScriptInt)
-                return (ulong?)((long)obj.BuildInObject);
+                return (ulong?)((long)obj.BuildInObject);*/
 
             else if ((csType == typeof(string) || csType == typeof(object)) && obj.ClassType is ScriptStr)
                 return (string)obj.BuildInObject;
@@ -140,8 +142,8 @@ namespace HanabiLang.Interprets
             else if ((csType == typeof(bool) || csType == typeof(object)) && obj.ClassType is ScriptBool)
                 return (bool)obj.BuildInObject;
 
-            else if ((csType == typeof(bool?) || csType == typeof(object)) && obj.ClassType is ScriptBool)
-                return (bool?)obj.BuildInObject;
+            /*else if ((csType == typeof(bool?) || csType == typeof(object)) && obj.ClassType is ScriptBool)
+                return (bool?)obj.BuildInObject;*/
 
             else if (csType == typeof(float) && obj.ClassType is ScriptFloat)
                 return (float)obj.BuildInObject;
@@ -150,12 +152,12 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(decimal) && obj.ClassType is ScriptFloat)
                 return (decimal)obj.BuildInObject;
 
-            else if (csType == typeof(float?) && obj.ClassType is ScriptFloat)
+            /*else if (csType == typeof(float?) && obj.ClassType is ScriptFloat)
                 return (float)obj.BuildInObject;
             else if ((csType == typeof(double?) || csType == typeof(object)) && obj.ClassType is ScriptFloat)
                 return (double)obj.BuildInObject;
             else if (csType == typeof(decimal?) && obj.ClassType is ScriptFloat)
-                return (decimal)obj.BuildInObject;
+                return (decimal)obj.BuildInObject;*/
 
             else if (csType == typeof(float) && obj.ClassType is ScriptDecimal)
                 return (float)obj.BuildInObject;
@@ -168,7 +170,13 @@ namespace HanabiLang.Interprets
             {
                 Type genericType = csType.GetGenericTypeDefinition();
                 Type[] genericArgs = csType.GenericTypeArguments;
-                if (genericType == typeof(List<>))
+                if (genericType == typeof(Nullable<>))
+                {
+                    Type genericListType = typeof(Nullable<>);
+                    Type concreteListType = genericListType.MakeGenericType(genericArgs[0]);
+                    return Activator.CreateInstance(concreteListType, new object[] { ToCsObject(value, genericArgs[0]) });
+                }
+                else if (genericType == typeof(List<>))
                 {
                     return GetCsList(obj, genericArgs[0]);
                 }
@@ -223,7 +231,7 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(ulong))
                 return new ScriptValue((long)(ulong)csObj);
 
-            if (csType == typeof(sbyte?))
+            /*if (csType == typeof(sbyte?))
                 return new ScriptValue((sbyte?)csObj);
             else if (csType == typeof(short?))
                 return new ScriptValue((short?)csObj);
@@ -238,7 +246,7 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(uint?))
                 return new ScriptValue((uint?)csObj);
             else if (csType == typeof(ulong?))
-                return new ScriptValue((long?)(ulong)csObj);
+                return new ScriptValue((long?)(ulong)csObj);*/
 
             else if (csType == typeof(string))
                 return new ScriptValue((string)csObj);
@@ -248,8 +256,8 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(bool))
                 return new ScriptValue((bool)csObj);
 
-            else if (csType == typeof(bool?))
-                return new ScriptValue((bool?)csObj);
+            /*else if (csType == typeof(bool?))
+                return new ScriptValue((bool?)csObj);*/
 
             else if (csType == typeof(float))
                 return new ScriptValue((float)csObj);
@@ -258,18 +266,22 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(decimal))
                 return new ScriptValue((decimal)csObj);
 
-            else if (csType == typeof(float?))
+            /*else if (csType == typeof(float?))
                 return new ScriptValue((float?)csObj);
             else if (csType == typeof(double?))
                 return new ScriptValue((double?)csObj);
             else if (csType == typeof(decimal?))
-                return new ScriptValue((decimal?)csObj);
+                return new ScriptValue((decimal?)csObj);*/
 
             else if (csType.IsGenericType)
             {
                 Type genericType = csType.GetGenericTypeDefinition();
                 // Type[] genericArgs = csType.GenericTypeArguments;
-                if (genericType == typeof(List<>))
+                if (genericType == typeof(Nullable<>))
+                {
+                    return FromCsObject(csType.GenericTypeArguments[0]);
+                }
+                else if (genericType == typeof(List<>))
                 {
                     return FromCsList(csObj);
                 }
@@ -277,6 +289,7 @@ namespace HanabiLang.Interprets
                 {
                     return FromCsDictionary(csObj);
                 }
+                throw new SystemException($"Unexpected type: {csType.Name}");
             }
             else if (csType.IsArray)
             {
@@ -560,17 +573,20 @@ namespace HanabiLang.Interprets
             else if (type.IsGenericType)
             {
                 Type genericType = type.GetGenericTypeDefinition();
-                if (genericType == typeof(List<>))
+                if (genericType == typeof(Nullable<>))
+                    return ToScriptType(type.GenericTypeArguments[0]);
+                else if (genericType == typeof(List<>))
                     return BasicTypes.List;
                 else if (genericType == typeof(Dictionary<,>))
                     return BasicTypes.Dict;
+
+                throw new NotImplementedException($"Not supported datatype {type.Name}");
             }
             else if (type.IsArray)
                 return BasicTypes.List;
             else if (ImportedItems.Types.TryGetValue(type, out var scriptClass))
-            {
                 return scriptClass;
-            }
+
             try
             {
                 return CSharpClassToScriptClass(type);

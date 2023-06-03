@@ -64,6 +64,12 @@ namespace Testing
             }
             return lines;
         }
+
+        public static bool? Nullable(bool? fake)
+        {
+            bool? nul = null;
+            return nul;
+        }
     }
 
     public class Faker
