@@ -348,8 +348,7 @@ namespace HanabiLang.Parses
                         if (!isGet && setFn != null)
                             throw new SystemException($"Cannot redefine set function");
 
-                        if (this.currentTokenIndex < this.tokens.Count &&
-                            this.tokens[this.currentTokenIndex].Type == TokenType.DOUBLE_ARROW)
+                        if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
                         {
                             this.Expect(TokenType.DOUBLE_ARROW);
                             var fnBody = this.ParseChild();
@@ -359,13 +358,11 @@ namespace HanabiLang.Parses
                             else
                                 body.Add(fnBody);
                         }
-                        else if (this.currentTokenIndex < this.tokens.Count &&
-                                    this.tokens[this.currentTokenIndex].Type == TokenType.CLOSE_CURLY_BRACKET)
+                        else if (HasNextToken && NextTokenType == TokenType.OPEN_CURLY_BRACKET)
                         {
                             this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                            while (this.currentTokenIndex < this.tokens.Count &&
-                                    this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+                            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
                             {
                                 AstNode child = this.ParseChild();
                                 if (child != null)
