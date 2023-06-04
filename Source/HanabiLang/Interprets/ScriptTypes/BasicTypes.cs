@@ -7,9 +7,11 @@ using HanabiLang.Interprets.Exceptions;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
-    internal class BasicTypes
+    internal static class BasicTypes
     {
         public static readonly ScriptObjectClass ObjectClass = new ScriptObjectClass();
+        public static readonly ScriptNull Null = new ScriptNull();
+        public static readonly ScriptObject NullValue = Null.Create();
         public static readonly ScriptInt Int = new ScriptInt();
         public static readonly ScriptFloat Float = new ScriptFloat();
         public static readonly ScriptDecimal Decimal = new ScriptDecimal();
@@ -18,8 +20,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptList List = new ScriptList();
         public static readonly ScriptDict Dict = new ScriptDict();
         public static readonly ScriptRange Range = new ScriptRange();
-        public static readonly ScriptNull Null = new ScriptNull();
-        public static readonly ScriptObject NullValue = Null.Create();
         public static readonly ScriptEnumerator Enumerator = new ScriptEnumerator();
         public static readonly ScriptException Exception = new ScriptException();
     }

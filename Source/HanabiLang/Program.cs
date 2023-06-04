@@ -8,6 +8,7 @@ using HanabiLang.Lexers;
 using HanabiLang.Parses;
 using HanabiLang.Interprets;
 using System.Collections;
+using System.Threading;
 
 namespace HanabiLang
 {
