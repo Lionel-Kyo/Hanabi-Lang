@@ -130,10 +130,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                string[] separator = new string[args.Count - 1];
-                for (int i = 1; i < args.Count; i++)
+                ScriptObject separators = (ScriptObject)args[1].Value;
+                string[] separator = new string[((List<ScriptValue>)separators.BuildInObject).Count];
+                for (int i = 0; i < ((List<ScriptValue>)separators.BuildInObject).Count; i++)
                 {
-                    separator[i - 1] = (string)((ScriptObject)args[i].Value).BuildInObject;
+                    separator[i] = (string)(((ScriptObject)((List<ScriptValue>)separators.BuildInObject)[i].Value).BuildInObject);
                 }
                 List<ScriptValue> result = new List<ScriptValue>();
                 foreach (string value in ((string)_this.BuildInObject).Split(separator, StringSplitOptions.None))

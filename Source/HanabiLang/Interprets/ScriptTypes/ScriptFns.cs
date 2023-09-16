@@ -199,7 +199,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                             isMatchFn = false;
                             break;
                         }
-                        variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevel.Private));
+                        if (args.TryGetValue(parameter.Name, out ScriptValue value))
+                        {
+                            variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
+                        }
+                        else
+                        {
+                            variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevel.Private));
+                        }
                     }
                     else
                     {
