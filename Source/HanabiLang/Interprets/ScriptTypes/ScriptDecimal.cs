@@ -123,19 +123,24 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
             return base.Divide(_this, value);
         }
+
+        public static long Modulo(long k, long n) => ((k %= n) < 0) ? k + n : k;
+        public static double Modulo(double k, double n) => ((k %= n) < 0) ? k + n : k;
+        public static decimal Modulo(decimal k, decimal n) => ((k %= n) < 0) ? k + n : k;
+
         public override ScriptObject Modulo(ScriptObject _this, ScriptObject value)
         {
             if (value.ClassType is ScriptInt)
             {
-                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject % (long)value.BuildInObject);
+                return BasicTypes.Decimal.Create(Modulo((decimal)_this.BuildInObject, (long)value.BuildInObject));
             }
             else if (value.ClassType is ScriptFloat)
             {
-                return BasicTypes.Decimal.Create((double)(decimal)_this.BuildInObject % (double)value.BuildInObject);
+                return BasicTypes.Decimal.Create(Modulo((double)(decimal)_this.BuildInObject, (double)value.BuildInObject));
             }
             else if (value.ClassType is ScriptDecimal)
             {
-                return BasicTypes.Decimal.Create((decimal)_this.BuildInObject % (decimal)value.BuildInObject);
+                return BasicTypes.Decimal.Create(Modulo((decimal)_this.BuildInObject, (decimal)value.BuildInObject));
             }
             return base.Modulo(_this, value);
         }
