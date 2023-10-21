@@ -1244,10 +1244,9 @@ namespace HanabiLang.Interprets
 
                     long intValue = (long)((ScriptObject)index.Ref.Value).BuildInObject;
 
-                    if (intValue < 0 || intValue >= listValue.Count)
-                        throw new SystemException("Index out of range");
-                    return new ValueReference(() => listValue[(int)intValue],
-                        x => listValue[(int)intValue] = x);
+                    int intIndex = (int)ScriptInt.Modulo(intValue, listValue.Count);
+                    return new ValueReference(() => listValue[intIndex],
+                        x => listValue[intIndex] = x);
                 }
                 else if (obj.ClassType is ScriptDict)
                 {
