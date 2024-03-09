@@ -834,6 +834,7 @@ namespace HanabiLang.Lexers
                         else if (i + 1 < line.Length && line[i + 1] == '*')
                         {
                             isBlockComment = true;
+                            i += 2;
                             BlockComment(ref i, ref isBlockComment, line);
                             if (i >= line.Length)
                                 break;
