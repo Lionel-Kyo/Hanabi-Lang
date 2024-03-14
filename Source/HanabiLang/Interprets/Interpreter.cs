@@ -28,7 +28,7 @@ namespace HanabiLang.Interprets
         {
             this.ast = ast;
             this.currentScope = new ScriptScope(null, this);
-            this.Path = path;
+            this.Path = path.Replace("\\", "/");
             this.currentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
             this.currentScope.Classes.Add("object", BasicTypes.ObjectClass);
             this.currentScope.Classes.Add("str", BasicTypes.Str);
@@ -117,7 +117,7 @@ namespace HanabiLang.Interprets
             if (fullPathIndex < 0)
                 throw new SystemException($"File {realNode.Path} not found");
 
-            string fullPath = fullPaths[fullPathIndex];
+            string fullPath = fullPaths[fullPathIndex].Replace("\\", "/");
             string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
             string extension = System.IO.Path.GetExtension(fullPath).ToLower();
             if (extension.Equals(".json"))
