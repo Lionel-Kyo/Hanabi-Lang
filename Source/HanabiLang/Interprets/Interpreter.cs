@@ -27,7 +27,7 @@ namespace HanabiLang.Interprets
         public Interpreter(AbstractSyntaxTree ast, string path, bool isMain)
         {
             this.ast = ast;
-            this.currentScope = new ScriptScope(null);
+            this.currentScope = new ScriptScope(null, this);
             this.Path = path;
             this.currentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
             this.currentScope.Classes.Add("object", BasicTypes.ObjectClass);
@@ -109,10 +109,15 @@ namespace HanabiLang.Interprets
                 return;
             }
 
-            string fullPath = System.IO.Path.GetFullPath(realNode.Path);
-
-            if (!System.IO.File.Exists(fullPath))
+            List<string> fullPaths = new List<string>();
+            if (!string.IsNullOrEmpty(interpretScope?.ParentInterpreter?.Path))
+                fullPaths.Add(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(interpretScope.ParentInterpreter.Path), realNode.Path));
+            fullPaths.Add(System.IO.Path.GetFullPath(realNode.Path));
+            int fullPathIndex = fullPaths.FindIndex(x => System.IO.File.Exists(x));
+            if (fullPathIndex < 0)
                 throw new SystemException($"File {realNode.Path} not found");
+
+            string fullPath = fullPaths[fullPathIndex];
             string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
             string extension = System.IO.Path.GetExtension(fullPath).ToLower();
             if (extension.Equals(".json"))

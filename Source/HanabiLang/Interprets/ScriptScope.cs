@@ -23,15 +23,29 @@ namespace HanabiLang.Interprets
         public Dictionary<string, ScriptFns> Functions { get; private set; }
         public Dictionary<string, ScriptClass> Classes { get; private set; }
         public ScriptScope Parent { get; set; }
-        //public ScopeType Type { get; private set; }
         public ScriptType Type { get; private set; }
-        public ScriptScope(ScriptType type, ScriptScope parent = null)
+        public Interpreter ParentInterpreter { get; private set; }
+
+        private ScriptScope(ScriptType type)
         {
             this.Type = type;
-            this.Parent = parent;
+            this.Parent = null;
+            this.ParentInterpreter = null;
             this.Variables = new Dictionary<string, ScriptVariable>();
             this.Functions = new Dictionary<string, ScriptFns>();
             this.Classes = new Dictionary<string, ScriptClass>();
+        }
+
+        public ScriptScope(ScriptType type, Interpreter parentInterpreter): this(type)
+        {
+            this.Parent = null;
+            this.ParentInterpreter = parentInterpreter;
+        }
+
+        public ScriptScope(ScriptType type, ScriptScope parentScope) : this(type)
+        {
+            this.Parent = parentScope;
+            this.ParentInterpreter = parentScope == null ? null : parentScope.ParentInterpreter;
         }
 
         public bool TryGetValue(string name, out ScriptType value)

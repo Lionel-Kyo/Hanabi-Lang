@@ -29,6 +29,7 @@ namespace HanabiLang
             //string path = "./ChristmasTree.txt";
             // string path = "./ForLoopTest.txt";
             //string path = "./switchTest.txt";
+            path = "H:/HanabiScriptTest/ImportJson.txt";
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 path = args[0];
