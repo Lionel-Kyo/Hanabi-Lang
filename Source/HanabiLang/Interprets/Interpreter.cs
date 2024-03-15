@@ -15,7 +15,8 @@ namespace HanabiLang.Interprets
 {
     class Interpreter
     {
-        public ScriptScope currentScope { get; set; }
+        public ScriptScope PredefinedScope { get; private set; }
+        public ScriptScope CurrentScope { get; private set; }
         private AbstractSyntaxTree ast { get; set; }
         public string Path { get; private set; }
         public static IEnumerable<string> Arguments { get; set; }
@@ -24,47 +25,71 @@ namespace HanabiLang.Interprets
         /// Script Start or Import Script
         /// </summary>
         /// <param name="ast"></param>
-        public Interpreter(AbstractSyntaxTree ast, string path, bool isMain)
+        public Interpreter(AbstractSyntaxTree ast, ScriptScope predefinedScope, string path, bool isMain)
         {
             this.ast = ast;
-            this.currentScope = new ScriptScope(null, this);
+            this.PredefinedScope = predefinedScope;
+            this.CurrentScope = new ScriptScope(null, this);
             this.Path = path.Replace("\\", "/");
-            this.currentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
-            this.currentScope.Classes.Add("object", BasicTypes.ObjectClass);
-            this.currentScope.Classes.Add("str", BasicTypes.Str);
-            this.currentScope.Classes.Add("int", BasicTypes.Int);
-            this.currentScope.Classes.Add("float", BasicTypes.Float);
-            this.currentScope.Classes.Add("decimal", BasicTypes.Decimal);
-            this.currentScope.Classes.Add("bool", BasicTypes.Bool);
-            this.currentScope.Classes.Add("range", BasicTypes.Range);
-            this.currentScope.Classes.Add("List", BasicTypes.List);
-            this.currentScope.Classes.Add("Dict", BasicTypes.Dict);
-            this.currentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
-            this.currentScope.Classes.Add("Exception", BasicTypes.Exception);
-            BuildInFns.AddBasicFunctions(this.currentScope);
+            this.CurrentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
+            this.CurrentScope.Classes.Add("object", BasicTypes.ObjectClass);
+            this.CurrentScope.Classes.Add("str", BasicTypes.Str);
+            this.CurrentScope.Classes.Add("int", BasicTypes.Int);
+            this.CurrentScope.Classes.Add("float", BasicTypes.Float);
+            this.CurrentScope.Classes.Add("decimal", BasicTypes.Decimal);
+            this.CurrentScope.Classes.Add("bool", BasicTypes.Bool);
+            this.CurrentScope.Classes.Add("range", BasicTypes.Range);
+            this.CurrentScope.Classes.Add("List", BasicTypes.List);
+            this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
+            this.CurrentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
+            this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
+            BuildInFns.AddBasicFunctions(this.CurrentScope);
         }
 
-        public void Interpret()
+        public void Interpret(bool isThrowException)
         {
             try
             {
+                if (this.PredefinedScope != null)
+                {
+                    foreach (var kv in this.PredefinedScope.Classes)
+                    {
+                        this.CurrentScope.Classes[kv.Key] = kv.Value;
+                    }
+                    foreach (var kv in this.PredefinedScope.Functions)
+                    {
+                        this.CurrentScope.Functions[kv.Key] = kv.Value;
+                    }
+                    foreach (var kv in this.PredefinedScope.Variables)
+                    {
+                        this.CurrentScope.Variables[kv.Key] = kv.Value;
+                    }
+                }
+
                 foreach (var child in this.ast.Nodes)
                 {
-                    InterpretChild(this.currentScope, child);
+                    InterpretChild(this.CurrentScope, child);
                 }
             }
             catch (Exception ex)
             {
-                StringBuilder result = new StringBuilder();
-                for (Exception exception = ex; exception != null; exception = exception.InnerException)
+                if (isThrowException)
                 {
-                    if (exception is HanibiException)
-                        result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
-                    else
-                        result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
+                    throw ex;
                 }
-                Console.Error.WriteLine(result.ToString());
-                Environment.ExitCode = ex.HResult;
+                else
+                {
+                    StringBuilder result = new StringBuilder();
+                    for (Exception exception = ex; exception != null; exception = exception.InnerException)
+                    {
+                        if (exception is HanibiException)
+                            result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
+                        else
+                            result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
+                    }
+                    Console.Error.WriteLine(result.ToString());
+                    Environment.ExitCode = ex.HResult;
+                }
             }
         }
 
@@ -131,12 +156,12 @@ namespace HanabiLang.Interprets
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    interpreter = new Interpreter(ast, fullPath, false);
-                    interpreter.Interpret();
+                    interpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    interpreter.Interpret(true);
                     ImportedItems.Files[fullPath] = interpreter;
                 }
 
-                var jsonData = interpreter.currentScope.Variables["jsonData"].Value;
+                var jsonData = interpreter.CurrentScope.Variables["jsonData"].Value;
                 if (string.IsNullOrEmpty(realNode.AsName))
                     interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true, true, AccessibilityLevel.Public);
                 else
@@ -151,8 +176,8 @@ namespace HanabiLang.Interprets
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    interpreter = new Interpreter(ast, fullPath, false);
-                    interpreter.Interpret();
+                    interpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    interpreter.Interpret(true);
                     ImportedItems.Files[fullPath] = interpreter;
                 }
 
@@ -161,11 +186,11 @@ namespace HanabiLang.Interprets
                     if (string.IsNullOrEmpty(realNode.AsName))
                         interpretScope.Classes[fileNameWithoutExtension] = new
                             ScriptClass(fileNameWithoutExtension, interpreter.ast.Nodes,
-                                interpreter.currentScope, null, true, AccessibilityLevel.Public, true);
+                                interpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
                     else
                         interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, interpreter.ast.Nodes,
-                                interpreter.currentScope, null, true, AccessibilityLevel.Public, true);
+                                interpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
                 }
                 else
                 {
@@ -174,7 +199,7 @@ namespace HanabiLang.Interprets
                         if (interpretScope.TryGetValue(item, out _))
                             throw new SystemException($"Import failed, value {item} exists");
 
-                        if (interpreter.currentScope.TryGetValue(item, out ScriptType scriptType))
+                        if (interpreter.CurrentScope.TryGetValue(item, out ScriptType scriptType))
                         {
                             if (scriptType is ScriptFns)
                                 interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;

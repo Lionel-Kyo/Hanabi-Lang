@@ -48,9 +48,9 @@ namespace HanabiLang
             }
             //Console.WriteLine();
             Interpreter.Arguments = args;
-            Interpreter interpreter = new Interpreter(ast, path, true);
+            Interpreter interpreter = new Interpreter(ast, null, path, true);
             ImportedItems.Files[Path.GetFullPath(path)] = interpreter;
-            interpreter.Interpret();
+            interpreter.Interpret(false);
         }
     }
 }
