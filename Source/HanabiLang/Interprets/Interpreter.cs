@@ -108,10 +108,28 @@ namespace HanabiLang.Interprets
 
                 ScriptScope scriptScope = scriptClass.Scope;
 
+                // Import as variable
                 if (realNode.Imports == null)
                 {
                     interpretScope.Classes[className] = scriptClass;
                 }
+                // Import all
+                else if (realNode.Imports.Count <= 0)
+                {
+                    foreach (var kv in scriptScope.Classes)
+                    {
+                        interpretScope.Classes[kv.Key] = kv.Value;
+                    }
+                    foreach (var kv in scriptScope.Functions)
+                    {
+                        interpretScope.Functions[kv.Key] = kv.Value;
+                    }
+                    foreach (var kv in scriptScope.Variables)
+                    {
+                        interpretScope.Variables[kv.Key] = kv.Value;
+                    }
+                }
+                // Import some
                 else
                 {
                     foreach (string item in realNode.Imports)
@@ -169,29 +187,47 @@ namespace HanabiLang.Interprets
             }
             else
             {
-                if (!ImportedItems.Files.TryGetValue(fullPath, out Interpreter interpreter))
+                if (!ImportedItems.Files.TryGetValue(fullPath, out Interpreter newInterpreter))
                 {
                     string[] lines = System.IO.File.ReadAllLines(fullPath);
                     var tokens = Lexer.Tokenize(lines);
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    interpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    interpreter.Interpret(true);
-                    ImportedItems.Files[fullPath] = interpreter;
+                    newInterpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    newInterpreter.Interpret(true);
+                    ImportedItems.Files[fullPath] = newInterpreter;
                 }
 
+                // Import as variable
                 if (realNode.Imports == null)
                 {
                     if (string.IsNullOrEmpty(realNode.AsName))
                         interpretScope.Classes[fileNameWithoutExtension] = new
-                            ScriptClass(fileNameWithoutExtension, interpreter.ast.Nodes,
-                                interpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
+                            ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
+                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
                     else
                         interpretScope.Classes[realNode.AsName] = new
-                            ScriptClass(realNode.AsName, interpreter.ast.Nodes,
-                                interpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
+                            ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
+                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
+                }                
+                // Import all
+                else if (realNode.Imports.Count <= 0)
+                {
+                    foreach (var kv in newInterpreter.CurrentScope.Classes)
+                    {
+                        interpretScope.Classes[kv.Key] = kv.Value;
+                    }
+                    foreach (var kv in newInterpreter.CurrentScope.Functions)
+                    {
+                        interpretScope.Functions[kv.Key] = kv.Value;
+                    }
+                    foreach (var kv in newInterpreter.CurrentScope.Variables)
+                    {
+                        interpretScope.Variables[kv.Key] = kv.Value;
+                    }
                 }
+                // Import some
                 else
                 {
                     foreach (string item in realNode.Imports)
@@ -199,7 +235,7 @@ namespace HanabiLang.Interprets
                         if (interpretScope.TryGetValue(item, out _))
                             throw new SystemException($"Import failed, value {item} exists");
 
-                        if (interpreter.CurrentScope.TryGetValue(item, out ScriptType scriptType))
+                        if (newInterpreter.CurrentScope.TryGetValue(item, out ScriptType scriptType))
                         {
                             if (scriptType is ScriptFns)
                                 interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;

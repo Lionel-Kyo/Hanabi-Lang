@@ -703,14 +703,19 @@ namespace HanabiLang.Parses
         {
             this.currentTokenIndex++;
             List<string> imports = null;
-            if (this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER)
+            bool isImportAll = false;
+            if (this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER ||
+                this.tokens[this.currentTokenIndex].Raw == "*")
             {
                 imports = new List<string>();
                 while (this.currentTokenIndex < this.tokens.Count &&
-                    this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER)
+                    (this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER ||
+                    this.tokens[this.currentTokenIndex].Raw == "*"))
                 {
                     imports.Add(this.tokens[this.currentTokenIndex].Raw);
-                    this.Expect(TokenType.IDENTIFIER);
+                    if (this.tokens[this.currentTokenIndex].Raw == "*")
+                        isImportAll = true;
+                    this.Expect(TokenType.IDENTIFIER, TokenType.OPERATOR);
                     if (this.currentTokenIndex < this.tokens.Count &&
                         this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
                         this.Expect(TokenType.COMMA);
@@ -719,6 +724,9 @@ namespace HanabiLang.Parses
                     throw new SystemException("The correct format is import ... from \"\";");
                 this.Expect(TokenType.KEYWORD);
             }
+
+            if (isImportAll)
+                imports = new List<string>();
 
             var importPath = this.tokens[this.currentTokenIndex].Raw;
             this.Expect(TokenType.STRING);
