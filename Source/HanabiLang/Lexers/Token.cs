@@ -16,7 +16,7 @@ namespace HanabiLang.Lexers
         {
             this.Type = type;
             this.Raw = raw;
-            this.Line = line;
+            this.Line = line + 1;
         }
 
         public override string ToString()

@@ -73,7 +73,8 @@ namespace HanabiLang.Parses
                         Parser parser = new Parser(tokens);
                         var interpolatedNode = parser.Expression();
                         if (parser.HasNextToken)
-                            throw new SystemException($"Cannot end with {parser.tokens[parser.currentTokenIndex].Raw} in a interpolated string");
+                            throw new ParseException($"Cannot end with {parser.tokens[parser.currentTokenIndex].Raw} in a interpolated string",
+                                parser.tokens[parser.currentTokenIndex]);
                         interpolatedNodes.Enqueue(interpolatedNode);
 
                     }
@@ -121,9 +122,9 @@ namespace HanabiLang.Parses
                         }
                         else
                         {
-                            throw new SystemException(
-                                    "Unexpected token: " + currentToken.Raw + ", " + currentToken.Type +
-                                    ", line: " + currentToken.Line);
+                            throw new ParseException(
+                                    "Unexpected token: " + currentToken.Raw + ", " + currentToken.Type,
+                                    currentToken);
                         }
                     }
 
@@ -143,7 +144,7 @@ namespace HanabiLang.Parses
                             else if (HasNextToken && NextTokenType == TokenType.COMMA)
                                 Expect(TokenType.COMMA);
                             else
-                                throw new SystemException("List expected ',' or ']'");
+                                throw new ParseException("List expected ',' or ']'", this.tokens[this.currentTokenIndex]);
                         }
 
                         this.Expect(TokenType.CLOSE_SQURE_BRACKET);
@@ -170,7 +171,7 @@ namespace HanabiLang.Parses
                             else if (HasNextToken && NextTokenType == TokenType.COMMA)
                                 Expect(TokenType.COMMA);
                             else
-                                throw new SystemException("Dict expected ',' or '}'");
+                                throw new ParseException("Dict expected ',' or '}'", this.tokens[this.currentTokenIndex]);
                         }
 
                         this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -332,21 +333,22 @@ namespace HanabiLang.Parses
                     var keyword = this.tokens[this.currentTokenIndex].Raw;
                     this.Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
 
+                    // Body.Count = 0 : Auto Implemented
                     List<AstNode> body = new List<AstNode>();
                     if (keyword.Equals("public") || keyword.Equals("protected") ||
                             keyword.Equals("private"))
                     {
                         if (lastLevel.HasValue)
-                            throw new SystemException("Cannot redefine accessibility levels");
+                            throw new ParseException("Cannot redefine accessibility levels", this.tokens[this.currentTokenIndex - 1]);
                         lastLevel = ToAccessibilityLevel(keyword);
                     }
                     else if (keyword.Equals("get") || keyword.Equals("set"))
                     {
                         bool isGet = keyword.Equals("get");
                         if (isGet && getFn != null)
-                            throw new SystemException($"Cannot redefine get function");
+                            throw new ParseException($"Cannot redefine get function", this.tokens[this.currentTokenIndex - 1]);
                         if (!isGet && setFn != null)
-                            throw new SystemException($"Cannot redefine set function");
+                            throw new ParseException($"Cannot redefine set function", this.tokens[this.currentTokenIndex - 1]);
 
                         if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
                         {
@@ -378,7 +380,8 @@ namespace HanabiLang.Parses
 
                         if (lastLevel.HasValue && (int)lastLevel.Value <= (int)level)
                         {
-                            throw new SystemException($"Cannot define getter/setter with the same or a larger accessibility level");
+                            throw new ParseException($"Cannot define getter/setter with the same or a larger accessibility level",
+                                this.tokens[this.currentTokenIndex - 1]);
                         }
 
                         if (isGet)
@@ -398,7 +401,7 @@ namespace HanabiLang.Parses
                     }
                     else
                     {
-                        throw new SystemException($"Unexpected keyword {keyword}");
+                        throw new ParseException($"Unexpected keyword {keyword}", this.tokens[this.currentTokenIndex - 1]);
                     }
                 }
                 this.Expect(TokenType.CLOSE_CURLY_BRACKET);
@@ -416,9 +419,9 @@ namespace HanabiLang.Parses
             if (getFn != null && setFn != null)
             {
                 if (getFn.Body.Count > 0 && setFn.Body.Count == 0)
-                    throw new SystemException("Setter is auto-implemented variable but Getter is not");
+                    throw new ParseException("Setter is auto-implemented variable but Getter is not", this.tokens[this.currentTokenIndex - 1]);
                 else if (setFn.Body.Count > 0 && getFn.Body.Count == 0)
-                    throw new SystemException("Getter is auto-implemented variable but Setter is not");
+                    throw new ParseException("Getter is auto-implemented variable but Setter is not", this.tokens[this.currentTokenIndex - 1]);
             }
 
             if (HasNextToken && NextTokenType == TokenType.EQUALS)
@@ -427,9 +430,9 @@ namespace HanabiLang.Parses
 
                 // Disable assign default value to auto-implemented getter
                 /*if (getFn != null && setFn == null)
-                    throw new SystemException("Cannot assign value to a read only variable");*/
+                    throw new ParseException("Cannot assign value to a read only variable");*/
                 if (setFn != null && setFn.Body.Count > 0)
-                    throw new SystemException("Only auto-implemented variable can have initializers");
+                    throw new ParseException("Only auto-implemented variable can have initializers", this.tokens[this.currentTokenIndex - 1]);
 
                 var node = new VariableDefinitionNode(variableName, this.Expression(), dataType, getFn, setFn, constant, isStatic, level);
                 if (this.currentTokenIndex >= this.tokens.Count)
@@ -441,7 +444,7 @@ namespace HanabiLang.Parses
             else
             {
                 if (getFn == null && setFn == null)
-                    throw new SystemException("Normal variable must define a initial value");
+                    throw new ParseException("Normal variable must define a initial value", this.tokens[this.currentTokenIndex - 1]);
 
                 var node = new VariableDefinitionNode(variableName, null, dataType, getFn, setFn, constant, isStatic, level);
                 if (this.currentTokenIndex >= this.tokens.Count)
@@ -566,7 +569,7 @@ namespace HanabiLang.Parses
             }
 
             if (catchBody == null && finallyBody == null)
-                throw new SystemException("try keyword must work with catch or finally");
+                throw new ParseException("try keyword must work with catch or finally", this.tokens[this.currentTokenIndex - 1]);
 
             return new TryCatchNode(tryBody, catchBody, finallyBody);
         }
@@ -618,7 +621,7 @@ namespace HanabiLang.Parses
 
             if (HasNextToken && this.tokens[this.currentTokenIndex].Raw != "in")
             {
-                throw new SystemException("Keyword 'in' is essential in for loop");
+                throw new ParseException("Keyword 'in' is essential in for loop", this.tokens[this.currentTokenIndex - 1]);
             }
 
             this.currentTokenIndex++;
@@ -721,7 +724,7 @@ namespace HanabiLang.Parses
                         this.Expect(TokenType.COMMA);
                 }
                 if (this.tokens[this.currentTokenIndex].Raw != "from")
-                    throw new SystemException("The correct format is import ... from \"\";");
+                    throw new ParseException("The correct format is import ... from \"\";", this.tokens[this.currentTokenIndex]);
                 this.Expect(TokenType.KEYWORD);
             }
 
@@ -737,7 +740,7 @@ namespace HanabiLang.Parses
             {
                 this.Expect(TokenType.KEYWORD);
                 if (imports != null)
-                    throw new SystemException("Format: import ... from \"\"; cannot use as keyword");
+                    throw new ParseException("Format: import ... from \"\"; cannot use as keyword", this.tokens[this.currentTokenIndex - 1]);
                 asName = this.tokens[this.currentTokenIndex].Raw;
                 this.Expect(TokenType.IDENTIFIER);
             }
@@ -773,7 +776,7 @@ namespace HanabiLang.Parses
 
                     if (currentToken.Type != TokenType.IDENTIFIER)
                     {
-                        throw new SystemException("Expected identifier line: " + (currentToken.Line + 1));
+                        throw new ParseException("Expected identifier line: " + (currentToken.Line + 1), this.tokens[this.currentTokenIndex - 1]);
                     }
 
                     string paramName = currentToken.Raw;
@@ -798,7 +801,7 @@ namespace HanabiLang.Parses
                     {
                         if (isLastDefaultValue)
                         {
-                            throw new SystemException("Function default value cannot in the middle");
+                            throw new ParseException("Function default value cannot in the middle", this.tokens[this.currentTokenIndex - 1]);
                         }
                     }
 
@@ -821,7 +824,7 @@ namespace HanabiLang.Parses
                 if (this.currentTokenIndex < this.tokens.Count && 
                     this.tokens[this.currentTokenIndex].Type != TokenType.IDENTIFIER)
                 {
-                    throw new SystemException("Expected identifier line: " + (this.tokens[this.currentTokenIndex].Line + 1));
+                    throw new ParseException("Expected identifier" , this.tokens[this.currentTokenIndex]);
                 }
 
                 string paramName = this.tokens[this.currentTokenIndex].Raw;
@@ -866,7 +869,7 @@ namespace HanabiLang.Parses
 
             if (isArrowFn && (!haveArrow && returnType == null))
             {
-                throw new SystemException("Lambda function must define return type or use double arrow");
+                throw new ParseException("Lambda function must define return type or use double arrow", this.tokens[this.currentTokenIndex - 1]);
             }
 
             if (this.currentTokenIndex < this.tokens.Count && 
@@ -890,8 +893,8 @@ namespace HanabiLang.Parses
             else
             {
                 if (!haveArrow)
-                    throw new SystemException("Function cannot define without arrow and curly bracket " +
-                                            (this.tokens[this.currentTokenIndex].Line + 1));
+                    throw new ParseException("Function cannot define without arrow and curly bracket ",
+                        this.tokens[this.currentTokenIndex]);
                 AstNode child = this.ParseChild();
                 if (child != null)
                     body.Add(new ReturnNode(child));
@@ -921,7 +924,8 @@ namespace HanabiLang.Parses
                 while (HasNextToken && NextTokenType == TokenType.KEYWORD)
                 {
                     if (token.Raw != "case" && token.Raw != "default")
-                        throw new SystemException($"switch only accept case or default as keyword");
+                        throw new ParseException($"switch only accept case or default as keyword",
+                            token);
 
                     this.currentTokenIndex++;
 
@@ -934,7 +938,8 @@ namespace HanabiLang.Parses
                     else
                     {
                         if (defaultCase != null)
-                            throw new SystemException("switch default case cannot define more than 1 time");
+                            throw new ParseException("switch default case cannot define more than 1 time",
+                                token);
                         isDefaultCase = true;
                     }
 
@@ -1009,7 +1014,7 @@ namespace HanabiLang.Parses
                 var token = this.tokens[this.currentTokenIndex];
 
                 if (token.Type != TokenType.IDENTIFIER)
-                    throw new SystemException("Expected identifier on line: " + token.Line);
+                    throw new ParseException("Expected identifier on line: " + token.Line);
 
                 parameters.Add(token.Raw);
 
@@ -1061,7 +1066,7 @@ namespace HanabiLang.Parses
                 {
                     // supporting multiple arguments
                     /*if (isLastWithName)
-                        throw new SystemException("cannot pass argument without name after passing named argument");*/
+                        throw new ParseException("cannot pass argument without name after passing named argument");*/
 
                     arguments[argsCount.ToString()] = this.Expression();
                     argsCount++;
@@ -1072,12 +1077,14 @@ namespace HanabiLang.Parses
                 else if (HasNextToken && NextTokenType == TokenType.COMMA)
                     Expect(TokenType.COMMA);
                 else
-                    throw new SystemException("Function call expected ',' or ')'");
+                    throw new ParseException("Function call expected ',' or ')'", 
+                        this.tokens[this.currentTokenIndex - 1]);
             }
 
             if (HasNextToken && NextTokenType != TokenType.CLOSE_ROUND_BRACKET)
             {
-                throw new SystemException("Function call expected ')'");
+                throw new ParseException("Function call expected ')'",
+                    this.tokens[this.currentTokenIndex - 1]);
             }
 
             Expect(TokenType.CLOSE_ROUND_BRACKET);
@@ -1119,7 +1126,7 @@ namespace HanabiLang.Parses
             if (this.currentTokenIndex < this.tokens.Count &&
                 this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
             {
-                throw new SystemException("Expected ')'");
+                throw new ParseException("Expected ')'");
             }
 
             this.currentTokenIndex++;
@@ -1208,9 +1215,9 @@ namespace HanabiLang.Parses
                     typesText.Remove(typesText.Length - 2, 2);
                 }
                 typesText.Append(']');
-                throw new SystemException(
-                        "Unexpected token: " + currentToken.Raw + ". Expected: " + typesText + ", line: " +
-                        (currentToken.Line + 1));
+                throw new ParseException(
+                        "Unexpected token: " + currentToken.Raw + ". Expected: " + typesText,
+                        currentToken);
             }
         }
 
@@ -1243,7 +1250,8 @@ namespace HanabiLang.Parses
                 {
                     this.Expect(TokenType.KEYWORD);
                     if (isStatic)
-                        throw new SystemException("Already defined static");
+                        throw new ParseException("Already defined static",
+                            this.tokens[this.currentTokenIndex - 1]);
                     isStatic = true;
                 }
                 else if (keyword.Equals("var") || keyword.Equals("auto") ||
@@ -1260,7 +1268,8 @@ namespace HanabiLang.Parses
                     return this.ClassDefinition(isStatic, accessibilityLevel);
                 }
             }
-            throw new SystemException($"Unexpected {level} defined");
+            throw new ParseException($"Unexpected {level} defined",
+                this.tokens[this.currentTokenIndex]);
         }
 
         private AstNode ParseChild()
@@ -1321,7 +1330,7 @@ namespace HanabiLang.Parses
                             expression.Line = token.Line;
                             return expression;
                         }
-                        else throw new SystemException("Keyword is not implemented: " + token.Raw);
+                        else throw new ParseException("Keyword is not implemented: " + token.Raw, token);
                         while (HasNextToken && NextTokenType == TokenType.SEMI_COLON)
                         {
                             Expect(TokenType.SEMI_COLON);
@@ -1333,9 +1342,7 @@ namespace HanabiLang.Parses
                         this.currentTokenIndex++;
                         return null;
                 default:
-                    throw new SystemException(
-                            "Unexpected token: " + token.Type + " line: " +
-                            token.Line);
+                    throw new ParseException("Unexpected token: " + token.Type, token);
             }
         }
     }
