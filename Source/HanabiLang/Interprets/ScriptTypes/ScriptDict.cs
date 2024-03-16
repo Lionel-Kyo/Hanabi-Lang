@@ -57,6 +57,19 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Remove(key));
             });
 
+            this.AddObjectFn("GetValue", new List<FnParameter>()
+            {
+                new FnParameter("key")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptValue key = args[1];
+                var dict = ((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
+                if (dict.TryGetValue(key, out var value))
+                    return value;
+                return ScriptValue.Null;
+            });
+
             this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;

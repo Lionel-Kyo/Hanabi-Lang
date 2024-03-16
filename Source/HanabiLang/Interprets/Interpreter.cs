@@ -155,12 +155,14 @@ namespace HanabiLang.Interprets
             List<string> fullPaths = new List<string>();
             if (!string.IsNullOrEmpty(interpretScope?.ParentInterpreter?.Path))
                 fullPaths.Add(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(interpretScope.ParentInterpreter.Path), realNode.Path));
-            fullPaths.Add(System.IO.Path.GetFullPath(realNode.Path));
+            fullPaths.Add(realNode.Path);
+            fullPaths = fullPaths.Select(x => System.IO.Path.GetFullPath(x).Replace("\\", "/")).ToList();
+
             int fullPathIndex = fullPaths.FindIndex(x => System.IO.File.Exists(x));
             if (fullPathIndex < 0)
                 throw new SystemException($"File {realNode.Path} not found");
 
-            string fullPath = fullPaths[fullPathIndex].Replace("\\", "/");
+            string fullPath = fullPaths[fullPathIndex];
             string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
             string extension = System.IO.Path.GetExtension(fullPath).ToLower();
             if (extension.Equals(".json"))
