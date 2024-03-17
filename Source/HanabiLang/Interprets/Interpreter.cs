@@ -165,9 +165,11 @@ namespace HanabiLang.Interprets
             string fullPath = fullPaths[fullPathIndex];
             string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
             string extension = System.IO.Path.GetExtension(fullPath).ToLower();
+            DateTime lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(fullPath);
             if (extension.Equals(".json"))
             {
-                if (!ImportedItems.Files.TryGetValue(fullPath, out Interpreter interpreter))
+                Interpreter newInterpreter = null;
+                if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
                 {
                     List<string> lines = new List<string>();
                     lines.Add("const jsonData = ");
@@ -176,12 +178,16 @@ namespace HanabiLang.Interprets
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    interpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    interpreter.Interpret(true);
-                    ImportedItems.Files[fullPath] = interpreter;
+                    newInterpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    newInterpreter.Interpret(true);
+                    ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
+                }
+                else
+                {
+                    newInterpreter = scriptInfo.Item2;
                 }
 
-                var jsonData = interpreter.CurrentScope.Variables["jsonData"].Value;
+                var jsonData = newInterpreter.CurrentScope.Variables["jsonData"].Value;
                 if (string.IsNullOrEmpty(realNode.AsName))
                     interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true, true, AccessibilityLevel.Public);
                 else
@@ -189,7 +195,8 @@ namespace HanabiLang.Interprets
             }
             else
             {
-                if (!ImportedItems.Files.TryGetValue(fullPath, out Interpreter newInterpreter))
+                Interpreter newInterpreter = null;
+                if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
                 {
                     string[] lines = System.IO.File.ReadAllLines(fullPath);
                     var tokens = Lexer.Tokenize(lines);
@@ -198,7 +205,11 @@ namespace HanabiLang.Interprets
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
                     newInterpreter.Interpret(true);
-                    ImportedItems.Files[fullPath] = newInterpreter;
+                    ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
+                }
+                else
+                {
+                    newInterpreter = scriptInfo.Item2;
                 }
 
                 // Import as variable

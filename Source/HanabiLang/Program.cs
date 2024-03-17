@@ -47,9 +47,11 @@ namespace HanabiLang
                 Console.WriteLine(item);
             }
             //Console.WriteLine();
+            path = Path.GetFullPath(path).Replace("\\", "/");
+            DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);
             Interpreter.Arguments = args;
             Interpreter interpreter = new Interpreter(ast, null, path, true);
-            ImportedItems.Files[Path.GetFullPath(path)] = interpreter;
+            ImportedItems.Files[path] = Tuple.Create(lastWriteTimeUtc, interpreter);
             interpreter.Interpret(false);
         }
     }

@@ -9,7 +9,7 @@ namespace HanabiLang.Interprets
 {
     static class ImportedItems
     {
-        public static Dictionary<string, Interpreter> Files = new Dictionary<string, Interpreter>();
+        public static Dictionary<string, Tuple<DateTime, Interpreter>> Files = new Dictionary<string, Tuple<DateTime, Interpreter>>();
         public static Dictionary<Type, ScriptClass> Types = new Dictionary<Type, ScriptClass>();
     }
 }

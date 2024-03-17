@@ -144,7 +144,7 @@ namespace HanabiLang.Parses
                             else if (HasNextToken && NextTokenType == TokenType.COMMA)
                                 Expect(TokenType.COMMA);
                             else
-                                throw new ParseException("List expected ',' or ']'", this.tokens[this.currentTokenIndex]);
+                                throw new ParseException("List expected ',' or ']'", this.tokens[this.currentTokenIndex - 1]);
                         }
 
                         this.Expect(TokenType.CLOSE_SQURE_BRACKET);
@@ -171,7 +171,7 @@ namespace HanabiLang.Parses
                             else if (HasNextToken && NextTokenType == TokenType.COMMA)
                                 Expect(TokenType.COMMA);
                             else
-                                throw new ParseException("Dict expected ',' or '}'", this.tokens[this.currentTokenIndex]);
+                                throw new ParseException("Dict expected ',' or '}'", this.tokens[this.currentTokenIndex - 1]);
                         }
 
                         this.Expect(TokenType.CLOSE_CURLY_BRACKET);
