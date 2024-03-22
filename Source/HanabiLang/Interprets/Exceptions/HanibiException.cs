@@ -7,7 +7,7 @@ using HanabiLang.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets.Exceptions
 {
-    class HanibiException : SystemException
+    class HanibiException : Exception
     {
         public string Name { get; private set; }
         public HanibiException(string name, string message) :

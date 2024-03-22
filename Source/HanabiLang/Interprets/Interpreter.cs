@@ -385,9 +385,12 @@ namespace HanabiLang.Interprets
 
         private static ValueReference VariableDefinition(VariableDefinitionNode node, ScriptScope scope)
         {
-            if (scope.Variables.ContainsKey(node.Name))
-                throw new SystemException($"Cannot reassigned variable {node.Name}");
-
+            if (scope.Variables.TryGetValue(node.Name, out ScriptVariable existedVariable))
+            {
+                if (existedVariable.IsConstant)
+                    throw new SystemException($"Cannot reassigned constant variable {node.Name}");
+            }
+             
             ScriptValue setValue = node.Value == null ? new ScriptValue() :
                 InterpretExpression(scope, node.Value).Ref;
 
