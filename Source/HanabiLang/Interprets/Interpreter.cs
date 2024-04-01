@@ -118,6 +118,9 @@ namespace HanabiLang.Interprets
                 {
                     foreach (var kv in scriptScope.Classes)
                     {
+                        if (kv.Value.Level != AccessibilityLevel.Public)
+                            continue;
+
                         interpretScope.Classes[kv.Key] = kv.Value;
                     }
                     foreach (var kv in scriptScope.Functions)
@@ -126,6 +129,8 @@ namespace HanabiLang.Interprets
                     }
                     foreach (var kv in scriptScope.Variables)
                     {
+                        if (kv.Value.Level != AccessibilityLevel.Public)
+                            continue;
                         interpretScope.Variables[kv.Key] = kv.Value;
                     }
                 }
@@ -136,14 +141,26 @@ namespace HanabiLang.Interprets
                     {
                         if (scriptScope.TryGetValue(item, out ScriptType scriptType))
                         {
-                            if (scriptType is ScriptFns)
-                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
-                            else if (scriptType is ScriptClass)
+                            if (scriptType is ScriptClass)
+                            {
+                                if (((ScriptClass)scriptType).Level != AccessibilityLevel.Public)
+                                    continue;
                                 interpretScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
+                            }
+                            if (scriptType is ScriptFns)
+                            {
+                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
+                            }
                             else if (scriptType is ScriptVariable)
+                            {
+                                if (((ScriptVariable)scriptType).Level != AccessibilityLevel.Public)
+                                    continue;
                                 interpretScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
+                            }
                             else
+                            {
                                 throw new SystemException($"Unexpected script type");
+                            }
                         }
                         else
                             throw new SystemException($"{item} is not defined in realNode.Path");
@@ -229,6 +246,8 @@ namespace HanabiLang.Interprets
                 {
                     foreach (var kv in newInterpreter.CurrentScope.Classes)
                     {
+                        if (kv.Value.Level != AccessibilityLevel.Public)
+                            continue;
                         interpretScope.Classes[kv.Key] = kv.Value;
                     }
                     foreach (var kv in newInterpreter.CurrentScope.Functions)
@@ -237,6 +256,8 @@ namespace HanabiLang.Interprets
                     }
                     foreach (var kv in newInterpreter.CurrentScope.Variables)
                     {
+                        if (kv.Value.Level != AccessibilityLevel.Public)
+                            continue;
                         interpretScope.Variables[kv.Key] = kv.Value;
                     }
                 }
@@ -250,14 +271,26 @@ namespace HanabiLang.Interprets
 
                         if (newInterpreter.CurrentScope.TryGetValue(item, out ScriptType scriptType))
                         {
-                            if (scriptType is ScriptFns)
-                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
-                            else if (scriptType is ScriptClass)
+                            if (scriptType is ScriptClass)
+                            {
+                                if (((ScriptClass)scriptType).Level != AccessibilityLevel.Public)
+                                    continue;
                                 interpretScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
+                            }
+                            if (scriptType is ScriptFns)
+                            {
+                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
+                            }
                             else if (scriptType is ScriptVariable)
+                            {
+                                if (((ScriptVariable)scriptType).Level != AccessibilityLevel.Public)
+                                    continue;
                                 interpretScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
+                            }
                             else
+                            {
                                 throw new SystemException($"Unexpected script type");
+                            }
                         }
                         else
                             throw new SystemException($"{item} is not defined in realNode.Path");
@@ -597,7 +630,8 @@ namespace HanabiLang.Interprets
             return nodeType == typeof(ExpressionNode) || nodeType == typeof(IntNode) ||
                 nodeType == typeof(FloatNode) || nodeType == typeof(InterpolatedString) ||
                 nodeType == typeof(UnaryNode) || nodeType == typeof(StringNode) || nodeType == typeof(VariableAssignmentNode) ||
-                nodeType == typeof(VariableReferenceNode) || nodeType == typeof(FnCallNode) || nodeType == typeof(FnReferenceCallNode);
+                nodeType == typeof(VariableReferenceNode) || nodeType == typeof(FnCallNode) || nodeType == typeof(FnReferenceCallNode) ||
+                nodeType == typeof(TernaryNode);
         }
 
         public static bool IsStatementNode(AstNode node)
