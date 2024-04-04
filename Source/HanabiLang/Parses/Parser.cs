@@ -10,6 +10,10 @@ namespace HanabiLang.Parses
 {
     class Parser
     {
+        private const bool DISABLE_ARROW_IF = true;
+        private const bool DISABLE_ARROW_SWITCH = true;
+        private const bool DISABLE_ARROW_LOOP = true;
+
         private List<Token> tokens { get; set; }
         private int currentTokenIndex { get; set; }
         private List<AstNode> nodes { get; }
@@ -463,7 +467,7 @@ namespace HanabiLang.Parses
             List<AstNode> thenBody = new List<AstNode>();
             List<AstNode> elseBody = new List<AstNode>();
 
-            if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            if (!DISABLE_ARROW_IF && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
@@ -495,7 +499,7 @@ namespace HanabiLang.Parses
                 }
                 else
                 {
-                    if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+                    if (!DISABLE_ARROW_IF && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
                     {
                         this.Expect(TokenType.DOUBLE_ARROW);
                         AstNode child = this.ParseChild();
@@ -521,7 +525,7 @@ namespace HanabiLang.Parses
             return new IfNode(condition, thenBody, elseBody);
         }
 
-        private void AddBody(List<AstNode> body)
+        private void AddTryCatchBody(List<AstNode> body)
         {
             if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
             {
@@ -552,20 +556,20 @@ namespace HanabiLang.Parses
             List<AstNode> catchBody = null;
             List<AstNode> finallyBody = null;
 
-            AddBody(tryBody);
+            AddTryCatchBody(tryBody);
 
             if (HasNextToken && NextToken.Raw.Equals("catch"))
             {
                 this.Expect(TokenType.KEYWORD);
                 catchBody = new List<AstNode>();
-                AddBody(catchBody);
+                AddTryCatchBody(catchBody);
             }
 
             if (HasNextToken && NextToken.Raw.Equals("finally"))
             {
                 this.Expect(TokenType.KEYWORD);
                 finallyBody = new List<AstNode>();
-                AddBody(finallyBody);
+                AddTryCatchBody(finallyBody);
             }
 
             if (catchBody == null && finallyBody == null)
@@ -581,7 +585,7 @@ namespace HanabiLang.Parses
             var condition = this.Expression();
             List<AstNode> thenStatements = new List<AstNode>();
 
-            if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            if (!DISABLE_ARROW_LOOP && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
@@ -633,7 +637,7 @@ namespace HanabiLang.Parses
 
             List<AstNode> thenStatements = new List<AstNode>();
 
-            if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            if (!DISABLE_ARROW_LOOP && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
@@ -947,7 +951,7 @@ namespace HanabiLang.Parses
                 }
 
                 var statements = new List<AstNode>();
-                if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+                if (!DISABLE_ARROW_SWITCH && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
                 {
                     this.Expect(TokenType.DOUBLE_ARROW);
                     AstNode child = this.ParseChild();
