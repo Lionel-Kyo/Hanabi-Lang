@@ -18,16 +18,21 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class FnParameter
     {
         public string Name { get; private set; }
-        public ScriptClass DataType { get; private set; }
+        public HashSet<ScriptClass> DataTypes { get; private set; }
         public ScriptValue DefaultValue { get; private set; }
         public bool IsMultiArgs { get; private set; }
 
-        public FnParameter(string name, ScriptClass dataType = null, ScriptValue defaultValue = null, bool multipleArguments = false)
+        public FnParameter(string name, HashSet<ScriptClass> dataTypes = null, ScriptValue defaultValue = null, bool multipleArguments = false)
         {
             this.Name = name;
-            this.DataType = dataType;
+            this.DataTypes = dataTypes;
             this.DefaultValue = defaultValue;
             this.IsMultiArgs = multipleArguments;
+        }
+
+        public FnParameter(string name, ScriptClass dataType, ScriptValue defaultValue = null, bool multipleArguments = false) :
+            this(name, dataType == null ? null : new HashSet<ScriptClass> { dataType }, defaultValue, multipleArguments)
+        { 
         }
 
         public override string ToString()
@@ -104,7 +109,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return false;
             for (int i = 0; i < x.Parameters.Count; i++)
             {
-                if (x.Parameters[i].DataType != fn.Parameters[i].DataType)
+                if (x.Parameters[i].DataTypes != fn.Parameters[i].DataTypes)
                     return false;
             }
             return true;
@@ -181,8 +186,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                         while (args.TryGetValue(index.ToString(), out ScriptValue value))
                         {
-                            if (parameter.DataType != null &&
-                                (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
+                            if (parameter.DataTypes != null && !parameter.DataTypes.Contains(((ScriptObject)value.Value).ClassType))
                             {
                                 isMatchFn = false;
                                 break;
@@ -220,13 +224,12 @@ namespace HanabiLang.Interprets.ScriptTypes
                             }
                         }
 
-                        if (parameter.DataType != null &&
-                            (value.IsNull || ((ScriptObject)value.Value).ClassType != parameter.DataType))
+                        if (parameter.DataTypes != null && (!parameter.DataTypes.Contains(((ScriptObject)value.Value).ClassType)))
                         {
                             isMatchFn = false;
                             break;
                         }
-                        if (parameter.DataType == null)
+                        if (parameter.DataTypes == null)
                             anyTypeCount++;
                         variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
                     }
@@ -239,7 +242,10 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
 
             if (fns.Count <= 0)
-                throw new NotImplementedException($"Match function call for {this.Name} does not exists");
+            {
+                throw new NotImplementedException($"Match function call for {this.Name} does not exists\n" +
+                    $"Avaliable Functions: {string.Join(", ", this.Fns.Select(_fn => '(' + string.Join(", ", _fn.Parameters.Select(_params => string.Join(" | ", _params.DataTypes.Select(_type => _type.Name)))) + ')'))}");
+            }
 
             var scriptfn = MinScriptFn(fns);
             return Tuple.Create(scriptfn.Item1, scriptfn.Item2);

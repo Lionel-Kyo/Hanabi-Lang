@@ -1132,18 +1132,18 @@ namespace HanabiLang.Interprets
                 List<FnParameter> fnParameters = new List<FnParameter>();
                 foreach (var param in realNode.Parameters)
                 {
-                    ScriptClass dataType = null;
+                    HashSet<ScriptClass> dataTypes = null;
                     ScriptValue defaultValue = null;
                     if (param.DataType != null)
                     {
                         ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
                         if (!type.IsClass)
                             throw new SystemException($"Only class is accepted in {realNode.Name}.{param.Name}");
-                        dataType = (ScriptClass)type.Value;
+                        dataTypes = new HashSet<ScriptClass> { (ScriptClass)type.Value };
                     }
                     if (param.DefaultValue != null)
                         defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataType, defaultValue));
+                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue));
                 }
 
                 scriptFns.AddFn(new ScriptFn(fnParameters,
@@ -1393,18 +1393,18 @@ namespace HanabiLang.Interprets
                 List<FnParameter> fnParameters = new List<FnParameter>();
                 foreach (var param in realNode.Parameters)
                 {
-                    ScriptClass dataType = null;
+                    HashSet<ScriptClass> dataTypes = null;
                     ScriptValue defaultValue = null;
                     if (param.DataType != null)
                     {
                         ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
                         if (!type.IsClass)
                             throw new SystemException($"Only class is accepted in {realNode.Name}.{param.Name}");
-                        dataType = (ScriptClass)type.Value;
+                        dataTypes = new HashSet<ScriptClass> { (ScriptClass)type.Value };
                     }
                     if (param.DefaultValue != null)
                         defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataType, defaultValue));
+                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue));
                 }
                 var scriptFns = new ScriptFns(realNode.Name);
                 scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,

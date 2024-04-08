@@ -533,10 +533,14 @@ namespace HanabiLang.Interprets
             }
         }
 
-        private static ScriptClass ToScriptType(Type type)
+        private static ScriptClass ToScriptType(Type type, out bool nullable)
         {
+            nullable = false;
             if (type == typeof(ScriptValue))
+            {
+                nullable = true;
                 return null;
+            }
             else if (type == typeof(sbyte))
                 return BasicTypes.Int;
             else if (type == typeof(short))
@@ -555,9 +559,15 @@ namespace HanabiLang.Interprets
                 return BasicTypes.Int;
 
             else if (type == typeof(string))
+            {
+                nullable = true;
                 return BasicTypes.Str;
+            }
             else if (type == typeof(StringBuilder))
+            {
+                nullable = true;
                 return BasicTypes.Str;
+            }
 
             else if (type == typeof(bool))
                 return BasicTypes.Bool;
@@ -569,12 +579,16 @@ namespace HanabiLang.Interprets
             else if (type == typeof(decimal))
                 return BasicTypes.Decimal;
             else if (type == typeof(object))
+            {
+                nullable = true;
                 return null;
+            }
             else if (type.IsGenericType)
             {
+                nullable = true;
                 Type genericType = type.GetGenericTypeDefinition();
                 if (genericType == typeof(Nullable<>))
-                    return ToScriptType(type.GenericTypeArguments[0]);
+                    return ToScriptType(type.GenericTypeArguments[0], out _);
                 else if (genericType == typeof(List<>))
                     return BasicTypes.List;
                 else if (genericType == typeof(Dictionary<,>))
@@ -583,9 +597,15 @@ namespace HanabiLang.Interprets
                 throw new NotImplementedException($"Not supported datatype {type.Name}");
             }
             else if (type.IsArray)
+            {
+                nullable = true;
                 return BasicTypes.List;
+            }
             else if (ImportedItems.Types.TryGetValue(type, out var scriptClass))
+            {
+                nullable = true;
                 return scriptClass;
+            }
 
             try
             {
@@ -610,9 +630,12 @@ namespace HanabiLang.Interprets
                 string name = parameter.Name;
                 Type type = parameter.ParameterType;
                 ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
-                bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 csParameters.Add(type);
-                ScriptClass scriptType = isMultipleArgs ? ToScriptType(type.GetElementType()) : ToScriptType(type);
+                bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
+                bool scriptTypeNullable;
+                var scriptType = new HashSet<ScriptClass> { isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable) };
+                if (scriptTypeNullable)
+                    scriptType.Add(BasicTypes.Null);
                 scriptParameters.Add(new FnParameter(name, scriptType, defaultValue, isMultipleArgs));
             }
 
@@ -670,7 +693,12 @@ namespace HanabiLang.Interprets
                 Type type = parameter.ParameterType;
                 object defaultValue = parameter.DefaultValue;
                 csParameters.Add(type);
-                scriptParameters.Add(new FnParameter(name, ToScriptType(type)));
+                bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
+                bool scriptTypeNullable;
+                var scriptType = new HashSet<ScriptClass> { isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable) };
+                if (scriptTypeNullable)
+                    scriptType.Add(BasicTypes.Null);
+                scriptParameters.Add(new FnParameter(name, scriptType));
             }
 
             BuildInFns.ScriptFnType fn = args =>
