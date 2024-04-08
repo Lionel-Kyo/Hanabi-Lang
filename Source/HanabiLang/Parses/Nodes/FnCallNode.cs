@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
+    [Obsolete]
     class FnCallNode : AstNode
     {
         public string Name { get; private set; }

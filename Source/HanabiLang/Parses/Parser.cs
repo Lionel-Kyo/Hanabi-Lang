@@ -124,6 +124,11 @@ namespace HanabiLang.Parses
                             var expression = this.TermDot(skipIndexers, skipArrowFn);
                             return new UnaryNode(expression, currentToken.Raw);
                         }
+                        else if (currentToken.Raw == "*")
+                        {
+                            var expression = this.TermDot(skipIndexers, skipArrowFn);
+                            return new UnaryNode(expression, currentToken.Raw);
+                        }
                         else
                         {
                             throw new ParseException(
@@ -769,6 +774,7 @@ namespace HanabiLang.Parses
             var parameters = new List<FnDefineParameter>();
             List<AstNode> body = new List<AstNode>();
             bool isLastDefaultValue = false;
+            Token multiArgsToken = null;
             if (!isOneParam)
             {
                 this.Expect(TokenType.OPEN_ROUND_BRACKET);
@@ -776,7 +782,22 @@ namespace HanabiLang.Parses
                 while (this.currentTokenIndex < this.tokens.Count &&
                         this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
                 {
+                    if (multiArgsToken != null)
+                        throw new ParseException($"Cannot have parameter after multiple-arguments", multiArgsToken);
+
+                    bool IsMultiArgs = false;
                     var currentToken = this.tokens[this.currentTokenIndex];
+
+                    if (currentToken.Type == TokenType.KEYWORD)
+                    {
+                        if (currentToken.Raw != "params")
+                            throw new ParseException($"Unexpect keyword: {currentToken.Raw}", currentToken);
+                        multiArgsToken = currentToken;
+                        this.Expect(TokenType.KEYWORD);
+                        IsMultiArgs = true;
+                    }
+
+                    currentToken = this.tokens[this.currentTokenIndex];
 
                     if (currentToken.Type != TokenType.IDENTIFIER)
                     {
@@ -809,7 +830,7 @@ namespace HanabiLang.Parses
                         }
                     }
 
-                    parameters.Add(new FnDefineParameter(paramName, paramType, paramDefaultValue));
+                    parameters.Add(new FnDefineParameter(paramName, paramType, paramDefaultValue, IsMultiArgs));
 
                     if (this.currentTokenIndex != this.tokens.Count)
                     {

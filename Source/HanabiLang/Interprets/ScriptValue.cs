@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HanabiLang.Interprets.ScriptTypes;
+using HanabiLang.Parses.Nodes;
 
 namespace HanabiLang.Interprets
 {
@@ -351,6 +352,28 @@ namespace HanabiLang.Interprets
                 return new ScriptValue(left.ClassType.Or(left, right));
             }
             throw new SystemException($"cannot || value between {a.value} and {b.value}");
+        }
+
+        public static ScriptValue OperatorSingleUnzip(ScriptValue a)
+        {
+            if (a.value is ScriptObject)
+            {
+                if (!((ScriptObject)a.value).ClassType.Scope.TryGetValue("GetEnumerator", out ScriptType getEnumerator)) 
+                    throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
+
+                if (!(getEnumerator is ScriptFns))
+                    throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
+
+                var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo();
+                var enumerator = ((ScriptFns)getEnumerator).Call((ScriptObject)a.value, enumeratorInfo);
+
+                if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
+                    throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
+
+                var list = (IEnumerable<ScriptValue>)((ScriptObject)enumerator.Value).BuildInObject;
+                return new ScriptValue() { value = new SingleUnzipList(list) };
+            }
+            throw new SystemException("operator * is not defined");
         }
 
         public override string ToString()

@@ -44,7 +44,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptFn : ScriptType
     {
         public List<FnParameter> Parameters { get; private set; }
-        private Dictionary<string, int> ArgsMap { get; set; }
+        //private Dictionary<string, int> ArgsMap { get; set; }
         internal List<AstNode> Body { get; private set; }
         /// <summary>
         /// The scope when the function is created 
@@ -60,7 +60,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         private ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level)
         {
             this.Parameters = parameters;
-            this.ArgsMap = new Dictionary<string, int>();
+            //this.ArgsMap = new Dictionary<string, int>();
             this.Body = body;
             this.Scope = scope;
             this.BuildInFn = fn;
@@ -70,7 +70,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             int count = 0;
             foreach (var param in this.Parameters)
             {
-                ArgsMap[param.Name] = count;
+                //ArgsMap[param.Name] = count;
                 if (param.DefaultValue == null)
                 {
                     MinArgs++;
@@ -140,9 +140,38 @@ namespace HanabiLang.Interprets.ScriptTypes
         private static Dictionary<string, ScriptValue> GetArgs(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
         {
             Dictionary<string, ScriptValue> result = new Dictionary<string, ScriptValue>();
+            int offset = 0;
             foreach (var arg in callArgs)
             {
-                result[arg.Key] = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
+                ScriptValue value = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
+                if (value.Value is SingleUnzipList)
+                {
+                    SingleUnzipList singleUnzipList = (SingleUnzipList)value.Value;
+                    if (int.TryParse(arg.Key, out int numKey))
+                    {
+                        numKey += offset;
+                        for (int i = 0; i < singleUnzipList.Value.Count; i++)
+                        {
+                            result[(numKey + i).ToString()] = singleUnzipList.Value[i];
+                            offset++;
+                        }
+                        // Skip the original counter
+                        offset--;
+                    }
+                    else
+                        throw new SystemException($"Unexpected function parameter key: {arg.Key}");
+                }
+                else
+                {
+                    if (int.TryParse(arg.Key, out int numKey))
+                    {
+                        result[(numKey + offset).ToString()] = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
+                    }
+                    else
+                    {
+                        result[arg.Key] = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
+                    }
+                }
             }
             return result;
         }

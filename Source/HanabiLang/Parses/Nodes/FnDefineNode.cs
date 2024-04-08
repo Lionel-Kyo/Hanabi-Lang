@@ -11,12 +11,14 @@ namespace HanabiLang.Parses.Nodes
         public string Name { get; private set; }
         public AstNode DataType { get; private set; }
         public AstNode DefaultValue { get; private set; }
+        public bool IsMultiArgs { get; private set; }
 
-        public FnDefineParameter(string name, AstNode dataType = null, AstNode defaultValue = null)
+        public FnDefineParameter(string name, AstNode dataType = null, AstNode defaultValue = null, bool multipleArguments = false)
         {
             this.Name = name;
             this.DataType = dataType;
             this.DefaultValue = defaultValue;
+            this.IsMultiArgs = multipleArguments;
         }
 
         public override string ToString()

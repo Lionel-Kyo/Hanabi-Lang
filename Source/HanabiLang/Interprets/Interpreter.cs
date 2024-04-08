@@ -630,7 +630,7 @@ namespace HanabiLang.Interprets
             return nodeType == typeof(ExpressionNode) || nodeType == typeof(IntNode) ||
                 nodeType == typeof(FloatNode) || nodeType == typeof(InterpolatedString) ||
                 nodeType == typeof(UnaryNode) || nodeType == typeof(StringNode) || nodeType == typeof(VariableAssignmentNode) ||
-                nodeType == typeof(VariableReferenceNode) || nodeType == typeof(FnCallNode) || nodeType == typeof(FnReferenceCallNode) ||
+                nodeType == typeof(VariableReferenceNode) || nodeType == typeof(FnReferenceCallNode) ||
                 nodeType == typeof(TernaryNode);
         }
 
@@ -1017,7 +1017,8 @@ namespace HanabiLang.Interprets
                 if (!(getEnumerator is ScriptFns))
                     throw new SystemException("For loop running failed, variable is not enumerable");
 
-                var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo(interpretScope, new Dictionary<string, AstNode>());
+                //var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo(interpretScope, new Dictionary<string, AstNode>());
+                var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo();
                 var enumerator = ((ScriptFns)getEnumerator).Call(scriptObject, enumeratorInfo);
 
                 if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
@@ -1143,7 +1144,7 @@ namespace HanabiLang.Interprets
                     }
                     if (param.DefaultValue != null)
                         defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue));
+                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue, param.IsMultiArgs));
                 }
 
                 scriptFns.AddFn(new ScriptFn(fnParameters,
@@ -1302,7 +1303,12 @@ namespace HanabiLang.Interprets
                     return new ValueReference(+value);
                 else if (realNode.Operator == "!")
                     return new ValueReference(!value);
-                return new ValueReference(-value);
+                else if (realNode.Operator == "-")
+                    return new ValueReference(-value);
+                else if (realNode.Operator == "*")
+                    return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
+                else
+                    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
             }
             else if (node is VariableReferenceNode)
             {
@@ -1404,7 +1410,7 @@ namespace HanabiLang.Interprets
                     }
                     if (param.DefaultValue != null)
                         defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue));
+                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue, param.IsMultiArgs));
                 }
                 var scriptFns = new ScriptFns(realNode.Name);
                 scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,
