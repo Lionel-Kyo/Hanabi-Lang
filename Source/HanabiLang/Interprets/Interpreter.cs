@@ -1337,7 +1337,13 @@ namespace HanabiLang.Interprets
                 List<ScriptValue> values = new List<ScriptValue>();
 
                 foreach (var value in realNode.Elements)
-                    values.Add(InterpretExpression(interpretScope, value).Ref);
+                {
+                    ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
+                    if (scriptValue.Value is SingleUnzipList)
+                        values.AddRange(((SingleUnzipList)scriptValue.Value).Value);
+                    else
+                        values.Add(scriptValue);
+                }
 
                 return new ValueReference(new ScriptValue(values));
             }
