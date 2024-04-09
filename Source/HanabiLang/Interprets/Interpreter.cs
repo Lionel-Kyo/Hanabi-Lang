@@ -329,8 +329,9 @@ namespace HanabiLang.Interprets
                             },
                             x =>
                             {
-                                if (variable.Set == null)
+                                if (variable.IsConstant || variable.Set == null)
                                     throw new SystemException($"{variable.Name} cannot be written");
+
                                 var fnInfo = variable.Set.GetCallableInfo(x);
                                 if ((int)accessLevel < (int)fnInfo.Item1.Level)
                                     throw new SystemException($"{variable.Name} cannot be written");
@@ -338,7 +339,12 @@ namespace HanabiLang.Interprets
                             }
                         );
                     }
-                    return new ValueReference(() => variable.Value, x => variable.Value = x);
+                    return new ValueReference(() => variable.Value, x =>
+                    {
+                        if (variable.IsConstant)
+                            throw new SystemException($"const {variable.Name} cannot be written");
+                        variable.Value = x;
+                    });
                 }
                 else
                     throw new SystemException($"Unexcepted reference to variable");
@@ -393,7 +399,12 @@ namespace HanabiLang.Interprets
                                     variable.Set.Call(null, x);
                                 });
                         }
-                        return new ValueReference(() => variable.Value, x => variable.Value = x);
+                        return new ValueReference(() => variable.Value, x =>
+                        {
+                            if (variable.IsConstant)
+                                throw new SystemException($"const {variable.Name} cannot be written");
+                            variable.Value = x;
+                        });
                     }
                     else if (scriptType is ScriptObject)
                     {

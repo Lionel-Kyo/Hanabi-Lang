@@ -431,7 +431,11 @@ namespace HanabiLang.Parses
                     throw new ParseException("Setter is auto-implemented variable but Getter is not", this.tokens[this.currentTokenIndex - 1]);
                 else if (setFn.Body.Count > 0 && getFn.Body.Count == 0)
                     throw new ParseException("Getter is auto-implemented variable but Setter is not", this.tokens[this.currentTokenIndex - 1]);
+
+                if (constant)
+                    throw new ParseException("Constant cannot have Setter", this.tokens[this.currentTokenIndex - 1]);
             }
+
 
             if (HasNextToken && NextTokenType == TokenType.EQUALS)
             {
