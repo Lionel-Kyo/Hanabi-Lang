@@ -633,10 +633,11 @@ namespace HanabiLang.Interprets
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 bool scriptTypeNullable;
-                var scriptType = new HashSet<ScriptClass> { isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable) };
-                if (scriptTypeNullable)
-                    scriptType.Add(BasicTypes.Null);
-                scriptParameters.Add(new FnParameter(name, scriptType, defaultValue, isMultipleArgs));
+                ScriptClass dataType = isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable);
+                HashSet<ScriptClass> dataTypes = dataType == null ? null : new HashSet<ScriptClass> { dataType };
+                if (dataType != null && scriptTypeNullable)
+                    dataTypes.Add(BasicTypes.Null);
+                scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
             }
 
             BuildInFns.ScriptFnType fn = args =>
@@ -695,10 +696,11 @@ namespace HanabiLang.Interprets
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 bool scriptTypeNullable;
-                var scriptType = new HashSet<ScriptClass> { isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable) };
-                if (scriptTypeNullable)
-                    scriptType.Add(BasicTypes.Null);
-                scriptParameters.Add(new FnParameter(name, scriptType));
+                ScriptClass dataType = isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable);
+                HashSet<ScriptClass> dataTypes = dataType == null ? null : new HashSet<ScriptClass> { dataType };
+                if (dataType != null && scriptTypeNullable)
+                    dataTypes.Add(BasicTypes.Null);
+                scriptParameters.Add(new FnParameter(name, dataTypes));
             }
 
             BuildInFns.ScriptFnType fn = args =>

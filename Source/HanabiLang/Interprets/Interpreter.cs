@@ -322,7 +322,7 @@ namespace HanabiLang.Interprets
                             {
                                 if (variable.Get == null)
                                     throw new SystemException($"{variable.Name} cannot be read");
-                                var fnInfo = variable.Get.GetFnInfo();
+                                var fnInfo = variable.Get.GetCallableInfo();
                                 if ((int)accessLevel < (int)fnInfo.Item1.Level)
                                     throw new SystemException($"{variable.Name} cannot be read");
                                 return variable.Get.Call(_this, fnInfo);
@@ -331,7 +331,7 @@ namespace HanabiLang.Interprets
                             {
                                 if (variable.Set == null)
                                     throw new SystemException($"{variable.Name} cannot be written");
-                                var fnInfo = variable.Set.GetFnInfo(x);
+                                var fnInfo = variable.Set.GetCallableInfo(x);
                                 if ((int)accessLevel < (int)fnInfo.Item1.Level)
                                     throw new SystemException($"{variable.Name} cannot be written");
                                 variable.Set.Call(_this, fnInfo);
@@ -505,7 +505,8 @@ namespace HanabiLang.Interprets
 
             if (fnRef == null)
             {
-                if (!(interpretScope.Type is ScriptFns))
+                // InterpretScope Type is ScriptFn not ScriptFns
+                if (!(interpretScope.Type is ScriptFn))
                     throw new SystemException("Cannot call this/super function out of function");
                 if (!(interpretScope.Parent.Type is ScriptObject))
                     throw new SystemException("Cannot call this/super function out of object");
@@ -515,27 +516,27 @@ namespace HanabiLang.Interprets
                     scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.Name, out ScriptType thisFns))
                 {
                     var fn = (ScriptFns)thisFns;
-                    var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
-                    return new ValueReference(fn.Call(scriptObject, fnInfo));
+                    var callableInfo = fn.GetCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
+                    return new ValueReference(fn.Call(scriptObject, callableInfo));
                 }
                 else if (specialAccess.Equals("super") &&
                     scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.Name, out ScriptType superFns))
                 {
                     var fn = (ScriptFns)superFns;
-                    var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
-                    return new ValueReference(fn.Call(scriptObject, fnInfo));
+                    var callableInfo = fn.GetCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
+                    return new ValueReference(fn.Call(scriptObject, callableInfo));
                 }
             }
             else if (fnRef.IsFunction)
             {
                 var fn = (ScriptFns)fnRef.Value;
-                var fnInfo = fn.GetFnInfo(interpretScope, realNode.Args);
-                return new ValueReference(fn.Call(null, fnInfo));
+                var callableInfo = fn.GetCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
+                return new ValueReference(fn.Call(null, callableInfo));
             }
             else if (fnRef.IsClass)
             {
                 var _class = (ScriptClass)fnRef.Value;
-                return new ValueReference(_class.Call(interpretScope, realNode.Args));
+                return new ValueReference(_class.Call(interpretScope, realNode.Args, realNode.KeyArgs));
             }
 
             throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
@@ -552,13 +553,13 @@ namespace HanabiLang.Interprets
                 if (referenceCallResult.IsFunction)
                 {
                     var fn = (ScriptFns)referenceCallResult.Value;
-                    var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
-                    return new ValueReference(fn.Call(null, fnInfo));
+                    var callableInfo = fn.GetCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
+                    return new ValueReference(fn.Call(null, callableInfo));
                 }
                 else if (referenceCallResult.IsClass)
                 {
                     var _class = (ScriptClass)referenceCallResult.Value;
-                    return new ValueReference(_class.Call(interpretScope, fnCall.Args));
+                    return new ValueReference(_class.Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
                 }
 
                 throw new SystemException($"Unexpected function call");
@@ -574,18 +575,18 @@ namespace HanabiLang.Interprets
                 if (scriptType is ScriptFns)
                 {
                     var fn = ((ScriptFns)scriptType);
-                    var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
-                    if ((int)accessLevel < (int)fnInfo.Item1.Level)
-                        throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
+                    var callableInfo = fn.GetCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
+                    if ((int)accessLevel < (int)callableInfo.Item1.Level)
+                        throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Name}");
 
-                    return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
+                    return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, callableInfo));
                 }
                 else if (scriptType is ScriptClass)
                 {
                     var _class = ((ScriptClass)scriptType);
                     if ((int)accessLevel < (int)_class.Level)
                         throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                    return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args));
+                    return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
                 }
                 else if (scriptType is ScriptVariable)
                 {
@@ -598,18 +599,18 @@ namespace HanabiLang.Interprets
                     if (value.IsFunction)
                     {
                         var fn = (ScriptFns)value.Value;
-                        var fnInfo = fn.GetFnInfo(interpretScope, fnCall.Args);
-                        if ((int)accessLevel < (int)fnInfo.Item1.Level)
-                            throw new SystemException($"Cannot access {fnInfo.Item1.Level} {fn.Name}");
+                        var callableInfo = fn.GetCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
+                        if ((int)accessLevel < (int)callableInfo.Item1.Level)
+                            throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Name}");
 
-                        return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, fnInfo));
+                        return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, callableInfo));
                     }
                     else if (value.IsClass)
                     {
                         var _class = (ScriptClass)value.Value;
                         if ((int)accessLevel < (int)_class.Level)
                             throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                        return new ValueReference(_class.Call(interpretScope, fnCall.Args));
+                        return new ValueReference(_class.Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
                     }
                     throw new SystemException($"{fnName} is not callable");
                 }
@@ -1018,7 +1019,7 @@ namespace HanabiLang.Interprets
                     throw new SystemException("For loop running failed, variable is not enumerable");
 
                 //var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo(interpretScope, new Dictionary<string, AstNode>());
-                var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo();
+                var enumeratorInfo = ((ScriptFns)getEnumerator).GetCallableInfo();
                 var enumerator = ((ScriptFns)getEnumerator).Call(scriptObject, enumeratorInfo);
 
                 if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))

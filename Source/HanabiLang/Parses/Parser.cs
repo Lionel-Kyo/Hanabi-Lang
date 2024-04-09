@@ -1071,8 +1071,8 @@ namespace HanabiLang.Parses
         {
             this.currentTokenIndex++;
 
-            var arguments = new Dictionary<string, AstNode>();
-            int argsCount = 0;
+            var arguments = new List<AstNode>();
+            var keyArguments = new Dictionary<string, AstNode>();
             bool isLastWithName = false;
             while (HasNextToken && NextTokenType != TokenType.CLOSE_ROUND_BRACKET)
             {
@@ -1083,18 +1083,16 @@ namespace HanabiLang.Parses
                     string argName = this.tokens[this.currentTokenIndex].Raw;
                     this.Expect(TokenType.IDENTIFIER);
                     this.Expect(TokenType.EQUALS);
-                    arguments[argName] = this.Expression(false, true, false);
+                    keyArguments[argName] = this.Expression(false, true, false);
                     isLastWithName = true;
-                    argsCount++;
                 }
                 else
                 {
                     // supporting multiple arguments
-                    /*if (isLastWithName)
-                        throw new ParseException("cannot pass argument without name after passing named argument");*/
+                    if (isLastWithName)
+                        throw new ParseException("cannot pass argument without name after passing named argument", this.tokens[this.currentTokenIndex - 1]);
 
-                    arguments[argsCount.ToString()] = this.Expression();
-                    argsCount++;
+                    arguments.Add(this.Expression());
                 }
 
                 if (HasNextToken && NextTokenType == TokenType.CLOSE_ROUND_BRACKET)
@@ -1114,7 +1112,7 @@ namespace HanabiLang.Parses
 
             Expect(TokenType.CLOSE_ROUND_BRACKET);
 
-            AstNode lastFnRefCall = new FnReferenceCallNode(node, arguments);
+            AstNode lastFnRefCall = new FnReferenceCallNode(node, arguments, keyArguments);
             while (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
             {
                 lastFnRefCall = FunctionCall(lastFnRefCall);

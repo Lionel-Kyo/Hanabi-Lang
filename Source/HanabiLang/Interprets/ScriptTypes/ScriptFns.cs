@@ -41,6 +41,22 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
     }
 
+    internal class FnTempParameter
+    {
+        public bool IsMultiArgs { get; private set; }
+        public HashSet<ScriptClass> DataTypes { get; private set; }
+        public ScriptValue Value { get; set; }
+
+        public bool IsValid => Value != null;
+
+        public FnTempParameter(FnParameter fnParameter)
+        {
+            this.IsMultiArgs = fnParameter.IsMultiArgs;
+            this.DataTypes = fnParameter.DataTypes;
+            this.Value = fnParameter.DefaultValue;
+        }
+    }
+
     public class ScriptFn : ScriptType
     {
         public List<FnParameter> Parameters { get; private set; }
@@ -137,177 +153,180 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        private static Dictionary<string, ScriptValue> GetArgs(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
+        private static Tuple<List<ScriptValue>, Dictionary<string, ScriptValue>> InterpretArgs(ScriptScope currentScope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
-            Dictionary<string, ScriptValue> result = new Dictionary<string, ScriptValue>();
-            int offset = 0;
-            foreach (var arg in callArgs)
+            List<ScriptValue> resultArgs = new List<ScriptValue>();
+            Dictionary<string, ScriptValue> resultKeyArgs = new Dictionary<string, ScriptValue>();
+            foreach (var arg in args)
             {
-                ScriptValue value = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
+                ScriptValue value = Interpreter.InterpretExpression(currentScope, arg).Ref;
                 if (value.Value is SingleUnzipList)
                 {
                     SingleUnzipList singleUnzipList = (SingleUnzipList)value.Value;
-                    if (int.TryParse(arg.Key, out int numKey))
-                    {
-                        numKey += offset;
-                        for (int i = 0; i < singleUnzipList.Value.Count; i++)
-                        {
-                            result[(numKey + i).ToString()] = singleUnzipList.Value[i];
-                            offset++;
-                        }
-                        // Skip the original counter
-                        offset--;
-                    }
-                    else
-                        throw new SystemException($"Unexpected function parameter key: {arg.Key}");
+                    resultArgs.AddRange(singleUnzipList.Value);
                 }
                 else
                 {
-                    if (int.TryParse(arg.Key, out int numKey))
-                    {
-                        result[(numKey + offset).ToString()] = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
-                    }
-                    else
-                    {
-                        result[arg.Key] = Interpreter.InterpretExpression(currentScope, arg.Value).Ref;
-                    }
+                    resultArgs.Add(value);
                 }
             }
-            return result;
+
+            foreach (var kv in keyArgs)
+            {
+                ScriptValue value = Interpreter.InterpretExpression(currentScope, kv.Value).Ref;
+                resultKeyArgs[kv.Key] = value;
+            }
+            return Tuple.Create(resultArgs, resultKeyArgs);
         }
 
-        private static Tuple<ScriptFn, List<ScriptVariable>, int> MinScriptFn(List<Tuple<ScriptFn, List<ScriptVariable>, int>> list)
+        private static Tuple<ScriptFn, Dictionary<string, FnTempParameter>, int> FindMinAnyTypeFn(List<Tuple<ScriptFn, Dictionary<string, FnTempParameter>, int>> infos)
         {
-            int min = list[0].Item3;
+            int min = infos[0].Item3;
             int minIndex = 0;
 
-            for (int i = 1; i < list.Count; ++i)
+            for (int i = 1; i < infos.Count; ++i)
             {
-                if (list[i].Item3 < min)
+                if (infos[i].Item3 < min)
                 {
-                    min = list[i].Item3;
+                    min = infos[i].Item3;
                     minIndex = i;
                 }
             }
 
-            return list[minIndex];
+            return infos[minIndex];
         }
 
-        private Tuple<ScriptFn, List<ScriptVariable>> FindFnInfo(Dictionary<string, ScriptValue> args)
+        private Tuple<ScriptFn, List<ScriptVariable>> GetCallableFnParams(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
         {
-            var fns = new List<Tuple<ScriptFn, List<ScriptVariable>, int>>();
+            args = args ?? new List<ScriptValue>();
+            keyArgs = keyArgs ?? new Dictionary<string, ScriptValue>();
+            var fns = new List<Tuple<ScriptFn, Dictionary<string, FnTempParameter>, int>>();
             foreach (var fn in this.Fns)
-            //for (int i = this.Fns.Count - 1; i >= 0; i--)
             {
-                //var fn = this.Fns[i];
                 if ((args.Count < fn.MinArgs || args.Count > fn.Parameters.Count) && !fn.HasMultiArgs)
                     continue;
 
-                int index = 0;
-                int anyTypeCount = 0;
-                var variables = new List<ScriptVariable>();
+                var paramsMatch = fn.Parameters.ToDictionary(_param => _param.Name, _param => new FnTempParameter(_param));
+                int anyTypeCount = paramsMatch.Values.Sum(x => x.DataTypes == null ? 1 : 0);
                 bool isMatchFn = true;
-                foreach (var parameter in fn.Parameters)
-                {
-                    if (parameter.IsMultiArgs)
-                    {
-                        var multipleArguments = new List<ScriptValue>();
 
-                        while (args.TryGetValue(index.ToString(), out ScriptValue value))
+                foreach (var kv in keyArgs)
+                {
+                    if (!paramsMatch.TryGetValue(kv.Key, out FnTempParameter tempParam))
+                    {
+                        isMatchFn = false;
+                        break;
+                    }
+                    if (tempParam.DataTypes != null)
+                    {
+                        if (tempParam.IsMultiArgs)
                         {
-                            if (parameter.DataTypes != null && !parameter.DataTypes.Contains(((ScriptObject)value.Value).ClassType))
+                            if ((((ScriptObject)kv.Value.Value).ClassType != BasicTypes.List) ||
+                                (!((List<ScriptValue>)((ScriptObject)kv.Value.Value).BuildInObject).All(arg => tempParam.DataTypes.Contains(((ScriptObject)arg.Value).ClassType))))
                             {
                                 isMatchFn = false;
                                 break;
                             }
-                            multipleArguments.Add(value);
-                            index++;
-                        }
-                        variables.Add(new ScriptVariable(parameter.Name, new ScriptValue(multipleArguments), false, false, AccessibilityLevel.Private));
-                    }
-                    else if (index >= args.Count)
-                    {
-                        if (parameter.DefaultValue == null)
-                        {
-                            isMatchFn = false;
-                            break;
-                        }
-                        if (args.TryGetValue(parameter.Name, out ScriptValue value))
-                        {
-                            variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
                         }
                         else
                         {
-                            variables.Add(new ScriptVariable(parameter.Name, parameter.DefaultValue, false, false, AccessibilityLevel.Private));
-                        }
-                    }
-                    else
-                    {
-                        if (!args.TryGetValue(parameter.Name, out ScriptValue value))
-                        {
-                            if (!args.TryGetValue(index.ToString(), out value))
+                            if (!tempParam.DataTypes.Contains(((ScriptObject)kv.Value.Value).ClassType))
                             {
-                                if (parameter.DefaultValue == null)
-                                    continue;
-                                value = parameter.DefaultValue;
+                                isMatchFn = false;
+                                break;
                             }
                         }
+                    }
+                    tempParam.Value = kv.Value;
+                }
 
-                        if (parameter.DataTypes != null && (!parameter.DataTypes.Contains(((ScriptObject)value.Value).ClassType)))
+                if (!isMatchFn)
+                    continue;
+
+                int argCount = 0;
+                foreach (var _param in paramsMatch)
+                {
+                    if (argCount >= args.Count)
+                        break;
+
+                    if (_param.Value.IsMultiArgs)
+                    {
+                        var multiArgs = args.Skip(argCount).ToList();
+                        if (_param.Value.DataTypes != null && !multiArgs.All(arg => _param.Value.DataTypes.Contains(((ScriptObject)arg.Value).ClassType)))
                         {
                             isMatchFn = false;
                             break;
                         }
-                        if (parameter.DataTypes == null)
-                            anyTypeCount++;
-                        variables.Add(new ScriptVariable(parameter.Name, value, false, false, AccessibilityLevel.Private));
+                        _param.Value.Value = new ScriptValue(multiArgs);
                     }
-                    index++;
+                    else
+                    {
+                        if (_param.Value.DataTypes != null && !_param.Value.DataTypes.Contains(((ScriptObject)args[argCount].Value).ClassType))
+                        {
+                            isMatchFn = false;
+                            break;
+                        }
+                        _param.Value.Value = args[argCount];
+                    }
+                    argCount++;
                 }
 
-                // if (index == fn.Parameters.Count || fn.HasMultiArgs)
-                if (isMatchFn)
-                    fns.Add(Tuple.Create(fn, variables, anyTypeCount));
+                if (!isMatchFn)
+                    continue;
+
+                FnTempParameter lastParam = paramsMatch.Count > 0 ? paramsMatch.Last().Value : null;
+
+                if (lastParam != null && lastParam.IsMultiArgs)
+                {
+                    if (lastParam.Value == null)
+                        lastParam.Value = new ScriptValue(BasicTypes.List.Create());
+                    if (((ScriptObject)lastParam.Value.Value).ClassType != BasicTypes.List)
+                    {
+                        isMatchFn = false;
+                        continue;
+                    }
+                }
+
+                if (paramsMatch.Values.All(x => x.IsValid))
+                {
+                    fns.Add(Tuple.Create(fn, paramsMatch, anyTypeCount));
+                }
             }
 
             if (fns.Count <= 0)
             {
                 throw new NotImplementedException($"Match function call for {this.Name} does not exists\n" +
-                    $"Avaliable Functions: {string.Join(", ", this.Fns.Select(_fn => '(' + string.Join(", ", _fn.Parameters.Select(_params => string.Join(" | ", _params.DataTypes.Select(_type => _type.Name)))) + ')'))}");
+                    $"Avaliable Functions: {string.Join(", ", this.Fns.Select(_fn => '(' + string.Join(", ", _fn.Parameters.Select(_params => _params.DataTypes == null ? "any" : string.Join(" | ", _params.DataTypes.Select(_type => _type.Name)))) + ')'))}");
             }
 
-            var scriptfn = MinScriptFn(fns);
-            return Tuple.Create(scriptfn.Item1, scriptfn.Item2);
+            var scriptfn = FindMinAnyTypeFn(fns);
+            return Tuple.Create(scriptfn.Item1, scriptfn.Item2.Select(x => new ScriptVariable(x.Key, x.Value.Value, false, false, AccessibilityLevel.Private)).ToList());
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(ScriptScope scope, Dictionary<string, AstNode> nodeArgs)
+        internal Tuple<ScriptFn, List<ScriptVariable>> GetCallableInfo(ScriptScope scope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
-            return FindFnInfo(GetArgs(scope, nodeArgs));
+            var kv = InterpretArgs(scope, args, keyArgs);
+            return GetCallableFnParams(kv.Item1, kv.Item2);
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(Dictionary<string, ScriptValue> args)
+        internal Tuple<ScriptFn, List<ScriptVariable>> GetCallableInfo(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
         {
-            return FindFnInfo(args);
+            return GetCallableFnParams(args, keyArgs);
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> GetFnInfo(params ScriptValue[] values)
+        internal Tuple<ScriptFn, List<ScriptVariable>> GetCallableInfo(params ScriptValue[] values)
         {
-            Dictionary<string, ScriptValue> args = new Dictionary<string, ScriptValue>();
-            for (int i = 0; i < values.Length; i++)
-            {
-                args[i.ToString()] = values[i];
-            }
-            return FindFnInfo(args); ;
+            return GetCallableFnParams(values.ToList(), null);
         }
 
-        internal ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> fnInfo)
+        internal ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
         {
-            return Call(fnInfo.Item1, _this, fnInfo.Item2);
+            return Call(callableInfo.Item1, _this, callableInfo.Item2);
         }
 
         public ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
         {
-            var fnInfo = GetFnInfo(value);
+            var fnInfo = GetCallableInfo(value);
             return Call(fnInfo.Item1, _this, fnInfo.Item2);
         }
 
@@ -317,13 +336,14 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 List<ScriptValue> valueArgs = new List<ScriptValue>();
 
+                if (!fn.IsStatic && _this != null)
+                {
+                    valueArgs.Add(new ScriptValue(_this));
+                }
+
                 foreach (var arg in args)
                 {
                     valueArgs.Add(arg.Value);
-                }
-                if (!fn.IsStatic && _this != null)
-                {
-                    valueArgs.Insert(0, new ScriptValue(_this));
                 }
                 return fn.BuildInFn(valueArgs);
             }

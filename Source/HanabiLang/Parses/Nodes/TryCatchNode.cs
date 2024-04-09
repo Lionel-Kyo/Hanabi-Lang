@@ -29,14 +29,20 @@ namespace HanabiLang.Parses.Nodes
                 result.Append(branch.ToString());
             }
             result.Append(' ');
-            foreach (var branch in CatchBranch)
+            if (CatchBranch != null)
             {
-                result.Append(branch.ToString());
+                foreach (var branch in CatchBranch)
+                {
+                    result.Append(branch.ToString());
+                }
+                result.Append(' ');
             }
-            result.Append(' ');
-            foreach (var branch in FinallyBranch)
+            if (FinallyBranch != null)
             {
-                result.Append(branch.ToString());
+                foreach (var branch in FinallyBranch)
+                {
+                    result.Append(branch.ToString());
+                }
             }
             result.Append(')');
             //result.AppendLine("  ");

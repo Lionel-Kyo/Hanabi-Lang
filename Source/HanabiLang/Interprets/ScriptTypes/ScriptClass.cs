@@ -208,7 +208,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public virtual ScriptObject Negative(ScriptObject left)
         {
             if (left.ClassType.Scope.Functions.TryGetValue("^-", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, fn.GetFnInfo()).Value;
+                return (ScriptObject)fn.Call(left, fn.GetCallableInfo()).Value;
             throw new SystemException("Operator ! is not implemented");
         }
         public virtual ScriptObject Add(ScriptObject left, ScriptObject right)
@@ -357,7 +357,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public virtual ScriptObject Create() => new ScriptObject(this);
 
-        internal ScriptValue Call(ScriptScope currentScope, Dictionary<string, AstNode> callArgs)
+        internal ScriptValue Call(ScriptScope currentScope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
             if (this.IsStatic)
                 throw new SystemException($"Static class({this.Name}) cannot create an object");
@@ -365,7 +365,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             // C# class
             if (this.BuildInConstructor.Fns.Count != 0)
             {
-                var fnInfo = this.BuildInConstructor.GetFnInfo(currentScope, callArgs);
+                var fnInfo = this.BuildInConstructor.GetCallableInfo(currentScope, args, keyArgs);
                 return this.BuildInConstructor.Call(null, fnInfo);
             }
 
@@ -395,7 +395,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             
             if (this.Scope.Functions.TryGetValue(this.Name, out currentConstructor))
             {
-                var fnInfo = currentConstructor.GetFnInfo(currentScope, callArgs);
+                var fnInfo = currentConstructor.GetCallableInfo(currentScope, args, keyArgs);
                 currentConstructor.Call(_object, fnInfo);
             }
 

@@ -19,7 +19,6 @@ namespace HanabiLang
             //string path = "./Test.txt";
             //string path = "./Test2.txt";
             //string path = "./Test3.txt";
-            string path = "./Test4.txt";
             //string path = "./BubbleSort.txt";
             //string path = "./CsImport.txt";
             //string path = "./CsImport2.txt";
@@ -27,9 +26,10 @@ namespace HanabiLang
             //string path = "./InterpolatedString.txt";
             //string path = "./ImportJson.txt";
             //string path = "./ChristmasTree.txt";
-            // string path = "./ForLoopTest.txt";
+            //string path = "./ForLoopTest.txt";
+            //string path = "./ForLoopFuncBug.txt";
             //string path = "./switchTest.txt";
-            path = "H:/HanabiScriptTest/ImportJson.txt";
+            string path = "H:/HanabiScriptTest/ImportJson.txt";
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 path = args[0];
