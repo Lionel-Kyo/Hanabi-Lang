@@ -187,7 +187,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             return infos[minIndex];
         }
 
-        private Tuple<ScriptFn, List<ScriptVariable>> GetCallableFnParams(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
+        private Tuple<ScriptFn, List<ScriptVariable>> FindCallableFnParams(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
         {
             args = args ?? new List<ScriptValue>();
             keyArgs = keyArgs ?? new Dictionary<string, ScriptValue>();
@@ -287,7 +287,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (fns.Count <= 0)
             {
-                throw new NotImplementedException($"Match function call for {this.Name} does not exists\n" +
+                throw new NotImplementedException($"Match function call for {this.Name} does not exist\n" +
                     $"Avaliable Functions: {string.Join(", ", this.Fns.Select(_fn => '(' + string.Join(", ", _fn.Parameters.Select(_params => _params.DataTypes == null ? "any" : string.Join(" | ", _params.DataTypes.Select(_type => _type.Name)))) + ')'))}");
             }
 
@@ -295,20 +295,20 @@ namespace HanabiLang.Interprets.ScriptTypes
             return Tuple.Create(scriptfn.Item1, scriptfn.Item2.Select(x => new ScriptVariable(x.Key, x.Value.Value, false, false, AccessibilityLevel.Private)).ToList());
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> GetCallableInfo(ScriptScope scope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
+        internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptScope scope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
             var kv = InterpretArgs(scope, args, keyArgs);
-            return GetCallableFnParams(kv.Item1, kv.Item2);
+            return FindCallableFnParams(kv.Item1, kv.Item2);
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> GetCallableInfo(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
+        internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
         {
-            return GetCallableFnParams(args, keyArgs);
+            return FindCallableFnParams(args, keyArgs);
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> GetCallableInfo(params ScriptValue[] values)
+        internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(params ScriptValue[] values)
         {
-            return GetCallableFnParams(values.ToList(), null);
+            return FindCallableFnParams(values.ToList(), null);
         }
 
         internal ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
@@ -318,7 +318,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
         {
-            var fnInfo = GetCallableInfo(value);
+            var fnInfo = FindCallableInfo(value);
             return Call(fnInfo.Item1, _this, fnInfo.Item2);
         }
 

@@ -56,15 +56,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.resetFn = (ScriptFns)reset.Value;
             }
 
-            public object Current => currentFn.Call(currentObject, currentFn.GetCallableInfo(currentObject.Scope, null, null));
+            public object Current => currentFn.Call(currentObject, currentFn.FindCallableInfo(currentObject.Scope, null, null));
 
-            ScriptValue IEnumerator<ScriptValue>.Current => currentFn.Call(currentObject, currentFn.GetCallableInfo(currentObject.Scope, null, null));
+            ScriptValue IEnumerator<ScriptValue>.Current => currentFn.Call(currentObject, currentFn.FindCallableInfo(currentObject.Scope, null, null));
 
-            public void Dispose() => resetFn.Call(currentObject, resetFn.GetCallableInfo(currentObject.Scope, null, null));
+            public void Dispose() => resetFn.Call(currentObject, resetFn.FindCallableInfo(currentObject.Scope, null, null));
 
             public bool MoveNext()
             {
-                var result = moveNextFn.Call(currentObject, resetFn.GetCallableInfo(currentObject.Scope, null, null));
+                var result = moveNextFn.Call(currentObject, resetFn.FindCallableInfo(currentObject.Scope, null, null));
                 if (!result.IsObject)
                     throw new SystemException("MoveNext does not return a bool");
                 var obj = (ScriptObject)result.Value;
@@ -73,7 +73,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return (bool)obj.BuildInObject;
             }
 
-            public void Reset() => resetFn.Call(currentObject, resetFn.GetCallableInfo(currentObject.Scope, null, null));
+            public void Reset() => resetFn.Call(currentObject, resetFn.FindCallableInfo(currentObject.Scope, null, null));
 
             public IEnumerator<ScriptValue> GetEnumerator() => this;
             IEnumerator IEnumerable.GetEnumerator() => this;

@@ -364,7 +364,7 @@ namespace HanabiLang.Interprets
                 if (!(getEnumerator is ScriptFns))
                     throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
 
-                var enumeratorInfo = ((ScriptFns)getEnumerator).GetCallableInfo();
+                var enumeratorInfo = ((ScriptFns)getEnumerator).FindCallableInfo();
                 var enumerator = ((ScriptFns)getEnumerator).Call((ScriptObject)a.value, enumeratorInfo);
 
                 if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
