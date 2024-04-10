@@ -82,17 +82,8 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.BuildInFn = fn;
             this.IsStatic = isStatic;
             this.Level = level;
-
-            int count = 0;
-            foreach (var param in this.Parameters)
-            {
-                //ArgsMap[param.Name] = count;
-                if (param.DefaultValue == null)
-                {
-                    MinArgs++;
-                }
-                count++;
-            }
+            // Number of arguments with no default value
+            this.MinArgs = this.Parameters.Count(x => x.DefaultValue == null);
         }
 
         internal ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
@@ -200,10 +191,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             args = args ?? new List<ScriptValue>();
             keyArgs = keyArgs ?? new Dictionary<string, ScriptValue>();
+            int totalArgsCount = args.Count + keyArgs.Count;
             var fns = new List<Tuple<ScriptFn, Dictionary<string, FnTempParameter>, int>>();
             foreach (var fn in this.Fns)
             {
-                if ((args.Count < fn.MinArgs || args.Count > fn.Parameters.Count) && !fn.HasMultiArgs)
+                if ((totalArgsCount < fn.MinArgs || totalArgsCount > fn.Parameters.Count) && !fn.HasMultiArgs)
                     continue;
 
                 var paramsMatch = fn.Parameters.ToDictionary(_param => _param.Name, _param => new FnTempParameter(_param));
