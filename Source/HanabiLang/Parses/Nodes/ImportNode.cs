@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class ImportNode : AstNode
+    class ImportNode : AstNode, IStatementNode
     {
         public string Path { get; private set; }
         /// <summary>

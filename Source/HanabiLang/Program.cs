@@ -14,7 +14,7 @@ namespace HanabiLang
 {
     internal class Program
     {
-        public static void Main(string[] args)
+        public static void ExecuteFile(string[] args)
         {
             //string path = "./Test.txt";
             //string path = "./Test2.txt";
@@ -50,9 +50,58 @@ namespace HanabiLang
             path = Path.GetFullPath(path).Replace("\\", "/");
             DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);
             Interpreter.Arguments = args;
-            Interpreter interpreter = new Interpreter(ast, null, path, true);
+            Interpreter interpreter = new Interpreter(ast: ast, existedScope: null, predefinedScope: null, path: "", isMain: true);
             ImportedItems.Files[path] = Tuple.Create(lastWriteTimeUtc, interpreter);
             interpreter.Interpret(false);
+        }
+
+        public static void Start(string[] args)
+        {
+            Interpreter.Arguments = args;
+            Interpreter interpreter = new Interpreter(ast: null, existedScope: null, predefinedScope: null, path: "", isMain: true);
+            List<string> lines = new List<string>();
+            while (true)
+            {
+                string line = Console.ReadLine();
+                lines.Add(line);
+                var tokens = Lexer.Tokenize(lines);
+                var parser = new Parser(tokens);
+                AbstractSyntaxTree ast = null;
+                try
+                {
+                    ast = parser.Parse();
+                }
+                catch (ParseFormatNotCompleteException ex)
+                {
+                }
+                catch (Exception ex)
+                {
+                    lines = new List<string>();
+                    Console.WriteLine(Parser.ExceptionToString(ex));
+                }
+                if (ast == null)
+                    continue;
+
+                Interpreter tempInterpreter = new Interpreter(ast: ast, existedScope: interpreter.CurrentScope,
+                    predefinedScope: interpreter.PredefinedScope, path: interpreter.Path, isMain: true);
+                try
+                {
+                    tempInterpreter.Interpret(false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(Interpreter.ExceptionToString(ex));
+                }
+                lines = new List<string>();
+            }
+        }
+
+        public static void Main(string[] args)
+        {
+            if (args.Length <= 0)
+                Start(args);
+            else
+                ExecuteFile(args);
         }
     }
 }

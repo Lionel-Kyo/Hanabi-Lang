@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class SwitchNode : AstNode
+    class SwitchNode : AstNode, IStatementNode
     {
         public AstNode Condition { get; private set; }
         public List<SwitchCaseNode> Cases { get; private set; }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class TryCatchNode : AstNode
+    class TryCatchNode : AstNode, IStatementNode
     {
         public List<AstNode> TryBranch { get; private set; }
         public List<AstNode> CatchBranch { get; private set; }

@@ -24,26 +24,32 @@ namespace HanabiLang.Interprets
         /// <summary>
         /// Script Start or Import Script
         /// </summary>
-        /// <param name="ast"></param>
-        public Interpreter(AbstractSyntaxTree ast, ScriptScope predefinedScope, string path, bool isMain)
+        public Interpreter(AbstractSyntaxTree ast, ScriptScope existedScope, ScriptScope predefinedScope, string path, bool isMain)
         {
             this.ast = ast;
             this.PredefinedScope = predefinedScope;
-            this.CurrentScope = new ScriptScope(null, this);
-            this.Path = path.Replace("\\", "/");
-            this.CurrentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
-            this.CurrentScope.Classes.Add("object", BasicTypes.ObjectClass);
-            this.CurrentScope.Classes.Add("str", BasicTypes.Str);
-            this.CurrentScope.Classes.Add("int", BasicTypes.Int);
-            this.CurrentScope.Classes.Add("float", BasicTypes.Float);
-            this.CurrentScope.Classes.Add("decimal", BasicTypes.Decimal);
-            this.CurrentScope.Classes.Add("bool", BasicTypes.Bool);
-            this.CurrentScope.Classes.Add("range", BasicTypes.Range);
-            this.CurrentScope.Classes.Add("List", BasicTypes.List);
-            this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
-            this.CurrentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
-            this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
-            BuildInFns.AddBasicFunctions(this.CurrentScope);
+            if (existedScope == null)
+            {
+                this.CurrentScope = new ScriptScope(null, this);
+                this.Path = path.Replace("\\", "/");
+                this.CurrentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
+                this.CurrentScope.Classes.Add("object", BasicTypes.ObjectClass);
+                this.CurrentScope.Classes.Add("str", BasicTypes.Str);
+                this.CurrentScope.Classes.Add("int", BasicTypes.Int);
+                this.CurrentScope.Classes.Add("float", BasicTypes.Float);
+                this.CurrentScope.Classes.Add("decimal", BasicTypes.Decimal);
+                this.CurrentScope.Classes.Add("bool", BasicTypes.Bool);
+                this.CurrentScope.Classes.Add("range", BasicTypes.Range);
+                this.CurrentScope.Classes.Add("List", BasicTypes.List);
+                this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
+                this.CurrentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
+                this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
+                BuildInFns.AddBasicFunctions(this.CurrentScope);
+            }
+            else
+            {
+                this.CurrentScope = existedScope;
+            }
         }
 
         public void Interpret(bool isThrowException)
@@ -79,18 +85,23 @@ namespace HanabiLang.Interprets
                 }
                 else
                 {
-                    StringBuilder result = new StringBuilder();
-                    for (Exception exception = ex; exception != null; exception = exception.InnerException)
-                    {
-                        if (exception is HanibiException)
-                            result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
-                        else
-                            result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
-                    }
-                    Console.Error.WriteLine(result.ToString());
+                    Console.Error.WriteLine(ExceptionToString(ex));
                     Environment.ExitCode = ex.HResult;
                 }
             }
+        }
+
+        public static string ExceptionToString(Exception ex)
+        {
+            StringBuilder result = new StringBuilder();
+            for (Exception exception = ex; exception != null; exception = exception.InnerException)
+            {
+                if (exception is HanibiException)
+                    result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
+                else
+                    result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
+            }
+            return result.ToString();
         }
 
         public static void ImportFile(ScriptScope interpretScope, AstNode node)
@@ -195,7 +206,7 @@ namespace HanabiLang.Interprets
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    newInterpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
                     newInterpreter.Interpret(true);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
@@ -220,7 +231,7 @@ namespace HanabiLang.Interprets
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    newInterpreter = new Interpreter(ast, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
                     newInterpreter.Interpret(true);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
@@ -636,31 +647,22 @@ namespace HanabiLang.Interprets
             }
         }
 
-        public static bool IsExpressionNode(AstNode node)
-        {
-            Type nodeType = node.GetType();
-            return nodeType == typeof(ExpressionNode) || nodeType == typeof(IntNode) ||
-                nodeType == typeof(FloatNode) || nodeType == typeof(InterpolatedString) ||
-                nodeType == typeof(UnaryNode) || nodeType == typeof(StringNode) || nodeType == typeof(VariableAssignmentNode) ||
-                nodeType == typeof(VariableReferenceNode) || nodeType == typeof(FnReferenceCallNode) ||
-                nodeType == typeof(TernaryNode);
-        }
-
         public static bool IsStatementNode(AstNode node)
         {
-            Type nodeType = node.GetType();
-            return nodeType == typeof(ForNode) || nodeType == typeof(WhileNode) ||
-                nodeType == typeof(SwitchNode) || nodeType == typeof(IfNode) || nodeType == typeof(TryCatchNode) ||
-                nodeType == typeof(ImportNode) || nodeType == typeof(ThrowNode) || nodeType == typeof(VariableDefinitionNode) ||
-                nodeType == typeof(FnDefineNode) || nodeType == typeof(ClassDefineNode);
+            return node is IStatementNode;
+        }
+
+        public static bool IsExpressionNode(AstNode node)
+        {
+            return node is IExpressionNode;
         }
 
         public static void InterpretChild(ScriptScope interpretScope, AstNode node)
         {
             if (IsExpressionNode(node))
-                InterpretExpression(interpretScope, node);
+                return InterpretExpression(interpretScope, node);
             else if (IsStatementNode(node))
-                InterpretStatement(interpretScope, node);
+                return InterpretStatement(interpretScope, node);
             else
                 throw new SystemException("Unexcepted child: " + node.NodeName);
         }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class TernaryNode : AstNode
+    class TernaryNode : AstNode, IExpressionNode
     {
         public AstNode Condition { get; private set; }
         public AstNode Consequent { get; private set; }

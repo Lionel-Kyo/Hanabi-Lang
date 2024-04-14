@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class VariableAssignmentNode : AstNode
+    class VariableAssignmentNode : AstNode, IExpressionNode
     {
         public AstNode Name { get; private set; }
         public AstNode Value { get; private set; }

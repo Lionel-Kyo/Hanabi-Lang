@@ -27,7 +27,7 @@ namespace HanabiLang.Parses.Nodes
         }
     }
 
-    class FnDefineNode : AstNode
+    class FnDefineNode : AstNode, IStatementNode
     {
         public string Name { get; private set; }
         public List<FnDefineParameter> Parameters { get; private set; }

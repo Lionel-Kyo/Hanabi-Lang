@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class IfNode : AstNode
+    class IfNode : AstNode, IStatementNode
     {
         public AstNode Condition { get; private set; }
         public List<AstNode> ThenBranch { get; private set; }

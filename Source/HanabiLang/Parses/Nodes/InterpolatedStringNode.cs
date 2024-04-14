@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class InterpolatedString : AstNode
+    class InterpolatedString : AstNode, IExpressionNode
     {
         public List<string> Values { get; private set; }
         private Queue<AstNode> interpolatedNodes;

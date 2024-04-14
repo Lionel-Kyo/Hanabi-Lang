@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class WhileNode : AstNode
+    class WhileNode : AstNode, IStatementNode
     {
         public AstNode Condition { get; private set; }
         public List<AstNode> Body { get; private set; }

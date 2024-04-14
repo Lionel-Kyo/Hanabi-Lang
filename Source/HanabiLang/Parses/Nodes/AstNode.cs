@@ -21,4 +21,7 @@ namespace HanabiLang.Parses.Nodes
             }
         }
     }
+
+    interface IStatementNode { }
+    interface IExpressionNode {}
 }
