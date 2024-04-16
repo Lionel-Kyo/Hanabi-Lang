@@ -1353,6 +1353,7 @@ namespace HanabiLang.Parses
                 case TokenType.FALSE:
                 case TokenType.NULL:
                 case TokenType.OPEN_SQURE_BRACKET:
+                case TokenType.OPEN_CURLY_BRACKET:
                     {
                         var expression = this.Expression();
                         expression.Line = token.Line;
