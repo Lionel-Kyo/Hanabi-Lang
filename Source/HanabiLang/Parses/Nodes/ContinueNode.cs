@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class ContinueNode : AstNode
+    class ContinueNode : AstNode, IStatementNode
     {
         public ContinueNode() { }
 

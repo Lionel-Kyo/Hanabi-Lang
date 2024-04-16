@@ -10,6 +10,7 @@ using HanabiLang.Interprets.ScriptTypes;
 using HanabiLang.Interprets.Exceptions;
 using HanabiLang.Parses.Nodes;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace HanabiLang.Interprets
 {
@@ -52,7 +53,7 @@ namespace HanabiLang.Interprets
             }
         }
 
-        public void Interpret(bool isThrowException)
+        public void Interpret(bool isThrowException, bool printExpression)
         {
             try
             {
@@ -74,7 +75,7 @@ namespace HanabiLang.Interprets
 
                 foreach (var child in this.ast.Nodes)
                 {
-                    InterpretChild(this.CurrentScope, child);
+                    InterpretChild(this.CurrentScope, child, printExpression);
                 }
             }
             catch (Exception ex)
@@ -207,7 +208,7 @@ namespace HanabiLang.Interprets
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true);
+                    newInterpreter.Interpret(true, false);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
@@ -232,7 +233,7 @@ namespace HanabiLang.Interprets
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true);
+                    newInterpreter.Interpret(true, false);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
@@ -657,14 +658,23 @@ namespace HanabiLang.Interprets
             return node is IExpressionNode;
         }
 
-        public static void InterpretChild(ScriptScope interpretScope, AstNode node)
+        public static void InterpretChild(ScriptScope interpretScope, AstNode node, bool printExpression)
         {
             if (IsExpressionNode(node))
-                return InterpretExpression(interpretScope, node);
+            {
+                var result = InterpretExpression(interpretScope, node);
+                if (printExpression)
+                    Console.WriteLine(result.Ref);
+            }
             else if (IsStatementNode(node))
-                return InterpretStatement(interpretScope, node);
+                InterpretStatement(interpretScope, node);
             else
                 throw new SystemException("Unexcepted child: " + node.NodeName);
+        }
+
+        public static void InterpretChild(ScriptScope interpretScope, AstNode node)
+        {
+            InterpretChild(interpretScope, node, false);
         }
 
         /// <summary>

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class BooleanNode : AstNode
+    class BooleanNode : AstNode, IExpressionNode
     {
         public bool Value { get; private set; }
 

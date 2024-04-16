@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using HanabiLang.Interprets.Exceptions;
@@ -241,7 +242,7 @@ namespace HanabiLang.Parses
                 left = FunctionCall(left);
             }
 
-            return left;
+            return skipIndexers ? left : CheckIndexersAccess(left);
         }
 
         private AstNode Expression(bool skipIndexers = false, bool skipEquals = false, bool skipArrowFn = false)
@@ -1202,10 +1203,6 @@ namespace HanabiLang.Parses
                     var obj = this.Expression(true);
                     var indexersAccess = this.CheckIndexersAccess(obj);
 
-                    if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
-                        return FunctionCall(indexersAccess);
-
-
                     return indexersAccess;
                 }
             }
@@ -1237,7 +1234,10 @@ namespace HanabiLang.Parses
                 return this.CheckIndexersAccess(new IndexersNode(child, expression));
             }
 
-            return new IndexersNode(child, expression);
+            AstNode result = new IndexersNode(child, expression);
+            if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                result = FunctionCall(result);
+            return result;
 
         }
 

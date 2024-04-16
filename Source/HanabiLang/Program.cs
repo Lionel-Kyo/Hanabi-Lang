@@ -52,7 +52,7 @@ namespace HanabiLang
             Interpreter.Arguments = args;
             Interpreter interpreter = new Interpreter(ast: ast, existedScope: null, predefinedScope: null, path: "", isMain: true);
             ImportedItems.Files[path] = Tuple.Create(lastWriteTimeUtc, interpreter);
-            interpreter.Interpret(false);
+            interpreter.Interpret(false, false);
         }
 
         public static void Start(string[] args)
@@ -86,7 +86,7 @@ namespace HanabiLang
                     predefinedScope: interpreter.PredefinedScope, path: interpreter.Path, isMain: true);
                 try
                 {
-                    tempInterpreter.Interpret(false);
+                    tempInterpreter.Interpret(false, true);
                 }
                 catch (Exception ex)
                 {

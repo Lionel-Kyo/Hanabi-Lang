@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class BreakNode : AstNode
+    class BreakNode : AstNode, IStatementNode
     {
         public BreakNode() { }
 

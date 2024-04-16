@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class DictNode : AstNode
+    class DictNode : AstNode, IExpressionNode
     {
         public List<Tuple<AstNode, AstNode>> KeyValues { get; private set; }
 
