@@ -41,15 +41,15 @@ namespace HanabiLang.Interprets.ScriptTypes
         public override ScriptObject Create() => new ScriptObject(this, (double)0);
         public ScriptObject Create(double value) => new ScriptObject(this, value);
         public ScriptObject Create(decimal value) => this.Create(value);
-        public ScriptObject Create(float value) => this.Create((float)value);
-        public ScriptObject Create(byte value) => this.Create((float)value);
-        public ScriptObject Create(short value) => this.Create((float)value);
-        public ScriptObject Create(int value) => this.Create((float)value);
-        public ScriptObject Create(sbyte value) => this.Create((float)value);
-        public ScriptObject Create(ushort value) => this.Create((float)value);
-        public ScriptObject Create(uint value) => this.Create((float)value);
-        public ScriptObject Create(string value) => this.Create(float.Parse(value));
-        public ScriptObject Create(StringBuilder value) => this.Create(float.Parse(value.ToString()));
+        public ScriptObject Create(float value) => this.Create((double)value);
+        public ScriptObject Create(byte value) => this.Create((double)value);
+        public ScriptObject Create(short value) => this.Create((double)value);
+        public ScriptObject Create(int value) => this.Create((double)value);
+        public ScriptObject Create(sbyte value) => this.Create((double)value);
+        public ScriptObject Create(ushort value) => this.Create((double)value);
+        public ScriptObject Create(uint value) => this.Create((double)value);
+        public ScriptObject Create(string value) => this.Create(double.Parse(value));
+        public ScriptObject Create(StringBuilder value) => this.Create(double.Parse(value.ToString()));
 
         public override ScriptObject Positive(ScriptObject _this)
         {

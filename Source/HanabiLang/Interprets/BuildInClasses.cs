@@ -98,74 +98,9 @@ namespace HanabiLang.Interprets
             var obj = (ScriptObject)value.Value;
 
             if (obj.ClassType is ScriptNull)
+            {
                 return null;
-
-            if (csType == typeof(sbyte) && obj.ClassType is ScriptInt)
-                return (sbyte)((long)obj.BuildInObject);
-            else if (csType == typeof(short) && obj.ClassType is ScriptInt)
-                return (short)((long)obj.BuildInObject);
-            else if (csType == typeof(int) && obj.ClassType is ScriptInt)
-                return (int)((long)obj.BuildInObject);
-            else if ((csType == typeof(long) || csType == typeof(object)) && obj.ClassType is ScriptInt)
-                return (long)((long)obj.BuildInObject);
-            else if (csType == typeof(byte) && obj.ClassType is ScriptInt)
-                return (byte)((long)obj.BuildInObject);
-            else if (csType == typeof(ushort) && obj.ClassType is ScriptInt)
-                return (ushort)((long)obj.BuildInObject);
-            else if (csType == typeof(uint) && obj.ClassType is ScriptInt)
-                return (uint)((long)obj.BuildInObject);
-            else if (csType == typeof(ulong) && obj.ClassType is ScriptInt)
-                return (ulong)((long)obj.BuildInObject);
-
-            /*else if (csType == typeof(sbyte?) && obj.ClassType is ScriptInt)
-                return (sbyte?)((long)obj.BuildInObject);
-            else if (csType == typeof(short?) && obj.ClassType is ScriptInt)
-                return (short?)((long)obj.BuildInObject);
-            else if (csType == typeof(int?) && obj.ClassType is ScriptInt)
-                return (int?)((long)obj.BuildInObject);
-            else if ((csType == typeof(long?) || csType == typeof(object)) && obj.ClassType is ScriptInt)
-                return (long?)((long)obj.BuildInObject);
-            else if (csType == typeof(byte?) && obj.ClassType is ScriptInt)
-                return (byte?)((long)obj.BuildInObject);
-            else if (csType == typeof(ushort?) && obj.ClassType is ScriptInt)
-                return (ushort?)((long)obj.BuildInObject);
-            else if (csType == typeof(uint?) && obj.ClassType is ScriptInt)
-                return (uint?)((long)obj.BuildInObject);
-            else if (csType == typeof(ulong?) && obj.ClassType is ScriptInt)
-                return (ulong?)((long)obj.BuildInObject);*/
-
-            else if ((csType == typeof(string) || csType == typeof(object)) && obj.ClassType is ScriptStr)
-                return (string)obj.BuildInObject;
-            else if (csType == typeof(StringBuilder) && obj.ClassType is ScriptStr)
-                return new StringBuilder((string)obj.BuildInObject);
-
-            else if ((csType == typeof(bool) || csType == typeof(object)) && obj.ClassType is ScriptBool)
-                return (bool)obj.BuildInObject;
-
-            /*else if ((csType == typeof(bool?) || csType == typeof(object)) && obj.ClassType is ScriptBool)
-                return (bool?)obj.BuildInObject;*/
-
-            else if (csType == typeof(float) && obj.ClassType is ScriptFloat)
-                return (float)obj.BuildInObject;
-            else if ((csType == typeof(double) || csType == typeof(object)) && obj.ClassType is ScriptFloat)
-                return (double)obj.BuildInObject;
-            else if (csType == typeof(decimal) && obj.ClassType is ScriptFloat)
-                return (decimal)obj.BuildInObject;
-
-            /*else if (csType == typeof(float?) && obj.ClassType is ScriptFloat)
-                return (float)obj.BuildInObject;
-            else if ((csType == typeof(double?) || csType == typeof(object)) && obj.ClassType is ScriptFloat)
-                return (double)obj.BuildInObject;
-            else if (csType == typeof(decimal?) && obj.ClassType is ScriptFloat)
-                return (decimal)obj.BuildInObject;*/
-
-            else if (csType == typeof(float) && obj.ClassType is ScriptDecimal)
-                return (float)obj.BuildInObject;
-            else if (csType == typeof(double) && obj.ClassType is ScriptDecimal)
-                return (double)obj.BuildInObject;
-            else if ((csType == typeof(decimal) || csType == typeof(object)) && obj.ClassType is ScriptDecimal)
-                return (decimal)obj.BuildInObject;
-
+            }
             else if (csType.IsGenericType)
             {
                 Type genericType = csType.GetGenericTypeDefinition();
@@ -185,17 +120,129 @@ namespace HanabiLang.Interprets
                     return GetCsDictionary(obj, genericArgs[0], genericArgs[1]);
                 }
             }
-            else if (csType == typeof(object) && obj.ClassType is ScriptList)
+            else if (obj.ClassType is ScriptList)
             {
-                return GetCsList(obj, typeof(object));
+                if (csType == typeof(object))
+                {
+                    return GetCsList(obj, typeof(object));
+                }
+                else if (csType.IsArray)
+                {
+                    return GetCsArray(obj, csType.GetElementType());
+                }
             }
-            else if (csType == typeof(object) && obj.ClassType is ScriptDict)
+            else if (obj.ClassType is ScriptDict) 
             {
-                return GetCsDictionary(obj, typeof(object), typeof(object));
+                if (csType == typeof(object))
+                {
+                    return GetCsDictionary(obj, typeof(object), typeof(object));
+                }
             }
-            else if (csType.IsArray && obj.ClassType is ScriptList)
+            else if (obj.ClassType is ScriptInt)
             {
-                return GetCsArray(obj, csType.GetElementType());
+                long intValue = (long)obj.BuildInObject;
+                if (csType == typeof(long) || csType == typeof(object))
+                {
+                    return (long)intValue;
+                }
+                else if (csType == typeof(sbyte))
+                {
+                    if (intValue < sbyte.MinValue || intValue > sbyte.MaxValue)
+                        throw new OverflowException($"value: {intValue}, sbyte is {sbyte.MinValue}-{sbyte.MaxValue}");
+                    return (sbyte)intValue;
+                }
+                else if (csType == typeof(short))
+                {
+                    if (intValue < short.MinValue || intValue > short.MaxValue)
+                        throw new OverflowException($"value: {intValue}, short is {short.MinValue}-{short.MaxValue}");
+                    return (short)intValue;
+                }
+                else if (csType == typeof(int))
+                {
+                    if (intValue < int.MinValue || intValue > int.MaxValue)
+                        throw new OverflowException($"value: {intValue}, int is {int.MinValue}-{int.MaxValue}");
+                    return (short)intValue;
+                }
+                else if (csType == typeof(byte))
+                {
+                    if (intValue < byte.MinValue || intValue > byte.MaxValue)
+                        throw new OverflowException($"value: {intValue}, byte is {byte.MinValue}-{byte.MaxValue}");
+                    return (byte)intValue;
+                }
+                else if (csType == typeof(ushort))
+                {
+                    if (intValue < ushort.MinValue || intValue > ushort.MaxValue)
+                        throw new OverflowException($"value: {intValue}, ushort is {ushort.MinValue}-{ushort.MaxValue}");
+                    return (byte)intValue;
+                }
+                else if (csType == typeof(uint))
+                {
+                    if (intValue < uint.MinValue || intValue > uint.MaxValue)
+                        throw new OverflowException($"value: {intValue}, uint is {uint.MinValue}-{uint.MaxValue}");
+                    return (uint)intValue;
+                }
+                else if (csType == typeof(ulong))
+                {
+                    if (intValue < 0)
+                        throw new OverflowException($"value: {intValue}, ulong is {ulong.MinValue}-{ulong.MaxValue}");
+                    return (ulong)intValue;
+                }
+                // Accept pass int to these types
+                else if (csType == typeof(double))
+                {
+                    return (double)intValue;
+                }
+                else if (csType == typeof(float))
+                {
+                    return (float)intValue;
+                }
+                else if (csType == typeof(decimal))
+                {
+                    return (decimal)intValue;
+                }
+            }
+            else if (obj.ClassType is ScriptStr)
+            {
+                if ((csType == typeof(string) || csType == typeof(object)))
+                    return (string)obj.BuildInObject;
+                else if (csType == typeof(StringBuilder))
+                    return new StringBuilder((string)obj.BuildInObject);
+            }
+            else if (obj.ClassType is ScriptBool)
+            {
+                if ((csType == typeof(bool) || csType == typeof(object)))
+                    return (bool)obj.BuildInObject;
+            }
+            else if (obj.ClassType is ScriptFloat)
+            {
+                double floatValue = (double)obj.BuildInObject;
+                if ((csType == typeof(double) || csType == typeof(object)))
+                {
+                    return floatValue;
+                }
+                else if (csType == typeof(float))
+                {
+                    if (floatValue < float.MinValue || floatValue > float.MaxValue)
+                        throw new OverflowException($"value: {floatValue}, float is {float.MinValue}-{float.MaxValue}");
+                    return (float)floatValue;
+                }
+                else if (csType == typeof(decimal))
+                {
+                    if (floatValue < (double)decimal.MinValue || floatValue > (double)decimal.MaxValue)
+                        throw new OverflowException($"value: {floatValue}, float is {float.MinValue}-{float.MaxValue}");
+                    return (decimal)floatValue;
+                }
+            }
+            else if (obj.ClassType is ScriptDecimal)
+            {
+                decimal decimalValue = (decimal)obj.BuildInObject;
+                // decimal must smaller than float/double
+                if ((csType == typeof(decimal) || csType == typeof(object)))
+                    return decimalValue;
+                else if (csType == typeof(float))
+                    return (float)decimalValue;
+                else if (csType == typeof(double))
+                    return (double)decimalValue;
             }
             else if (ImportedItems.Types.ContainsValue(obj.ClassType))
             {
@@ -214,6 +261,14 @@ namespace HanabiLang.Interprets
             if (csType == typeof(ScriptValue))
                 return (ScriptValue)csObj;
 
+            else if (csType == typeof(bool))
+                return new ScriptValue((bool)csObj);
+
+            else if (csType == typeof(string))
+                return new ScriptValue((string)csObj);
+            else if (csType == typeof(StringBuilder))
+                return new ScriptValue((StringBuilder)csObj);
+
             if (csType == typeof(sbyte))
                 return new ScriptValue((sbyte)csObj);
             else if (csType == typeof(short))
@@ -231,34 +286,6 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(ulong))
                 return new ScriptValue((long)(ulong)csObj);
 
-            /*if (csType == typeof(sbyte?))
-                return new ScriptValue((sbyte?)csObj);
-            else if (csType == typeof(short?))
-                return new ScriptValue((short?)csObj);
-            else if (csType == typeof(int?))
-                return new ScriptValue((int?)csObj);
-            else if (csType == typeof(long?))
-                return new ScriptValue((long?)csObj);
-            else if (csType == typeof(byte?))
-                return new ScriptValue((byte?)csObj);
-            else if (csType == typeof(ushort?))
-                return new ScriptValue((ushort)csObj);
-            else if (csType == typeof(uint?))
-                return new ScriptValue((uint?)csObj);
-            else if (csType == typeof(ulong?))
-                return new ScriptValue((long?)(ulong)csObj);*/
-
-            else if (csType == typeof(string))
-                return new ScriptValue((string)csObj);
-            else if (csType == typeof(StringBuilder))
-                return new ScriptValue((StringBuilder)csObj);
-
-            else if (csType == typeof(bool))
-                return new ScriptValue((bool)csObj);
-
-            /*else if (csType == typeof(bool?))
-                return new ScriptValue((bool?)csObj);*/
-
             else if (csType == typeof(float))
                 return new ScriptValue((float)csObj);
             else if (csType == typeof(double))
@@ -266,12 +293,6 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(decimal))
                 return new ScriptValue((decimal)csObj);
 
-            /*else if (csType == typeof(float?))
-                return new ScriptValue((float?)csObj);
-            else if (csType == typeof(double?))
-                return new ScriptValue((double?)csObj);
-            else if (csType == typeof(decimal?))
-                return new ScriptValue((decimal?)csObj);*/
 
             else if (csType.IsGenericType)
             {
@@ -303,6 +324,127 @@ namespace HanabiLang.Interprets
             throw new SystemException($"Unexpected type: {csType.Name}");
         }
 
+        private static ScriptClass ToScriptType(Type type, out IEnumerable<ScriptClass> acceptedTypes)
+        {
+            acceptedTypes = null;
+            if (type == typeof(ScriptValue))
+                return null;
+            else if (type == typeof(sbyte))
+                return BasicTypes.Int;
+            else if (type == typeof(short))
+                return BasicTypes.Int;
+            else if (type == typeof(int))
+                return BasicTypes.Int;
+            else if (type == typeof(long))
+                return BasicTypes.Int;
+            else if (type == typeof(byte))
+                return BasicTypes.Int;
+            else if (type == typeof(ushort))
+                return BasicTypes.Int;
+            else if (type == typeof(uint))
+                return BasicTypes.Int;
+            else if (type == typeof(ulong))
+                return BasicTypes.Int;
+
+            else if (type == typeof(bool))
+                return BasicTypes.Bool;
+
+            else if (type == typeof(string))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
+                return BasicTypes.Str;
+            }
+            else if (type == typeof(StringBuilder))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
+                return BasicTypes.Str;
+            }
+
+            else if (type == typeof(float))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Int, BasicTypes.Decimal };
+                return BasicTypes.Float;
+            }
+            else if (type == typeof(double))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Int, BasicTypes.Decimal };
+                return BasicTypes.Float;
+            }
+            else if (type == typeof(decimal))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Int, BasicTypes.Float };
+                return BasicTypes.Decimal;
+            }
+            else if (type == typeof(object))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
+                return null;
+            }
+            else if (type.IsGenericType)
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
+                Type genericType = type.GetGenericTypeDefinition();
+                if (genericType == typeof(Nullable<>))
+                {
+                    var nullableType = ToScriptType(type.GenericTypeArguments[0], out IEnumerable<ScriptClass> _acceptedTypes);
+                    if (_acceptedTypes != null)
+                        acceptedTypes = acceptedTypes.Concat(_acceptedTypes);
+                    return nullableType;
+                }
+                else if (genericType == typeof(List<>))
+                    return BasicTypes.List;
+                else if (genericType == typeof(Dictionary<,>))
+                    return BasicTypes.Dict;
+
+                throw new NotImplementedException($"Not supported datatype {type.Name}");
+            }
+            else if (type.IsArray)
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
+                return BasicTypes.List;
+            }
+            else if (ImportedItems.Types.TryGetValue(type, out var scriptClass))
+            {
+                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
+                return scriptClass;
+            }
+
+            try
+            {
+                return CSharpClassToScriptClass(type);
+            }
+            catch
+            {
+                throw new NotImplementedException($"Not supported datatype {type.Name}");
+            }
+        }
+
+        public static double FindParametersPoint(IEnumerable<ParameterInfo> paramters)
+        {
+            double result = 1;
+            foreach (ParameterInfo parameterInfo in paramters)
+            {
+                Type type = parameterInfo.ParameterType;
+                if (type == typeof(sbyte))
+                    result *= 4.0;
+                else if (type == typeof(short))
+                    result *= 3.0;
+                else if (type == typeof(int))
+                    result *= 1.5;
+                else if (type == typeof(byte))
+                    result *= 3.5;
+                else if (type == typeof(ushort))
+                    result *= 2.5;
+                else if (type == typeof(uint))
+                    result *= 1.5;
+                else if (type == typeof(ulong))
+                    result *= 2.0;
+                else if (type == typeof(float))
+                    result *= 1.5;
+            }
+            return result;
+        }
+
         public static ScriptClass CSharpClassToScriptClass(Type type, string rename = null)
         {
             bool isStruct = type.IsValueType && !type.IsEnum;
@@ -328,7 +470,7 @@ namespace HanabiLang.Interprets
         {
             bool isStatic = type.IsAbstract && type.IsSealed;
 
-            var staticFns = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+            var staticFns = type.GetMethods(BindingFlags.Public | BindingFlags.Static).OrderBy(x => FindParametersPoint(x.GetParameters()));
             var fields = type.GetFields(); // non get set variables
             var properties = type.GetProperties(); // get set variables
 
@@ -502,8 +644,8 @@ namespace HanabiLang.Interprets
 
             if (!isStatic)
             {
-                var instanceFns = type.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-                var constructors = type.GetConstructors();
+                var instanceFns = type.GetMethods(BindingFlags.Public | BindingFlags.Instance).OrderBy(x => FindParametersPoint(x.GetParameters()));
+                var constructors = type.GetConstructors().OrderBy(x => FindParametersPoint(x.GetParameters()));
                 foreach (var fn in instanceFns)
                 {
                     if (fn.IsSpecialName)
@@ -533,90 +675,6 @@ namespace HanabiLang.Interprets
             }
         }
 
-        private static ScriptClass ToScriptType(Type type, out bool nullable)
-        {
-            nullable = false;
-            if (type == typeof(ScriptValue))
-            {
-                nullable = true;
-                return null;
-            }
-            else if (type == typeof(sbyte))
-                return BasicTypes.Int;
-            else if (type == typeof(short))
-                return BasicTypes.Int;
-            else if (type == typeof(int))
-                return BasicTypes.Int;
-            else if (type == typeof(long))
-                return BasicTypes.Int;
-            else if (type == typeof(byte))
-                return BasicTypes.Int;
-            else if (type == typeof(ushort))
-                return BasicTypes.Int;
-            else if (type == typeof(uint))
-                return BasicTypes.Int;
-            else if (type == typeof(ulong))
-                return BasicTypes.Int;
-
-            else if (type == typeof(string))
-            {
-                nullable = true;
-                return BasicTypes.Str;
-            }
-            else if (type == typeof(StringBuilder))
-            {
-                nullable = true;
-                return BasicTypes.Str;
-            }
-
-            else if (type == typeof(bool))
-                return BasicTypes.Bool;
-
-            else if (type == typeof(float))
-                return BasicTypes.Float;
-            else if (type == typeof(double))
-                return BasicTypes.Float;
-            else if (type == typeof(decimal))
-                return BasicTypes.Decimal;
-            else if (type == typeof(object))
-            {
-                nullable = true;
-                return null;
-            }
-            else if (type.IsGenericType)
-            {
-                nullable = true;
-                Type genericType = type.GetGenericTypeDefinition();
-                if (genericType == typeof(Nullable<>))
-                    return ToScriptType(type.GenericTypeArguments[0], out _);
-                else if (genericType == typeof(List<>))
-                    return BasicTypes.List;
-                else if (genericType == typeof(Dictionary<,>))
-                    return BasicTypes.Dict;
-
-                throw new NotImplementedException($"Not supported datatype {type.Name}");
-            }
-            else if (type.IsArray)
-            {
-                nullable = true;
-                return BasicTypes.List;
-            }
-            else if (ImportedItems.Types.TryGetValue(type, out var scriptClass))
-            {
-                nullable = true;
-                return scriptClass;
-            }
-
-            try
-            {
-                return CSharpClassToScriptClass(type);
-            }
-            catch
-            {
-                throw new NotImplementedException($"Not supported datatype {type.Name}");
-            }
-        }
-
         public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method) => ToScriptFn(method, null);
 
         public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method, object createdObject)
@@ -632,11 +690,16 @@ namespace HanabiLang.Interprets
                 ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
-                bool scriptTypeNullable;
-                ScriptClass dataType = isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable);
+                IEnumerable<ScriptClass> acceptableTypes;
+                ScriptClass dataType = isMultipleArgs ? ToScriptType(type.GetElementType(), out acceptableTypes) : ToScriptType(type, out acceptableTypes);
                 HashSet<ScriptClass> dataTypes = dataType == null ? null : new HashSet<ScriptClass> { dataType };
-                if (dataType != null && scriptTypeNullable)
-                    dataTypes.Add(BasicTypes.Null);
+                if (dataType != null && acceptableTypes != null)
+                {
+                    foreach (var t in acceptableTypes)
+                    {
+                        dataTypes.Add(t);
+                    }
+                }
                 scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
             }
 
@@ -695,11 +758,16 @@ namespace HanabiLang.Interprets
                 object defaultValue = parameter.DefaultValue;
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
-                bool scriptTypeNullable;
-                ScriptClass dataType = isMultipleArgs ? ToScriptType(type.GetElementType(), out scriptTypeNullable) : ToScriptType(type, out scriptTypeNullable);
+                IEnumerable<ScriptClass> acceptableTypes;
+                ScriptClass dataType = isMultipleArgs ? ToScriptType(type.GetElementType(), out acceptableTypes) : ToScriptType(type, out acceptableTypes);
                 HashSet<ScriptClass> dataTypes = dataType == null ? null : new HashSet<ScriptClass> { dataType };
-                if (dataType != null && scriptTypeNullable)
-                    dataTypes.Add(BasicTypes.Null);
+                if (dataType != null && acceptableTypes != null)
+                {
+                    foreach (var t in acceptableTypes)
+                    {
+                        dataTypes.Add(t);
+                    }
+                }
                 scriptParameters.Add(new FnParameter(name, dataTypes));
             }
 

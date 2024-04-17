@@ -70,6 +70,11 @@ namespace Testing
             bool? nul = null;
             return nul;
         }
+
+        public static double? NullableDouble(double? fake)
+        {
+            return fake;
+        }
     }
 
     public class Faker

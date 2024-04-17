@@ -62,9 +62,25 @@ namespace HanabiLang
             List<string> lines = new List<string>();
             while (true)
             {
+                if (lines.Count <= 0)
+                    Console.Write(">>> ");
+                else
+                    Console.Write("... ");
                 string line = Console.ReadLine();
                 lines.Add(line);
-                var tokens = Lexer.Tokenize(lines);
+                List<Token> tokens = null;
+                try
+                {
+                    tokens = Lexer.Tokenize(lines);
+                }
+                catch (Exception ex)
+                {
+                    lines = new List<string>();
+                    Console.WriteLine(Parser.ExceptionToString(ex));
+                }
+                if (tokens == null)
+                    continue;
+
                 var parser = new Parser(tokens);
                 AbstractSyntaxTree ast = null;
                 try

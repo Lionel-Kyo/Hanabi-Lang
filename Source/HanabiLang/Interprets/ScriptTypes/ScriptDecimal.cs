@@ -21,7 +21,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject value = (ScriptObject)args[1].Value;
                 if (value.ClassType is ScriptInt)
                 {
-                    _this.BuildInObject = (decimal)value.BuildInObject;
+                    _this.BuildInObject = (decimal)(long)value.BuildInObject;
                 }
                 else if (value.ClassType is ScriptDecimal)
                 {
@@ -29,7 +29,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
                 else if (value.ClassType is ScriptFloat)
                 {
-                    _this.BuildInObject = (decimal)value.BuildInObject;
+                    _this.BuildInObject = (decimal)(double)value.BuildInObject;
                 }
                 else if (value.ClassType is ScriptStr)
                 {
