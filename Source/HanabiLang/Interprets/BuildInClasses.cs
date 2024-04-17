@@ -161,7 +161,7 @@ namespace HanabiLang.Interprets
                 {
                     if (intValue < int.MinValue || intValue > int.MaxValue)
                         throw new OverflowException($"value: {intValue}, int is {int.MinValue}-{int.MaxValue}");
-                    return (short)intValue;
+                    return (int)intValue;
                 }
                 else if (csType == typeof(byte))
                 {
@@ -173,7 +173,7 @@ namespace HanabiLang.Interprets
                 {
                     if (intValue < ushort.MinValue || intValue > ushort.MaxValue)
                         throw new OverflowException($"value: {intValue}, ushort is {ushort.MinValue}-{ushort.MaxValue}");
-                    return (byte)intValue;
+                    return (ushort)intValue;
                 }
                 else if (csType == typeof(uint))
                 {
@@ -377,7 +377,6 @@ namespace HanabiLang.Interprets
             }
             else if (type == typeof(object))
             {
-                acceptedTypes = new ScriptClass[] { BasicTypes.Null };
                 return null;
             }
             else if (type.IsGenericType)
