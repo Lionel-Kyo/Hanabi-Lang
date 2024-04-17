@@ -1464,6 +1464,17 @@ namespace HanabiLang.Interprets
                 }
                 return InterpretExpression(interpretScope, realNode.Alternative);
             }
+            else if (node is NullCoalescingNode)
+            {
+                var realNode = (NullCoalescingNode)node;
+                var value = InterpretExpression(interpretScope, realNode.Value);
+
+                if (value.Ref.IsNull)
+                {
+                    return InterpretExpression(interpretScope, realNode.Consequent);
+                }
+                return value;
+            }
             else if (node is VariableAssignmentNode)
             {
                 return VariableAssignment((VariableAssignmentNode)node, interpretScope);

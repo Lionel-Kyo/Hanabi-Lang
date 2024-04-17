@@ -743,7 +743,15 @@ namespace HanabiLang.Lexers
                     // ?
                     else if (c == '?')
                     {
-                        tokens.Add(new Token(TokenType.QUESTION_MARK, c.ToString(), lineIndex));
+                        if (i + 1 < line.Length && line[i + 1] == '?')
+                        {
+                            tokens.Add(new Token(TokenType.DOUBLE_QUESTION_MARK, "??", lineIndex));
+                            i++;
+                        }
+                        else
+                        {
+                            tokens.Add(new Token(TokenType.QUESTION_MARK, c.ToString(), lineIndex));
+                        }
                     }
 
                     // .

@@ -299,6 +299,14 @@ namespace HanabiLang.Parses
             }
 
             if (this.currentTokenIndex < this.tokens.Count &&
+                currentToken.Type == TokenType.DOUBLE_QUESTION_MARK)
+            {
+                this.Expect(TokenType.DOUBLE_QUESTION_MARK);
+                var consequent = this.Expression();
+                left = new NullCoalescingNode(left, consequent);
+            }
+
+            if (this.currentTokenIndex < this.tokens.Count &&
             (currentRaw == "++" || currentRaw == "--"))
             {
                 this.Expect(TokenType.OPERATOR);

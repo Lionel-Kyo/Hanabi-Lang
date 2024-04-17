@@ -22,6 +22,7 @@ namespace HanabiLang.Lexers
         COLON,
         SEMI_COLON,
         QUESTION_MARK,
+        DOUBLE_QUESTION_MARK,
 
         KEYWORD,
         IDENTIFIER,

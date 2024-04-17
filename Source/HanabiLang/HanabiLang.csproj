@@ -94,6 +94,7 @@
     <Compile Include="Parses\Nodes\ExpressionNode.cs" />
     <Compile Include="Parses\Nodes\FnReferenceCallNode.cs" />
     <Compile Include="Parses\Nodes\InterpolatedStringNode.cs" />
+    <Compile Include="Parses\Nodes\NullCoalescingNode.cs" />
     <Compile Include="Parses\Nodes\ThrowNode.cs" />
     <Compile Include="Parses\Nodes\TernaryNode.cs" />
     <Compile Include="Parses\Nodes\IndexersNode.cs" />
