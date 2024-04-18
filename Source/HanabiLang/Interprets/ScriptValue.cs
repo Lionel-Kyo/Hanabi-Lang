@@ -192,11 +192,20 @@ namespace HanabiLang.Interprets
         public static ScriptValue Continue => new ScriptValue(new ContinueType());
 
         public bool IsFunction => this.value is ScriptFns;
+        public ScriptFns TryFunction => this.value is ScriptFns ? (ScriptFns)this.value : null;
         public bool IsClass => this.value is ScriptClass;
+        public ScriptClass TryClass => this.value is ScriptClass ? (ScriptClass)this.value : null;
         public bool IsObject => this.value is ScriptObject;
+        public ScriptObject TryObject => this.value is ScriptObject ? (ScriptObject)this.value : null;
         public bool IsNull => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptNull;
         public bool IsBreak => this.value is BreakType;
         public bool IsContinue => this.value is ContinueType;
+
+        public bool IsClassTypeOf(ScriptClass type)
+        {
+            ScriptObject obj = this.TryObject;
+            return obj != null && obj.ClassType == type;
+        }
 
         public static ScriptValue operator !(ScriptValue a)
         {

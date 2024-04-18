@@ -16,6 +16,8 @@ namespace HanabiLang
     {
         public static void ExecuteFile(string[] args)
         {
+            Interpreter.Arguments = args;
+            Interpreter.IsPrintExpression = false;
             //string path = "./Test.txt";
             //string path = "./Test2.txt";
             //string path = "./Test3.txt";
@@ -49,15 +51,15 @@ namespace HanabiLang
             //Console.WriteLine();
             path = Path.GetFullPath(path).Replace("\\", "/");
             DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);
-            Interpreter.Arguments = args;
             Interpreter interpreter = new Interpreter(ast: ast, existedScope: null, predefinedScope: null, path: "", isMain: true);
             ImportedItems.Files[path] = Tuple.Create(lastWriteTimeUtc, interpreter);
-            interpreter.Interpret(false, false);
+            interpreter.Interpret(false);
         }
 
         public static void Start(string[] args)
         {
             Interpreter.Arguments = args;
+            Interpreter.IsPrintExpression = true;
             Interpreter interpreter = new Interpreter(ast: null, existedScope: null, predefinedScope: null, path: "", isMain: true);
             List<string> lines = new List<string>();
             while (true)
@@ -102,7 +104,7 @@ namespace HanabiLang
                     predefinedScope: interpreter.PredefinedScope, path: interpreter.Path, isMain: true);
                 try
                 {
-                    tempInterpreter.Interpret(false, true);
+                    tempInterpreter.Interpret(false);
                 }
                 catch (Exception ex)
                 {

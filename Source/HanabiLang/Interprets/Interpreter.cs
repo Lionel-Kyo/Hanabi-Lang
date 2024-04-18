@@ -21,6 +21,7 @@ namespace HanabiLang.Interprets
         private AbstractSyntaxTree ast { get; set; }
         public string Path { get; private set; }
         public static IEnumerable<string> Arguments { get; set; }
+        public static bool IsPrintExpression { get; set; }
 
         /// <summary>
         /// Script Start or Import Script
@@ -53,7 +54,7 @@ namespace HanabiLang.Interprets
             }
         }
 
-        public void Interpret(bool isThrowException, bool printExpression)
+        public void Interpret(bool isThrowException)
         {
             try
             {
@@ -75,7 +76,7 @@ namespace HanabiLang.Interprets
 
                 foreach (var child in this.ast.Nodes)
                 {
-                    InterpretChild(this.CurrentScope, child, printExpression);
+                    InterpretChild(this.CurrentScope, child);
                 }
             }
             catch (Exception ex)
@@ -208,7 +209,7 @@ namespace HanabiLang.Interprets
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true, false);
+                    newInterpreter.Interpret(true);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
@@ -233,7 +234,7 @@ namespace HanabiLang.Interprets
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true, false);
+                    newInterpreter.Interpret(true);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
@@ -658,23 +659,23 @@ namespace HanabiLang.Interprets
             return node is IExpressionNode;
         }
 
-        public static void InterpretChild(ScriptScope interpretScope, AstNode node, bool printExpression)
+        public static void InterpretChild(ScriptScope interpretScope, AstNode node)
         {
             if (IsExpressionNode(node))
             {
                 var result = InterpretExpression(interpretScope, node);
-                if (printExpression)
-                    Console.WriteLine(result.Ref);
+                if (IsPrintExpression)
+                {
+                    if (result.Ref.IsClassTypeOf(BasicTypes.Str))
+                        Console.WriteLine($"\"{result.Ref}\"");
+                    else
+                        Console.WriteLine(result.Ref);
+                }
             }
             else if (IsStatementNode(node))
                 InterpretStatement(interpretScope, node);
             else
                 throw new SystemException("Unexcepted child: " + node.NodeName);
-        }
-
-        public static void InterpretChild(ScriptScope interpretScope, AstNode node)
-        {
-            InterpretChild(interpretScope, node, false);
         }
 
         /// <summary>
