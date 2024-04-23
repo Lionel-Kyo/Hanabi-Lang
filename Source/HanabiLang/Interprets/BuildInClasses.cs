@@ -543,7 +543,7 @@ namespace HanabiLang.Interprets
                         new FnParameter("value")
                     }, null, setFn, createdObject != null ? true : field.IsStatic, level));
 
-                classScope.Variables[field.Name] = new ScriptVariable(field.Name, getFns, setFns, false, field.IsStatic, level);
+                classScope.Variables[field.Name] = new ScriptVariable(field.Name, null, getFns, setFns, false, field.IsStatic, level);
             }
 
             foreach (var property in properties)
@@ -637,7 +637,7 @@ namespace HanabiLang.Interprets
                     new FnParameter("value")
                 }, null, setFn, isSetFnStatic, setLevel));
 
-                classScope.Variables[property.Name] = new ScriptVariable(property.Name, getFns, setFns, false, overAllIsStatic, overAllLevel);
+                classScope.Variables[property.Name] = new ScriptVariable(property.Name, null, getFns, setFns, false, overAllIsStatic, overAllLevel);
             }
 
 

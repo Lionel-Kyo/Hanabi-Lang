@@ -21,7 +21,6 @@ namespace HanabiLang.Interprets
         private AbstractSyntaxTree ast { get; set; }
         public string Path { get; private set; }
         public static IEnumerable<string> Arguments { get; set; }
-        public static bool IsPrintExpression { get; set; }
 
         /// <summary>
         /// Script Start or Import Script
@@ -54,7 +53,7 @@ namespace HanabiLang.Interprets
             }
         }
 
-        public void Interpret(bool isThrowException)
+        public void Interpret(bool isThrowException, bool isPrintExpression)
         {
             try
             {
@@ -76,7 +75,7 @@ namespace HanabiLang.Interprets
 
                 foreach (var child in this.ast.Nodes)
                 {
-                    InterpretChild(this.CurrentScope, child);
+                    InterpretChild(this.CurrentScope, child, isPrintExpression);
                 }
             }
             catch (Exception ex)
@@ -209,7 +208,7 @@ namespace HanabiLang.Interprets
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true);
+                    newInterpreter.Interpret(true, false);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
@@ -219,9 +218,9 @@ namespace HanabiLang.Interprets
 
                 var jsonData = newInterpreter.CurrentScope.Variables["jsonData"].Value;
                 if (string.IsNullOrEmpty(realNode.AsName))
-                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, jsonData, true, true, AccessibilityLevel.Public);
+                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, null, jsonData, true, true, AccessibilityLevel.Public);
                 else
-                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, jsonData, true, true, AccessibilityLevel.Public);
+                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, null, jsonData, true, true, AccessibilityLevel.Public);
             }
             else
             {
@@ -234,7 +233,7 @@ namespace HanabiLang.Interprets
                     var ast = parser.Parse();
                     //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
                     newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true);
+                    newInterpreter.Interpret(true, false);
                     ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
@@ -345,6 +344,14 @@ namespace HanabiLang.Interprets
                                 if (variable.IsConstant || variable.Set == null)
                                     throw new SystemException($"{variable.Name} cannot be written");
 
+                                if (variable.DataTypes != null)
+                                {
+                                    if (!x.IsObject)
+                                        throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                                    if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
+                                        throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                                }
+
                                 var fnInfo = variable.Set.FindCallableInfo(x);
                                 if ((int)accessLevel < (int)fnInfo.Item1.Level)
                                     throw new SystemException($"{variable.Name} cannot be written");
@@ -356,6 +363,15 @@ namespace HanabiLang.Interprets
                     {
                         if (variable.IsConstant)
                             throw new SystemException($"const {variable.Name} cannot be written");
+
+                        if (variable.DataTypes != null)
+                        {
+                            if (!x.IsObject)
+                                throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                            if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
+                                throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                        }
+
                         variable.Value = x;
                     });
                 }
@@ -407,8 +423,17 @@ namespace HanabiLang.Interprets
                                 },
                                 x =>
                                 {
-                                    if (variable.Set == null)
-                                        throw new SystemException($"{node.Name} cannot be written");
+                                    if (variable.IsConstant || variable.Set == null)
+                                        throw new SystemException($"{variable.Name} cannot be written");
+
+                                    if (variable.DataTypes != null)
+                                    {
+                                        if (!x.IsObject)
+                                            throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                                        if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
+                                            throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                                    }
+
                                     variable.Set.Call(null, x);
                                 });
                         }
@@ -416,6 +441,15 @@ namespace HanabiLang.Interprets
                         {
                             if (variable.IsConstant)
                                 throw new SystemException($"const {variable.Name} cannot be written");
+
+                            if (variable.DataTypes != null)
+                            {
+                                if (!x.IsObject)
+                                    throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                                if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
+                                    throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
+                            }
+
                             variable.Value = x;
                         });
                     }
@@ -447,10 +481,29 @@ namespace HanabiLang.Interprets
                 if (existedVariable.IsConstant)
                     throw new SystemException($"Cannot reassigned constant variable {node.Name}");
             }
-             
+
+            DefinedTypes dataTypes = null;
+            if (node.DataType != null)
+            {
+                ScriptValue type = InterpretExpression(scope, node.DataType).Ref;
+                if (!type.IsDefinedTypes)
+                    throw new SystemException($"Unexpected error: {node.Name}");
+                dataTypes = (DefinedTypes)type.Value;
+            }
+
             ScriptValue setValue = node.Value == null ? new ScriptValue() :
                 InterpretExpression(scope, node.Value).Ref;
 
+            if (dataTypes != null)
+            {
+                if (node.SetFn == null || (node.SetFn != null && node.SetFn.Body.Count <= 0))
+                {
+                    if (!setValue.IsObject)
+                        throw new SystemException($"Variable ({node.Name}) cannot be assigned with {setValue}");
+                    if (!dataTypes.Value.Contains(setValue.TryObject?.ClassType))
+                        throw new SystemException($"Variable ({node.Name}) cannot be assigned with {setValue}");
+                }
+            }
 
             ScriptFns getFns = null;
             ScriptFns setFns = null;
@@ -493,14 +546,14 @@ namespace HanabiLang.Interprets
 
             if (getFns != null || setFns != null)
             {
-                var variable = new ScriptVariable(node.Name, getFns, setFns,
+                var variable = new ScriptVariable(node.Name, dataTypes?.Value, getFns, setFns,
                     node.IsConstant, node.IsStatic, node.Level);
                 scope.Variables[node.Name] = variable;
                 return new ValueReference(variable.Value);
             }
             else
             {
-                var variable = new ScriptVariable(node.Name,
+                var variable = new ScriptVariable(node.Name, dataTypes?.Value,
                     setValue, node.IsConstant, node.IsStatic, node.Level);
                 scope.Variables[node.Name] = variable;
                 return new ValueReference(variable.Value);
@@ -659,23 +712,25 @@ namespace HanabiLang.Interprets
             return node is IExpressionNode;
         }
 
-        public static void InterpretChild(ScriptScope interpretScope, AstNode node)
+        public static ValueReference InterpretChild(ScriptScope interpretScope, AstNode node, bool isPrintExpression)
         {
             if (IsExpressionNode(node))
             {
                 var result = InterpretExpression(interpretScope, node);
-                if (IsPrintExpression)
+                if (isPrintExpression)
                 {
                     if (result.Ref.IsClassTypeOf(BasicTypes.Str))
                         Console.WriteLine($"\"{result.Ref}\"");
                     else
                         Console.WriteLine(result.Ref);
                 }
+                return result;
             }
             else if (IsStatementNode(node))
-                InterpretStatement(interpretScope, node);
-            else
-                throw new SystemException("Unexcepted child: " + node.NodeName);
+            {
+                return InterpretStatement(interpretScope, node);
+            }
+            throw new SystemException("Unexcepted child: " + node.NodeName);
         }
 
         /// <summary>
@@ -730,7 +785,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            InterpretChild(tryScope, item);
+                            InterpretChild(tryScope, item, false);
                         }
                     }
                 }
@@ -773,7 +828,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            InterpretChild(catchScope, item);
+                            InterpretChild(catchScope, item, false);
                         }
                     }
                 }
@@ -816,7 +871,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            InterpretChild(finallyScope, item);
+                            InterpretChild(finallyScope, item, false);
                         }
                     }
                 }
@@ -876,7 +931,7 @@ namespace HanabiLang.Interprets
                     }
                     else
                     {
-                        InterpretChild(scope, item);
+                        InterpretChild(scope, item, false);
                     }
                 }
 
@@ -924,7 +979,7 @@ namespace HanabiLang.Interprets
                                 }
                                 else
                                 {
-                                    InterpretChild(scope, item);
+                                    InterpretChild(scope, item, false);
                                 }
                             }
                         }
@@ -957,7 +1012,7 @@ namespace HanabiLang.Interprets
                     }
                     else
                     {
-                        InterpretChild(defaultScope, item);
+                        InterpretChild(defaultScope, item, false);
                     }
                 }
                 return ValueReference.Empty;
@@ -1015,7 +1070,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            InterpretChild(scope, bodyNode);
+                            InterpretChild(scope, bodyNode, false);
                         }
                     }
 
@@ -1063,7 +1118,7 @@ namespace HanabiLang.Interprets
                     var scope = new ScriptScope(null, interpretScope);
 
                     scope.Variables[realNode.Initializer] =
-                        new ScriptVariable(realNode.Initializer, item, false, true, AccessibilityLevel.Private);
+                        new ScriptVariable(realNode.Initializer, null, item, false, true, AccessibilityLevel.Private);
 
                     foreach (var bodyNode in realNode.Body)
                     {
@@ -1108,7 +1163,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            InterpretChild(scope, bodyNode);
+                            InterpretChild(scope, bodyNode, false);
                         }
                     }
 
@@ -1146,7 +1201,8 @@ namespace HanabiLang.Interprets
                 return ValueReference.Empty;
             }*/
             else if (node is FnDefineNode)
-            {
+            {            
+                // Normal Function
                 var realNode = (FnDefineNode)node;
 
                 if (!interpretScope.Functions.TryGetValue(realNode.Name, out ScriptFns scriptFns))
@@ -1158,18 +1214,18 @@ namespace HanabiLang.Interprets
                 List<FnParameter> fnParameters = new List<FnParameter>();
                 foreach (var param in realNode.Parameters)
                 {
-                    HashSet<ScriptClass> dataTypes = null;
+                    DefinedTypes dataTypes = null;
                     ScriptValue defaultValue = null;
                     if (param.DataType != null)
                     {
                         ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
-                        if (!type.IsClass)
-                            throw new SystemException($"Only class is accepted in {realNode.Name}.{param.Name}");
-                        dataTypes = new HashSet<ScriptClass> { (ScriptClass)type.Value };
+                        if (!type.IsDefinedTypes)
+                            throw new SystemException($"Unexpected error: {realNode.Name}.{param.Name}");
+                        dataTypes = (DefinedTypes)type.Value;
                     }
                     if (param.DefaultValue != null)
                         defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue, param.IsMultiArgs));
+                    fnParameters.Add(new FnParameter(param.Name, dataTypes?.Value, defaultValue, param.IsMultiArgs));
                 }
 
                 scriptFns.AddFn(new ScriptFn(fnParameters,
@@ -1179,14 +1235,6 @@ namespace HanabiLang.Interprets
             else if (node is ClassDefineNode)
             {
                 var realNode = (ClassDefineNode)node;
-
-                foreach (var item in realNode.Body)
-                {
-                    if (!(item is FnDefineNode || item is VariableDefinitionNode || item is ClassDefineNode))
-                    {
-                        throw new SystemException("Class can only contains definition but not implement");
-                    }
-                }
 
                 List<ScriptClass> superClasses = new List<ScriptClass>();
                 foreach (var item in realNode.SuperClasses)
@@ -1386,29 +1434,13 @@ namespace HanabiLang.Interprets
 
                 ScriptObject obj = (ScriptObject)list.Ref.Value;
 
-                if (obj.ClassType is ScriptList)
-                {
-                    List<ScriptValue> listValue = (List<ScriptValue>)obj.BuildInObject;
+                var index = InterpretExpression(interpretScope, realNode.Index);
 
-                    var index = InterpretExpression(interpretScope, realNode.Index);
-
-                    if (!(((ScriptObject)index.Ref.Value).ClassType is ScriptInt))
-                        throw new SystemException("Index in List must be integer");
-
-                    long intValue = (long)((ScriptObject)index.Ref.Value).BuildInObject;
-
-                    int intIndex = (int)ScriptInt.Modulo(intValue, listValue.Count);
-                    return new ValueReference(() => listValue[intIndex],
-                        x => listValue[intIndex] = x);
-                }
-                else if (obj.ClassType is ScriptDict)
-                {
-                    Dictionary<ScriptValue, ScriptValue> dictValue = (Dictionary<ScriptValue, ScriptValue>)obj.BuildInObject;
-                    var index = InterpretExpression(interpretScope, realNode.Index);
-
-                    ScriptValue accessValue = index.Ref;
-
-                    return new ValueReference(() => dictValue[accessValue], x => dictValue[accessValue] = x);
+                obj.ClassType.Scope.Functions.TryGetValue("get_[]", out ScriptFns get_fn);
+                obj.ClassType.Scope.Functions.TryGetValue("set_[]", out ScriptFns set_fn);
+                if (get_fn != null || set_fn != null)
+                { 
+                    return new ValueReference(() => get_fn.Call(obj, index.Ref), x => set_fn.Call(obj, index.Ref, x));
                 }
                 else
                 {
@@ -1426,6 +1458,7 @@ namespace HanabiLang.Interprets
             }
             else if (node is FnDefineNode)
             {
+                // Lambda Function
                 var realNode = (FnDefineNode)node;
                 List<FnParameter> fnParameters = new List<FnParameter>();
                 foreach (var param in realNode.Parameters)
@@ -1435,9 +1468,9 @@ namespace HanabiLang.Interprets
                     if (param.DataType != null)
                     {
                         ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
-                        if (!type.IsClass)
-                            throw new SystemException($"Only class is accepted in {realNode.Name}.{param.Name}");
-                        dataTypes = new HashSet<ScriptClass> { (ScriptClass)type.Value };
+                        if (!type.IsDefinedTypes)
+                            throw new SystemException($"Unexpected error: {realNode.Name}.{param.Name}");
+                        dataTypes = ((DefinedTypes)type.Value).Value;
                     }
                     if (param.DefaultValue != null)
                         defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
@@ -1479,6 +1512,22 @@ namespace HanabiLang.Interprets
             else if (node is VariableAssignmentNode)
             {
                 return VariableAssignment((VariableAssignmentNode)node, interpretScope);
+            }
+            else if (node is TypeNode)
+            {
+                var realNode = (TypeNode)node;
+                HashSet<ScriptClass> types = new HashSet<ScriptClass>();
+                foreach (var value in realNode.Types)
+                {
+                    ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
+                    if (scriptValue.IsNull)
+                        types.Add(BasicTypes.Null);
+                    else if (scriptValue.IsClass)
+                        types.Add(scriptValue.TryClass);
+                    else
+                        throw new SystemException($"{scriptValue} is not a type");
+                }
+                return new ValueReference(new ScriptValue(new DefinedTypes(types)));
             }
             throw new SystemException("Unexcepted interpret expression: " + node.NodeName);
         }

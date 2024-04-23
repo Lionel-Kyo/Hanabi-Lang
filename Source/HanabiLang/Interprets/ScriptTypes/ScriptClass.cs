@@ -49,9 +49,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                         throw new SystemException("Inherit from C# class is not supported");
 
                     if (_class.SuperClass != null)
-                        AddClassMember(_class.SuperClass, this.SuperClass, true);
+                        CopyClassMember(_class.SuperClass, this.SuperClass, true);
 
-                    AddClassMember(_class, this.SuperClass, true);
+                    CopyClassMember(_class, this.SuperClass, true);
                 }
 
             }
@@ -66,13 +66,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                 {
                     if (bodyNode is FnDefineNode || bodyNode is ClassDefineNode)
                     {
-                        Interpreter.InterpretChild(this.Scope, bodyNode);
+                        Interpreter.InterpretChild(this.Scope, bodyNode, false);
                     }
                     else if (bodyNode is VariableDefinitionNode)
                     {
                         if (((VariableDefinitionNode)bodyNode).IsStatic)
                         {
-                            Interpreter.InterpretChild(this.Scope, bodyNode);
+                            Interpreter.InterpretChild(this.Scope, bodyNode, false);
                         }
                         else
                         {
@@ -83,10 +83,10 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
 
             if (this.SuperClass != null)
-                AddClassMember(this.SuperClass, this, false);
+                CopyClassMember(this.SuperClass, this, false);
         }
 
-        private static void AddClassMember(ScriptClass from, ScriptClass to, bool replaceMember)
+        private static void CopyClassMember(ScriptClass from, ScriptClass to, bool replaceMember)
         {
             foreach (var fns in from.Scope.Functions)
             {
@@ -190,7 +190,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value", dataType) }, null, getFn, isStatic, AccessibilityLevel.Public));
             }
 
-            this.Scope.Variables.Add(name, new ScriptVariable(name, getFns, setFns, false, isStatic, AccessibilityLevel.Public));
+            this.Scope.Variables.Add(name, new ScriptVariable(name, null, getFns, setFns, false, isStatic, AccessibilityLevel.Public));
         }
 
         public virtual ScriptObject Not(ScriptObject left)
@@ -386,7 +386,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             { 
                 foreach (var bodyNode in this.Body)
                 {
-                    Interpreter.InterpretChild(_object.Scope, bodyNode);
+                    Interpreter.InterpretChild(_object.Scope, bodyNode, false);
                 }
             }
 

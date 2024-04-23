@@ -19,6 +19,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptStr Str = new ScriptStr();
         public static readonly ScriptList List = new ScriptList();
         public static readonly ScriptDict Dict = new ScriptDict();
+        public static readonly ScriptKeyValuePair KeyValuePair = new ScriptKeyValuePair();
         public static readonly ScriptRange Range = new ScriptRange();
         public static readonly ScriptEnumerator Enumerator = new ScriptEnumerator();
         public static readonly ScriptException Exception = new ScriptException();

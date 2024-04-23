@@ -172,6 +172,11 @@ namespace HanabiLang.Interprets
             this.value = BasicTypes.Dict.Create(value);
         }
 
+        public ScriptValue(DefinedTypes value)
+        {
+            this.value = value;
+        }
+
         public ScriptValue(BreakType breakType)
         {
             this.value = breakType;
@@ -200,6 +205,7 @@ namespace HanabiLang.Interprets
         public bool IsNull => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptNull;
         public bool IsBreak => this.value is BreakType;
         public bool IsContinue => this.value is ContinueType;
+        public bool IsDefinedTypes => this.value is DefinedTypes;
 
         public bool IsClassTypeOf(ScriptClass type)
         {

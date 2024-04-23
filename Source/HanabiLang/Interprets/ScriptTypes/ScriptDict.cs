@@ -20,6 +20,18 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
             }, null, false, null);
 
+            AddVariable("Keys", args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Keys.ToList());
+            }, null, false, null);
+
+            AddVariable("Values", args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Values.ToList());
+            }, null, false, null);
+
             this.AddObjectFn("Clear", new List<FnParameter>(), args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
@@ -77,6 +89,23 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.BuildInObject = DictIterator((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
                 return new ScriptValue(result);
             });
+
+            this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index") }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptValue index = args[1];
+                var dictValue = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
+
+                return dictValue[index];
+            });
+            this.AddObjectFn("set_[]", new List<FnParameter> { new FnParameter("index"), new FnParameter("value") }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptValue index = args[1];
+                var dictValue = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject; 
+                dictValue[index] = args[2];
+                return ScriptValue.Null;
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, new Dictionary<ScriptValue, ScriptValue>());
@@ -111,7 +140,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             foreach (var c in value)
             {
-                yield return new ScriptValue(new List<ScriptValue>() { c.Key, c.Value });
+                yield return new ScriptValue(BasicTypes.KeyValuePair.Create(c));
             }
         }
 
@@ -156,6 +185,6 @@ namespace HanabiLang.Interprets.ScriptTypes
             return result.ToString();
         }
 
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this));
+        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this, 0));
     }
 }

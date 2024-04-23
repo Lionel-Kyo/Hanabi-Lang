@@ -27,7 +27,7 @@ namespace HanabiLang.Parses.Nodes
         }
     }
 
-    class FnDefineNode : AstNode, IStatementNode
+    abstract class FnDefineNode : AstNode
     {
         public string Name { get; private set; }
         public List<FnDefineParameter> Parameters { get; private set; }
@@ -72,6 +72,20 @@ namespace HanabiLang.Parses.Nodes
             result.Append(')');
             //result.AppendLine("  ");
             return result.ToString();
+        }
+    }
+
+    class FnDefineStatementNode : FnDefineNode, IStatementNode
+    {
+        public FnDefineStatementNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body, bool isStatic, AccessibilityLevel level) : base(name, parameters, returnType, body, isStatic, level)
+        {
+        }
+    }
+
+    class FnDefineExpressionNode : FnDefineNode, IExpressionNode
+    {
+        public FnDefineExpressionNode(string name, List<FnDefineParameter> parameters, AstNode returnType, List<AstNode> body, bool isStatic, AccessibilityLevel level) : base(name, parameters, returnType, body, isStatic, level)
+        {
         }
     }
 }

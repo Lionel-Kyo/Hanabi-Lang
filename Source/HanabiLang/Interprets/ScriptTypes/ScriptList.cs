@@ -460,6 +460,29 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.BuildInObject = (List<ScriptValue>)_this.BuildInObject;
                 return new ScriptValue(result);
             });
+            this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                long index = (long)args[1].TryObject.BuildInObject;
+                List<ScriptValue> listValue = (List<ScriptValue>)_this.BuildInObject;
+
+                if ((index >= listValue.Count) || index < 0 && index < (listValue.Count * -1))
+                    throw new IndexOutOfRangeException();
+
+                return listValue[(int)ScriptInt.Modulo(index, listValue.Count)];
+            });
+            this.AddObjectFn("set_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int), new FnParameter("value") }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                long index = (long)args[1].TryObject.BuildInObject;
+                List<ScriptValue> listValue = (List<ScriptValue>)_this.BuildInObject;
+
+                if ((index >= listValue.Count) || index < 0 && index < (listValue.Count * -1))
+                    throw new IndexOutOfRangeException();
+                listValue[(int)ScriptInt.Modulo(index, listValue.Count)] = args[2];
+
+                return ScriptValue.Null;
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, new List<ScriptValue>());

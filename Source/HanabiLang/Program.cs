@@ -16,8 +16,6 @@ namespace HanabiLang
     {
         public static void ExecuteFile(string[] args)
         {
-            Interpreter.Arguments = args;
-            Interpreter.IsPrintExpression = false;
             //string path = "./Test.txt";
             //string path = "./Test2.txt";
             //string path = "./Test3.txt";
@@ -38,28 +36,20 @@ namespace HanabiLang
             }
             string[] lines = File.ReadAllLines(path);
             var tokens = Lexer.Tokenize(lines);
-            foreach (var token in tokens)
-            {
-                //Console.WriteLine(token);
-            }
+            //Console.WriteLine(string.Join("\n", tokens));
             var parser = new Parser(tokens);
             var ast = parser.Parse();
-            foreach (var item in ast.Nodes)
-            {
-                Console.WriteLine(item);
-            }
-            //Console.WriteLine();
+            Console.WriteLine(string.Join("\n", ast.Nodes));
+
             path = Path.GetFullPath(path).Replace("\\", "/");
             DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);
             Interpreter interpreter = new Interpreter(ast: ast, existedScope: null, predefinedScope: null, path: "", isMain: true);
             ImportedItems.Files[path] = Tuple.Create(lastWriteTimeUtc, interpreter);
-            interpreter.Interpret(false);
+            interpreter.Interpret(false, false);
         }
 
-        public static void Start(string[] args)
+        public static void Start()
         {
-            Interpreter.Arguments = args;
-            Interpreter.IsPrintExpression = true;
             Interpreter interpreter = new Interpreter(ast: null, existedScope: null, predefinedScope: null, path: "", isMain: true);
             List<string> lines = new List<string>();
             while (true)
@@ -74,6 +64,7 @@ namespace HanabiLang
                 try
                 {
                     tokens = Lexer.Tokenize(lines);
+                    //Console.WriteLine(string.Join("\n", tokens));
                 }
                 catch (Exception ex)
                 {
@@ -88,6 +79,7 @@ namespace HanabiLang
                 try
                 {
                     ast = parser.Parse();
+                    //Console.WriteLine(string.Join("\n", ast.Nodes));
                 }
                 catch (ParseFormatNotCompleteException ex)
                 {
@@ -104,7 +96,7 @@ namespace HanabiLang
                     predefinedScope: interpreter.PredefinedScope, path: interpreter.Path, isMain: true);
                 try
                 {
-                    tempInterpreter.Interpret(false);
+                    tempInterpreter.Interpret(false, true);
                 }
                 catch (Exception ex)
                 {
@@ -116,8 +108,11 @@ namespace HanabiLang
 
         public static void Main(string[] args)
         {
+            Console.InputEncoding = Encoding.UTF8;
+            Console.OutputEncoding = Encoding.UTF8;
+            Interpreter.Arguments = args;
             if (args.Length <= 0)
-                Start(args);
+                Start();
             else
                 ExecuteFile(args);
         }

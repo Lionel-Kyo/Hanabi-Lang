@@ -116,7 +116,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return false;
             for (int i = 0; i < x.Parameters.Count; i++)
             {
-                if (x.Parameters[i].DataTypes != fn.Parameters[i].DataTypes)
+                if (!x.Parameters[i].DataTypes.SetEquals(fn.Parameters[i].DataTypes))
                     return false;
             }
             return true;
@@ -292,7 +292,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
 
             var scriptfn = FindMinAnyTypeFn(fns);
-            return Tuple.Create(scriptfn.Item1, scriptfn.Item2.Select(x => new ScriptVariable(x.Key, x.Value.Value, false, false, AccessibilityLevel.Private)).ToList());
+            return Tuple.Create(scriptfn.Item1, scriptfn.Item2.Select(x => new ScriptVariable(x.Key, null, x.Value.Value, false, false, AccessibilityLevel.Private)).ToList());
         }
 
         internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptScope scope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
@@ -381,7 +381,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
                 else
                 {
-                    Interpreter.InterpretChild(fnScope, node);
+                    Interpreter.InterpretChild(fnScope, node, false);
                 }
             }
             return new ScriptValue();

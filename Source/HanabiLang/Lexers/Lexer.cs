@@ -649,6 +649,7 @@ namespace HanabiLang.Lexers
                             tokens.Add(new Token(TokenType.OPERATOR, "||", lineIndex));
                             i++;
                         }
+                        else tokens.Add(new Token(TokenType.OPERATOR, "|", lineIndex));
                     }
 
                     // &&

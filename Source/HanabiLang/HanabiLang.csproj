@@ -65,6 +65,7 @@
     <Compile Include="Interprets\Exceptions\ScriptException.cs" />
     <Compile Include="Interprets\ScriptTypes\BasicTypes.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptEnumerator.cs" />
+    <Compile Include="Interprets\ScriptTypes\ScriptKeyValuePair.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptObjectClass.cs" />
     <Compile Include="Interprets\ScriptTypes\SingleUnzipList.cs" />
     <Compile Include="Interprets\ScriptValue.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="Parses\Nodes\IntNode.cs" />
     <Compile Include="Parses\Nodes\NullNode.cs" />
     <Compile Include="Parses\Nodes\TryCatchNode.cs" />
+    <Compile Include="Parses\Nodes\TypeNode.cs" />
     <Compile Include="Parses\ParseException.cs" />
     <Compile Include="Parses\Parser.cs" />
     <Compile Include="Parses\Nodes\ReturnNode.cs" />
