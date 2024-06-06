@@ -89,7 +89,30 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.BuildInObject = DictIterator((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
                 return new ScriptValue(result);
             });
+            this.AddObjectFn("ItemEquals", new List<FnParameter> { new FnParameter("other", BasicTypes.Dict) }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject other = (ScriptObject)args[1].Value;
 
+                var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
+                var b = (Dictionary<ScriptValue, ScriptValue>)other.BuildInObject;
+                if (_this.Equals(other))
+                    return new ScriptValue(true);
+
+                if (a.Count != b.Count)
+                    return new ScriptValue(false);
+
+                var aList = a.ToList();
+                var bList = b.ToList();
+                for (int i = 0; i < a.Count; i++)
+                {
+                    if (!aList[i].Key.Equals(bList[i].Key))
+                        return new ScriptValue(false);
+                    if (!aList[i].Value.Equals(bList[i].Value))
+                        return new ScriptValue(false);
+                }
+                return new ScriptValue(true);
+            });
             this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
@@ -115,23 +138,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptDict)
             {
-                if (_this.Equals(value))
-                    return ScriptBool.True;
 
                 var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
                 var b = (Dictionary<ScriptValue, ScriptValue>)value.BuildInObject;
-                if (a.Count == b.Count)
-                {
-                    var list1 = a.ToList();
-                    var list2 = a.ToList();
-                    for (int i = 0; i < a.Count; i++)
-                    {
-                        if (!list1[i].Equals(list2[2]))
-                            return ScriptBool.False;
-                    }
-                    return ScriptBool.True;
-                }
-                return ScriptBool.False;
+                return BasicTypes.Bool.Create(a.Equals(b));
             }
             return ScriptBool.False;
         }
