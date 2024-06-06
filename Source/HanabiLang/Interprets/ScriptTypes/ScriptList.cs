@@ -478,6 +478,26 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
                 return new ScriptValue(true);
             });
+            this.AddObjectFn("ItemEquals", new List<FnParameter> { new FnParameter("other", BasicTypes.List), new FnParameter("subEqualFn") }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject other = (ScriptObject)args[1].Value;
+                ScriptFns subEqualFn = (ScriptFns)args[2].Value;
+                var a = (List<ScriptValue>)_this.BuildInObject;
+                var b = (List<ScriptValue>)other.BuildInObject;
+                if (a.Equals(b))
+                    return new ScriptValue(true);
+                if (a.Count != b.Count)
+                    return new ScriptValue(false);
+
+                for (int i = 0; i < a.Count; i++)
+                {
+                    if (!(bool)((ScriptObject)subEqualFn.Call(null, a[i], b[i]).Value).BuildInObject)
+                        return new ScriptValue(false);
+                }
+                return new ScriptValue(true);
+            });
+
             this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
