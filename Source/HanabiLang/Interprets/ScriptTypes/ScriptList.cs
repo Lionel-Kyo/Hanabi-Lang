@@ -539,6 +539,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     if (!a[i].Equals(b[i]))
                         return ScriptBool.False;
                 }
+                return ScriptBool.True;
             }
             return ScriptBool.False;
         }
