@@ -89,53 +89,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.BuildInObject = DictIterator((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
                 return new ScriptValue(result);
             });
-            this.AddObjectFn("ItemEquals", new List<FnParameter> { new FnParameter("other", BasicTypes.Dict) }, args =>
-            {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                ScriptObject other = (ScriptObject)args[1].Value;
-
-                var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
-                var b = (Dictionary<ScriptValue, ScriptValue>)other.BuildInObject;
-                if (_this.Equals(other))
-                    return new ScriptValue(true);
-
-                if (a.Count != b.Count)
-                    return new ScriptValue(false);
-
-                var aList = a.ToList();
-                var bList = b.ToList();
-                for (int i = 0; i < a.Count; i++)
-                {
-                    if (!aList[i].Key.Equals(bList[i].Key))
-                        return new ScriptValue(false);
-                    if (!aList[i].Value.Equals(bList[i].Value))
-                        return new ScriptValue(false);
-                }
-                return new ScriptValue(true);
-            });
-            this.AddObjectFn("ItemEquals", new List<FnParameter> { new FnParameter("other", BasicTypes.Dict), new FnParameter("subEqualFn") }, args =>
-            {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                ScriptObject other = (ScriptObject)args[1].Value;
-                ScriptFns subEqualFn = (ScriptFns)args[2].Value;
-
-                var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
-                var b = (Dictionary<ScriptValue, ScriptValue>)other.BuildInObject;
-                if (_this.Equals(other))
-                    return new ScriptValue(true);
-
-                if (a.Count != b.Count)
-                    return new ScriptValue(false);
-
-                var aList = a.ToList();
-                var bList = b.ToList();
-                for (int i = 0; i < a.Count; i++)
-                {
-                    if (!(bool)((ScriptObject)subEqualFn.Call(null, new ScriptValue(BasicTypes.KeyValuePair.Create(aList[i])), new ScriptValue(BasicTypes.KeyValuePair.Create(bList[i]))).Value).BuildInObject)
-                        return new ScriptValue(false);
-                }
-                return new ScriptValue(true);
-            });
 
             this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index") }, args =>
             {
@@ -162,10 +115,23 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptDict)
             {
-
                 var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
                 var b = (Dictionary<ScriptValue, ScriptValue>)value.BuildInObject;
-                return BasicTypes.Bool.Create(a.Equals(b));
+
+                if (a.Equals(b))
+                    return ScriptBool.True;
+
+                if (a.Count != b.Count)
+                    return ScriptBool.False;
+
+                var aList = a.ToList();
+                var bList = b.ToList();
+                for (int i = 0; i < a.Count; i++)
+                {
+                    if (!aList[i].Key.Equals(bList[i].Key) || !aList[i].Value.Equals(bList[i].Value))
+                        return ScriptBool.False;
+                }
+                return ScriptBool.True;
             }
             return ScriptBool.False;
         }

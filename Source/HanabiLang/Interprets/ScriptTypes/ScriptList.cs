@@ -460,43 +460,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.BuildInObject = (List<ScriptValue>)_this.BuildInObject;
                 return new ScriptValue(result);
             });
-            this.AddObjectFn("ItemEquals", new List<FnParameter> { new FnParameter("other", BasicTypes.List) }, args =>
-            {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                ScriptObject other = (ScriptObject)args[1].Value;
-                var a = (List<ScriptValue>)_this.BuildInObject;
-                var b = (List<ScriptValue>)other.BuildInObject;
-                if (a.Equals(b))
-                    return new ScriptValue(true);
-                if (a.Count != b.Count)
-                    return new ScriptValue(false);
-
-                for (int i = 0; i < a.Count; i++)
-                {
-                    if (!a[i].Equals(b[i]))
-                        return new ScriptValue(false);
-                }
-                return new ScriptValue(true);
-            });
-            this.AddObjectFn("ItemEquals", new List<FnParameter> { new FnParameter("other", BasicTypes.List), new FnParameter("subEqualFn") }, args =>
-            {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                ScriptObject other = (ScriptObject)args[1].Value;
-                ScriptFns subEqualFn = (ScriptFns)args[2].Value;
-                var a = (List<ScriptValue>)_this.BuildInObject;
-                var b = (List<ScriptValue>)other.BuildInObject;
-                if (a.Equals(b))
-                    return new ScriptValue(true);
-                if (a.Count != b.Count)
-                    return new ScriptValue(false);
-
-                for (int i = 0; i < a.Count; i++)
-                {
-                    if (!(bool)((ScriptObject)subEqualFn.Call(null, a[i], b[i]).Value).BuildInObject)
-                        return new ScriptValue(false);
-                }
-                return new ScriptValue(true);
-            });
 
             this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
             {
@@ -566,7 +529,16 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 var a = (List<ScriptValue>)_this.BuildInObject;
                 var b = (List<ScriptValue>)value.BuildInObject;
-                return BasicTypes.Bool.Create(a.Equals(b));
+                if (a.Equals(b))
+                    return ScriptBool.True;
+                if (a.Count != b.Count)
+                    return ScriptBool.False;
+
+                for (int i = 0; i < a.Count; i++)
+                {
+                    if (!a[i].Equals(b[i]))
+                        return ScriptBool.False;
+                }
             }
             return ScriptBool.False;
         }
