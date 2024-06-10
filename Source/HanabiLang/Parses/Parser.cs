@@ -201,6 +201,8 @@ namespace HanabiLang.Parses
                         return new DictNode(keyValues);
                     }
                 case TokenType.KEYWORD:
+                    if (currentToken.Raw == "this" || currentToken.Raw == "super")
+                        return this.Identifier(skipIndexers);
                     throw new ParseException($"Unexpected keyword: {currentToken.Raw}", currentToken);
                 default:
                     break;
@@ -805,16 +807,16 @@ namespace HanabiLang.Parses
 
             return new ImportNode(importPath, imports, asName);
         }
-        private AstNode FunctionDefinition(bool isStatic, AccessibilityLevel level, bool isArrowFn = false, bool isOneParam = false)
+        private AstNode FunctionDefinition(bool isStatic, AccessibilityLevel level, bool isLambdaFn = false, bool isOneParam = false)
         {
-            if (!isArrowFn)
+            if (!isLambdaFn)
             {
                 Token keywordToken = this.Expect(TokenType.KEYWORD);
                 //this.currentTokenIndex++;
             }
 
             string functionName = "";
-            if (!isArrowFn)
+            if (!isLambdaFn)
             {
                 functionName = this.tokens[this.currentTokenIndex].Raw;
                 this.currentTokenIndex++;
@@ -942,7 +944,7 @@ namespace HanabiLang.Parses
                 haveArrow = true;
             }
 
-            if (isArrowFn && (!haveArrow && returnType == null))
+            if (isLambdaFn && (!haveArrow && returnType == null))
             {
                 throw new ParseException("Lambda function must define return type or use double arrow", this.tokens[this.currentTokenIndex - 1]);
             }
@@ -974,10 +976,10 @@ namespace HanabiLang.Parses
                 if (child != null)
                     body.Add(new ReturnNode(child));
             }
-            if (haveArrow)
-                return new FnDefineExpressionNode(functionName, parameters, returnType, body, isArrowFn ? true : isStatic, level);
+            if (isLambdaFn)
+                return new FnDefineExpressionNode(functionName, parameters, returnType, body, isLambdaFn ? true : isStatic, level);
             else
-                return new FnDefineStatementNode(functionName, parameters, returnType, body, isArrowFn ? true : isStatic, level);
+                return new FnDefineStatementNode(functionName, parameters, returnType, body, isLambdaFn ? true : isStatic, level);
 
         }
         private AstNode SwitchStatement()

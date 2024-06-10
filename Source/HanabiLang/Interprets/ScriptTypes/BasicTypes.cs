@@ -12,6 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptObjectClass ObjectClass = new ScriptObjectClass();
         public static readonly ScriptNull Null = new ScriptNull();
         public static readonly ScriptObject NullValue = Null.Create();
+        public static readonly ScriptTypeClass TypeClass = new ScriptTypeClass();
         public static readonly ScriptInt Int = new ScriptInt();
         public static readonly ScriptFloat Float = new ScriptFloat();
         public static readonly ScriptDecimal Decimal = new ScriptDecimal();

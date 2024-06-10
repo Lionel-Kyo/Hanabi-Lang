@@ -35,6 +35,7 @@ namespace HanabiLang.Interprets
                 this.Path = path.Replace("\\", "/");
                 this.CurrentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
                 this.CurrentScope.Classes.Add("object", BasicTypes.ObjectClass);
+                this.CurrentScope.Classes.Add("Type", BasicTypes.TypeClass);
                 this.CurrentScope.Classes.Add("str", BasicTypes.Str);
                 this.CurrentScope.Classes.Add("int", BasicTypes.Int);
                 this.CurrentScope.Classes.Add("float", BasicTypes.Float);
@@ -252,7 +253,7 @@ namespace HanabiLang.Interprets
                         interpretScope.Classes[realNode.AsName] = new
                             ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
                                 newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
-                }                
+                }
                 // Import all
                 else if (realNode.Imports.Count <= 0)
                 {
@@ -619,13 +620,13 @@ namespace HanabiLang.Interprets
             throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
         }
 
-        private static ValueReference FnReferenceCall(FnReferenceCallNode fnCall, 
-            ScriptScope interpretScope, ScriptValue left, ScriptScope leftScope, 
+        private static ValueReference FnReferenceCall(FnReferenceCallNode fnCall,
+            ScriptScope interpretScope, ScriptValue left, ScriptScope leftScope,
             AccessibilityLevel accessLevel, bool isStaticAccess)
         {
             if (fnCall.Reference is FnReferenceCallNode)
             {
-                ScriptValue referenceCallResult =  FnReferenceCall((FnReferenceCallNode)fnCall.Reference, interpretScope, left,
+                ScriptValue referenceCallResult = FnReferenceCall((FnReferenceCallNode)fnCall.Reference, interpretScope, left,
                     leftScope, accessLevel, isStaticAccess).Ref;
                 if (referenceCallResult.IsFunction)
                 {
@@ -1201,7 +1202,7 @@ namespace HanabiLang.Interprets
                 return ValueReference.Empty;
             }*/
             else if (node is FnDefineNode)
-            {            
+            {
                 // Normal Function
                 var realNode = (FnDefineNode)node;
 
@@ -1439,7 +1440,7 @@ namespace HanabiLang.Interprets
                 obj.ClassType.Scope.Functions.TryGetValue("get_[]", out ScriptFns get_fn);
                 obj.ClassType.Scope.Functions.TryGetValue("set_[]", out ScriptFns set_fn);
                 if (get_fn != null || set_fn != null)
-                { 
+                {
                     return new ValueReference(() => get_fn.Call(obj, index.Ref), x => set_fn.Call(obj, index.Ref, x));
                 }
                 else

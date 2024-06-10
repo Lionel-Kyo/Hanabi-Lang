@@ -18,11 +18,11 @@ namespace HanabiLang.Interprets.ScriptTypes
                     return new ScriptValue(_this.ClassType.ToStr(_this));
                 });
 
-            AddVariable("Type", args =>
-            {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(_this.ClassType);
-            }, null, false, null);
+            //AddVariable("Type", args =>
+            //{
+            //    ScriptObject _this = (ScriptObject)args[0].Value;
+            //    return new ScriptValue(_this.ClassType);
+            //}, null, false, null);
         }
     }
 }

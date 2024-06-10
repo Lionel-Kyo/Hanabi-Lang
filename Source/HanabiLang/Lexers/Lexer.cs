@@ -36,7 +36,7 @@ namespace HanabiLang.Lexers
             "import", "from", "as", "throw", "try", "catch", "finally", "params",
             "switch", "case", "default", "async", "await", "class", "this", "super",
             "null", "true", "false", "private", "public", "protected", "internal",
-            "static", "using", "namespace", "object", "dynamic", "enum", "is", "not"
+            "static", "using", "namespace", /*"object",*/ "dynamic", "enum", "is", "not"
         };
 
         private static void BlockComment(ref int index, ref bool isBlockComment, string line)

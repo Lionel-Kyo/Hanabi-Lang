@@ -67,6 +67,7 @@
     <Compile Include="Interprets\ScriptTypes\ScriptEnumerator.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptKeyValuePair.cs" />
     <Compile Include="Interprets\ScriptTypes\ScriptObjectClass.cs" />
+    <Compile Include="Interprets\ScriptTypes\ScriptTypeClass.cs" />
     <Compile Include="Interprets\ScriptTypes\SingleUnzipList.cs" />
     <Compile Include="Interprets\ScriptValue.cs" />
     <Compile Include="Interprets\BuildInFns.cs" />
