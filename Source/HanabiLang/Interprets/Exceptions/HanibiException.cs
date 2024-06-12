@@ -9,13 +9,13 @@ namespace HanabiLang.Interprets.Exceptions
 {
     class HanibiException : Exception
     {
-        public string Name { get; private set; }
-        public HanibiException(string name, string message) :
+        public ScriptObject ExceptionObject { get; private set; }
+        public HanibiException(ScriptObject exceptionObject, string message) :
             base(message)
         {
-            this.Name = name;
+            this.ExceptionObject = exceptionObject;
         }
-        public HanibiException(string name) : this(name, "")
+        public HanibiException(ScriptObject exceptionObject) : this(exceptionObject, "")
         { }
     }
 }

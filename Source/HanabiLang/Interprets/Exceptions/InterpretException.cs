@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Interprets.Exceptions
 {
-    internal class InterpretException : HanibiException
+    internal class InterpretException : SystemException
     {
         public InterpretException(string message, AstNode token) : base($"{message}\nLine: {token.Line}")
         { }

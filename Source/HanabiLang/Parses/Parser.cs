@@ -53,7 +53,7 @@ namespace HanabiLang.Parses
             for (Exception exception = ex; exception != null; exception = exception.InnerException)
             {
                 if (exception is HanibiException)
-                    result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
+                    result.AppendLine($"Unhandled Exception ({((HanibiException)exception).ExceptionObject.ClassType.Name}): {exception.Message}");
                 else
                     result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
             }
@@ -583,56 +583,77 @@ namespace HanabiLang.Parses
 
             return new IfNode(condition, thenBody, elseBody);
         }
-        private void AddTryCatchBody(List<AstNode> body)
+        private void OutTryCatchBody(List<AstNode> body)
         {
-            if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            this.Expect(TokenType.OPEN_CURLY_BRACKET);
+
+            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
             {
-                this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
                 if (child != null)
                     body.Add(child);
             }
-            else
-            {
-                this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
-                {
-                    AstNode child = this.ParseChild();
-                    if (child != null)
-                        body.Add(child);
-                }
-
-                this.Expect(true, TokenType.CLOSE_CURLY_BRACKET);
-            }
+            this.Expect(true, TokenType.CLOSE_CURLY_BRACKET);
         }
         private AstNode TryCatchStatement()
         {
             this.Expect(TokenType.KEYWORD);
             List<AstNode> tryBody = new List<AstNode>();
-            List<AstNode> catchBody = null;
+            List<CatchNode> catchNodes = null;
             List<AstNode> finallyBody = null;
 
-            AddTryCatchBody(tryBody);
+            OutTryCatchBody(tryBody);
 
-            if (HasNextToken && NextToken.Raw.Equals("catch"))
+            while (HasNextToken && NextToken.Raw.Equals("catch"))
             {
                 this.Expect(TokenType.KEYWORD);
-                catchBody = new List<AstNode>();
-                AddTryCatchBody(catchBody);
+                if (HasNextToken && NextToken.Type == TokenType.OPEN_ROUND_BRACKET)
+                    this.Expect(TokenType.OPEN_ROUND_BRACKET);
+
+                string paramName = "";
+                AstNode paramType = null;
+
+                bool hasParam = HasNextToken && NextToken.Type == TokenType.IDENTIFIER;
+                if (hasParam)
+                {
+                    paramName = NextToken.Raw;
+                    this.Expect(TokenType.IDENTIFIER);
+
+                    if (HasNextToken && NextToken.Type == TokenType.COLON)
+                    {
+                        this.Expect(TokenType.COLON);
+                        paramType = this.ParseTypes();
+                    }
+                }
+
+                if (HasNextToken && NextToken.Type == TokenType.CLOSE_ROUND_BRACKET)
+                    this.Expect(TokenType.CLOSE_ROUND_BRACKET);
+
+                var catchBody = new List<AstNode>();
+                OutTryCatchBody(catchBody);
+
+                if (catchNodes == null)
+                    catchNodes = new List<CatchNode>();
+
+                catchNodes.Add(new CatchNode(paramName, paramType, catchBody));
             }
 
             if (HasNextToken && NextToken.Raw.Equals("finally"))
             {
                 this.Expect(TokenType.KEYWORD);
                 finallyBody = new List<AstNode>();
-                AddTryCatchBody(finallyBody);
+                OutTryCatchBody(finallyBody);
             }
 
-            if (catchBody == null && finallyBody == null)
+            if (catchNodes == null && finallyBody == null)
                 throw new ParseException("try keyword must work with catch or finally", this.tokens[this.currentTokenIndex - 1]);
 
-            return new TryCatchNode(tryBody, catchBody, finallyBody);
+
+            if (catchNodes != null && catchNodes.Where(node => node.DataType == null).Count() > 1)
+                throw new ParseException("cannot define 2 type not defined catch", this.tokens[this.currentTokenIndex - 1]);
+
+            return new TryCatchNode(tryBody, catchNodes, finallyBody);
         }
         private AstNode WhileStatement()
         {

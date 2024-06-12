@@ -111,6 +111,8 @@ namespace HanabiLang
             Console.InputEncoding = Encoding.UTF8;
             Console.OutputEncoding = Encoding.UTF8;
             Interpreter.Arguments = args;
+
+            //TestCases.Run();
             if (args.Length <= 0)
                 Start();
             else

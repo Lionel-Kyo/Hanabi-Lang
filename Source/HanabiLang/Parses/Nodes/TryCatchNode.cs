@@ -9,10 +9,10 @@ namespace HanabiLang.Parses.Nodes
     class TryCatchNode : AstNode, IStatementNode
     {
         public List<AstNode> TryBranch { get; private set; }
-        public List<AstNode> CatchBranch { get; private set; }
+        public List<CatchNode> CatchBranch { get; private set; }
         public List<AstNode> FinallyBranch { get; private set; }
 
-        public TryCatchNode(List<AstNode> tryBranch, List<AstNode> catchBranch, List<AstNode> finallyBranch)
+        public TryCatchNode(List<AstNode> tryBranch, List<CatchNode> catchBranch, List<AstNode> finallyBranch)
         {
             this.TryBranch = tryBranch;
             this.CatchBranch = catchBranch;

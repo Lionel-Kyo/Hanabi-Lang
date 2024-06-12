@@ -99,7 +99,7 @@ namespace HanabiLang.Interprets
             for (Exception exception = ex; exception != null; exception = exception.InnerException)
             {
                 if (exception is HanibiException)
-                    result.AppendLine($"Unhandled Exception ({((HanibiException)exception).Name}): {exception.Message}");
+                    result.AppendLine($"Unhandled Exception ({((HanibiException)exception).ExceptionObject.ClassType.Name}): {exception.Message}");
                 else
                     result.AppendLine($"Unhandled Exception ({exception.GetType().Name}): {exception.Message}");
             }
@@ -752,8 +752,8 @@ namespace HanabiLang.Interprets
 
                 var tryScope = new ScriptScope(null, interpretScope);
 
-                Exception exception = null;
-
+                ScriptObject exceptionObject = null;
+                bool catched = false;
                 try
                 {
                     foreach (var item in realNode.TryBranch)
@@ -792,45 +792,70 @@ namespace HanabiLang.Interprets
                 }
                 catch (Exception ex)
                 {
-                    exception = ex;
-
+                    if (ex is HanibiException)
+                        exceptionObject = ((HanibiException)ex).ExceptionObject;
+                    else
+                        exceptionObject = BasicTypes.Exception.Create(ex);
                 }
 
-                if (exception != null && realNode.CatchBranch != null)
+                if (exceptionObject != null && realNode.CatchBranch != null)
                 {
                     var catchScope = new ScriptScope(null, interpretScope);
                     foreach (var item in realNode.CatchBranch)
                     {
-                        if (item is ReturnNode)
-                        {
-                            var returnNode = (ReturnNode)item;
+                        DefinedTypes dataTypes = null;
 
-                            if (returnNode.Value != null)
+                        if (item.DataType != null)
+                        {
+                            ScriptValue type = InterpretExpression(interpretScope, item.DataType).Ref;
+                            if (!type.IsDefinedTypes)
+                                throw new SystemException($"Unexpected error: {item.Name}");
+                            dataTypes = (DefinedTypes)type.Value;
+
+                            if (!dataTypes.Value.Any(ex => ex == exceptionObject.ClassType || (ex?.SuperClasses?.Contains(exceptionObject.ClassType) ?? false)))
+                                continue;
+                        }
+
+                        if (!string.IsNullOrEmpty(item.Name))
+                        {
+                            catchScope.Variables[item.Name] = new ScriptVariable(item.Name, null, new ScriptValue(exceptionObject), false, false, AccessibilityLevel.Public);
+                        }
+
+                        catched = true;
+                        foreach (var body in item.Body)
+                        {
+                            if (body is ReturnNode)
                             {
-                                var value = InterpretExpression(catchScope, returnNode.Value);
+                                var returnNode = (ReturnNode)body;
 
-                                return value;
+                                if (returnNode.Value != null)
+                                {
+                                    var value = InterpretExpression(catchScope, returnNode.Value);
+
+                                    return value;
+                                }
+                                return new ValueReference(ScriptValue.Null);
                             }
-                            return new ValueReference(ScriptValue.Null);
+                            else if (body is BreakNode)
+                            {
+                                return new ValueReference(ScriptValue.Break);
+                            }
+                            else if (body is ContinueNode)
+                            {
+                                return new ValueReference(ScriptValue.Continue);
+                            }
+                            else if (IsStatementNode(body))
+                            {
+                                var statementResult = InterpretStatement(catchScope, body);
+                                if (!statementResult.IsEmpty)
+                                    return statementResult;
+                            }
+                            else
+                            {
+                                InterpretChild(catchScope, body, false);
+                            }
                         }
-                        else if (item is BreakNode)
-                        {
-                            return new ValueReference(ScriptValue.Break);
-                        }
-                        else if (item is ContinueNode)
-                        {
-                            return new ValueReference(ScriptValue.Continue);
-                        }
-                        else if (IsStatementNode(item))
-                        {
-                            var statementResult = InterpretStatement(catchScope, item);
-                            if (!statementResult.IsEmpty)
-                                return statementResult;
-                        }
-                        else
-                        {
-                            InterpretChild(catchScope, item, false);
-                        }
+                        break;
                     }
                 }
 
@@ -846,22 +871,22 @@ namespace HanabiLang.Interprets
                             if (returnNode.Value != null)
                             {
                                 var value = InterpretExpression(finallyScope, returnNode.Value);
-                                if (exception != null && realNode.CatchBranch == null)
-                                    throw exception;
+                                if (exceptionObject != null && !catched)
+                                    throw (Exception)exceptionObject.BuildInObject;
                                 return value;
                             }
                             return new ValueReference(ScriptValue.Null);
                         }
                         else if (item is BreakNode)
                         {
-                            if (exception != null && realNode.CatchBranch == null)
-                                throw exception;
+                            if (exceptionObject != null && !catched)
+                                throw (Exception)exceptionObject.BuildInObject;
                             return new ValueReference(ScriptValue.Break);
                         }
                         else if (item is ContinueNode)
                         {
-                            if (exception != null && realNode.CatchBranch == null)
-                                throw exception;
+                            if (exceptionObject != null && !catched)
+                                throw (Exception)exceptionObject.BuildInObject;
                             return new ValueReference(ScriptValue.Continue);
                         }
                         else if (IsStatementNode(item))
@@ -877,8 +902,8 @@ namespace HanabiLang.Interprets
                     }
                 }
 
-                if (exception != null && realNode.CatchBranch == null)
-                    throw exception;
+                if (exceptionObject != null && !catched)
+                    throw (Exception)exceptionObject.BuildInObject;
 
                 return ValueReference.Empty;
             }
