@@ -1305,7 +1305,11 @@ namespace HanabiLang.Interprets
                     if (specialAccess.Equals("this"))
                         leftScope = ((ScriptObject)left.Value).Scope;
                     else if (specialAccess.Equals("super"))
-                        leftScope = ((ScriptObject)left.Value).ClassType.SuperClass.Scope;
+                        if (interpretScope.Type is ScriptFn && (((ScriptFn)interpretScope.Type).Scope.Type) is ScriptClass)
+                            leftScope = ((ScriptClass)((ScriptFn)interpretScope.Type).Scope.Type).SuperClass.Scope;
+                            //leftScope = ((ScriptObject)left.Value).ClassType.SuperClass.Scope;
+                        else
+                            throw new SystemException("Cannot call super out of function");
                     else if (left.Value is ScriptObject)
                         leftScope = ((ScriptObject)left.Value).Scope;
                     else if (left.Value is ScriptClass)

@@ -229,6 +229,51 @@ const result2 = test.ToStr();
             CheckEquals(values["result2"], new ScriptValue($"I'm testing: 3.14"));
         }
 
+        public static void ClassTest2()
+        {
+            string sourceCode = @"
+class Super1 {
+	fn ToStr() => ""Super1"";
+}
+
+class Super2 { 
+	fn ToStr() => ""Super2"";
+}
+
+class Super3 { }
+
+class Middle1: Super1 {
+	fn ToStr() => super.ToStr() + "" Middle1"";
+}
+
+class Middle2: Super2 {
+	fn ToStr() => super.ToStr() + "" Middle2"";
+}
+
+class Middle3: Super3 {
+	fn ToStr() => ""Middle3"";
+
+	fn GetText() => this.Name + "" is Middle3"";
+}
+
+class TestClass: Middle1, Middle3, Middle2 {
+	var Name: str { get; private set; }
+	fn TestClass(name: str) {
+		this.Name = name;
+	}
+
+	fn GetText() {
+		return super.GetText();
+	}
+}
+const result1 = TestClass(""Hello"").GetText();
+const result2 = TestClass(""Hello"").ToStr();
+";
+
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue("Hello is Middle3"));
+            CheckEquals(values["result2"], new ScriptValue("Super2 Middle2"));
+        }
 
         public static void ForloopTest()
         {
