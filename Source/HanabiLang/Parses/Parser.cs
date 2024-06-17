@@ -1162,11 +1162,11 @@ namespace HanabiLang.Parses
             {
                 if (this.currentTokenIndex + 1 < this.tokens.Count &&
                     this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER &&
-                    this.tokens[this.currentTokenIndex + 1].Type == TokenType.EQUALS)
+                    this.tokens[this.currentTokenIndex + 1].Type == TokenType.COLON)
                 {
                     string argName = this.tokens[this.currentTokenIndex].Raw;
                     this.Expect(TokenType.IDENTIFIER);
-                    this.Expect(TokenType.EQUALS);
+                    this.Expect(TokenType.COLON);
                     keyArguments[argName] = this.Expression(false, true, false);
                     isLastWithName = true;
                 }

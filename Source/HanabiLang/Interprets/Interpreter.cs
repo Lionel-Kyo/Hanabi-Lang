@@ -492,10 +492,10 @@ namespace HanabiLang.Interprets
                 dataTypes = (DefinedTypes)type.Value;
             }
 
-            ScriptValue setValue = node.Value == null ? new ScriptValue() :
+            ScriptValue setValue = node.Value == null ? null:
                 InterpretExpression(scope, node.Value).Ref;
 
-            if (dataTypes != null)
+            if (dataTypes != null && setValue != null)
             {
                 if (node.SetFn == null || (node.SetFn != null && node.SetFn.Body.Count <= 0))
                 {
@@ -505,6 +505,8 @@ namespace HanabiLang.Interprets
                         throw new SystemException($"Variable ({node.Name}) cannot be assigned with {setValue}");
                 }
             }
+
+            setValue = setValue ?? new ScriptValue();
 
             ScriptFns getFns = null;
             ScriptFns setFns = null;
