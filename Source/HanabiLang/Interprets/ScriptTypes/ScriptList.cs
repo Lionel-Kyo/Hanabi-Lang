@@ -489,12 +489,12 @@ namespace HanabiLang.Interprets.ScriptTypes
         public override ScriptObject Create() => new ScriptObject(this, new List<ScriptValue>());
         public ScriptObject Create(List<ScriptValue> value) => new ScriptObject(this, value);
 
-        public override ScriptObject Negative(ScriptObject left)
-        {
-            var result = ((List<ScriptValue>)left.BuildInObject).ToList();
-            result.Reverse();
-            return BasicTypes.List.Create(result);
-        }
+        //public override ScriptObject Negative(ScriptObject left)
+        //{
+        //    var result = ((List<ScriptValue>)left.BuildInObject).ToList();
+        //    result.Reverse();
+        //    return BasicTypes.List.Create(result);
+        //}
 
         public override ScriptObject Add(ScriptObject left, ScriptObject right)
         {
