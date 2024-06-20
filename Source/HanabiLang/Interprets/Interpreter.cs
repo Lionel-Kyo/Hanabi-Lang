@@ -318,7 +318,9 @@ namespace HanabiLang.Interprets
             if (leftScope.TryGetValue(node.Name, out ScriptType scriptType))
             {
                 if (scriptType is ScriptFns)
-                    return new ValueReference(new ScriptValue((ScriptFns)scriptType));
+                {
+                    return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)left.Value)));
+                }
                 else if (scriptType is ScriptClass)
                     return new ValueReference(new ScriptValue((ScriptClass)scriptType));
                 else if (scriptType is ScriptVariable)
@@ -389,17 +391,11 @@ namespace HanabiLang.Interprets
         {
             if (node.Name.Equals("this"))
             {
+                ScriptScope tempScope;
                 if (interpretScope.Type is ScriptObject)
                     return new ValueReference(new ScriptValue((ScriptObject)interpretScope.Type));
-                else if (interpretScope.Type is ScriptFn)
-                {
-                    for (ScriptScope scope = interpretScope.Parent; scope != null; scope = scope.Parent)
-                    {
-                        if (scope.Type is ScriptObject)
-                            return new ValueReference(new ScriptValue((ScriptObject)scope.Type));
-                    }
-                    throw new SystemException($"Unexpected keyword this, cannot call this outside the object");
-                }
+                else if ((tempScope = interpretScope.GetParentScope(s => s.Type is ScriptObject)) != null)
+                    return new ValueReference(new ScriptValue((ScriptObject)tempScope.Type));
                 throw new SystemException($"Unexpected keyword this");
             }
             else if (node.Name.Equals("super"))
@@ -492,7 +488,7 @@ namespace HanabiLang.Interprets
                 dataTypes = (DefinedTypes)type.Value;
             }
 
-            ScriptValue setValue = node.Value == null ? null:
+            ScriptValue setValue = node.Value == null ? null :
                 InterpretExpression(scope, node.Value).Ref;
 
             if (dataTypes != null && setValue != null)
@@ -613,6 +609,12 @@ namespace HanabiLang.Interprets
                 var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
                 return new ValueReference(fn.Call(null, callableInfo));
             }
+            else if (fnRef.IsBindedFunction)
+            {
+                var fn = (ScriptBindedFns)fnRef.Value;
+                var callableInfo = fn.Fns.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
+                return new ValueReference(fn.Fns.Call(fn.Object, callableInfo));
+            }
             else if (fnRef.IsClass)
             {
                 var _class = (ScriptClass)fnRef.Value;
@@ -635,6 +637,12 @@ namespace HanabiLang.Interprets
                     var fn = (ScriptFns)referenceCallResult.Value;
                     var callableInfo = fn.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
                     return new ValueReference(fn.Call(null, callableInfo));
+                }
+                else if (referenceCallResult.IsBindedFunction)
+                {
+                    var fn = (ScriptBindedFns)referenceCallResult.Value;
+                    var callableInfo = fn.Fns.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
+                    return new ValueReference(fn.Fns.Call(fn.Object, callableInfo));
                 }
                 else if (referenceCallResult.IsClass)
                 {
@@ -684,6 +692,10 @@ namespace HanabiLang.Interprets
                             throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Name}");
 
                         return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, callableInfo));
+                    }
+                    else if (value.IsBindedFunction)
+                    {
+                        throw new SystemException("Inexpected Binded Function");
                     }
                     else if (value.IsClass)
                     {
@@ -1294,8 +1306,21 @@ namespace HanabiLang.Interprets
                         specialAccess = rawRef;
                 }
 
-                ScriptValue left = specialAccess.Length <= 0 ? InterpretExpression(interpretScope, realNode.Left).Ref :
-                    new ScriptValue((ScriptObject)interpretScope.Parent.Type);
+                ScriptValue left;
+                if (specialAccess.Length <= 0)
+                {
+                    left = InterpretExpression(interpretScope, realNode.Left).Ref;
+                }
+                else
+                {
+                    ScriptScope tempScope;
+                    if (interpretScope.Type is ScriptObject)
+                        left = new ScriptValue((ScriptObject)interpretScope.Type);
+                    else if ((tempScope = interpretScope.GetParentScope(s => s.Type is ScriptObject)) != null)
+                        left = new ScriptValue((ScriptObject)tempScope.Type);
+                    else
+                        throw new SystemException("Cannot use this out of object");
+                }
 
                 if (_operater == ".")
                 {
@@ -1307,7 +1332,7 @@ namespace HanabiLang.Interprets
                     else if (specialAccess.Equals("super"))
                         if (interpretScope.Type is ScriptFn && (((ScriptFn)interpretScope.Type).Scope.Type) is ScriptClass)
                             leftScope = ((ScriptClass)((ScriptFn)interpretScope.Type).Scope.Type).SuperClass.Scope;
-                            //leftScope = ((ScriptObject)left.Value).ClassType.SuperClass.Scope;
+                        //leftScope = ((ScriptObject)left.Value).ClassType.SuperClass.Scope;
                         else
                             throw new SystemException("Cannot call super out of function");
                     else if (left.Value is ScriptObject)

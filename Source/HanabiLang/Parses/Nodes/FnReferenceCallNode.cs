@@ -8,6 +8,9 @@ namespace HanabiLang.Parses.Nodes
 {
     class FnReferenceCallNode : AstNode, IExpressionNode
     {
+        /// <summary>
+        /// VariableReferenceNode / FnReferenceCallNode
+        /// </summary>
         public AstNode Reference { get; private set; }
         public List<AstNode> Args { get; private set; }
         public Dictionary<string, AstNode> KeyArgs { get; private set; }

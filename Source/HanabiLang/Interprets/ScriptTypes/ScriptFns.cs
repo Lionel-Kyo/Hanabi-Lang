@@ -392,4 +392,20 @@ namespace HanabiLang.Interprets.ScriptTypes
             return $"<function: {this.Name}>";
         }
     }
+
+    public class ScriptBindedFns : ScriptType
+    {
+        public ScriptFns Fns { get; private set; }
+        public ScriptObject Object { get; private set; }
+        public ScriptBindedFns(ScriptFns scriptFns, ScriptObject scriptScope)
+        {
+            this.Fns = scriptFns;
+            this.Object = scriptScope;
+        }
+
+        public override string ToString()
+        {
+            return $"<function: {this.Fns.Name} ({Object})>";
+        }
+    }
 }

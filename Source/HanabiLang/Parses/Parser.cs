@@ -1151,7 +1151,7 @@ namespace HanabiLang.Parses
         }
 
 
-        private AstNode FunctionCall(AstNode node)
+        private FnReferenceCallNode FunctionCall(AstNode node)
         {
             Token bracketToken = this.Expect(TokenType.OPEN_ROUND_BRACKET);
 
@@ -1196,7 +1196,7 @@ namespace HanabiLang.Parses
 
             Expect(true, TokenType.CLOSE_ROUND_BRACKET);
 
-            AstNode lastFnRefCall = new FnReferenceCallNode(node, arguments, keyArguments);
+            FnReferenceCallNode lastFnRefCall = new FnReferenceCallNode(node, arguments, keyArguments);
             while (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
             {
                 lastFnRefCall = FunctionCall(lastFnRefCall);

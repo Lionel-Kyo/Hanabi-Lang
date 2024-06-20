@@ -275,6 +275,28 @@ const result2 = TestClass(""Hello"").ToStr();
             CheckEquals(values["result2"], new ScriptValue("Super2 Middle2"));
         }
 
+        public static void ClassTest3()
+        {
+            string sourceCode = @"
+class Test1 {
+    var a = 3.14; 
+    var b = str(this.a); 
+    fn GetA() {
+        return () => () => this.a; 
+    }
+}
+
+const a = Test1().GetA;
+const b = a();
+const result1 = a()()();
+const result2 = b()();
+";
+
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue(3.14));
+            CheckEquals(values["result2"], new ScriptValue(3.14));
+        }
+
         public static void ForloopTest()
         {
             string sourceCode = @"

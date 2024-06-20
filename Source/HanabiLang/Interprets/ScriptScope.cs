@@ -36,7 +36,7 @@ namespace HanabiLang.Interprets
             this.Classes = new Dictionary<string, ScriptClass>();
         }
 
-        public ScriptScope(ScriptType type, Interpreter parentInterpreter): this(type)
+        public ScriptScope(ScriptType type, Interpreter parentInterpreter) : this(type)
         {
             this.Parent = null;
             this.ParentInterpreter = parentInterpreter;
@@ -50,23 +50,23 @@ namespace HanabiLang.Interprets
 
         public bool TryGetValue(string name, out ScriptType value)
         {
-            if (name.Equals("this"))
-            {
-                if (this.Type is ScriptObject)
-                {
-                    value = this.Type;
-                    return true;
-                }
-                else if (this.Type is ScriptFn && this.Parent.Type is ScriptObject)
-                {
-                    value = this.Parent.Type;
-                    return true;
-                }
-                else
-                {
-                    throw new SystemException("Cannot use this out of object");
-                }
-            }
+            //if (name.Equals("this"))
+            //{
+            //    if (this.Type is ScriptObject)
+            //    {
+            //        value = this.Type;
+            //        return true;
+            //    }
+            //    else if (this.Type is ScriptFn && this.Parent.Type is ScriptObject)
+            //    {
+            //        value = this.Parent.Type;
+            //        return true;
+            //    }
+            //    else
+            //    {
+            //        throw new SystemException("Cannot use this out of object");
+            //    }
+            //}
             if (this.Type is ScriptObject)
             {
                 ScriptObject scriptObject = (ScriptObject)this.Type;
@@ -114,6 +114,24 @@ namespace HanabiLang.Interprets
             }
             value = null;
             return false;
+        }
+
+        public ScriptScope GetParentScope(Func<ScriptScope, bool> condition)
+        {
+            if (condition == null)
+                return this.Parent;
+
+            for (ScriptScope scope = this.Parent; scope != null; scope = scope.Parent)
+            {
+                if (condition(scope))
+                    return scope;
+            }
+            return null;
+        }
+
+        public ScriptScope GetParentScope()
+        {
+            return GetParentScope(null);
         }
 
         public bool ContainsScope(ScriptScope scope)

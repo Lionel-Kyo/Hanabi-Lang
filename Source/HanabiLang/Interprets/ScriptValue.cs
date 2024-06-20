@@ -23,6 +23,11 @@ namespace HanabiLang.Interprets
             this.value = fn;
         }
 
+        public ScriptValue(ScriptBindedFns fn)
+        {
+            this.value = fn;
+        }
+
         public ScriptValue(ScriptClass _class)
         {
             this.value = _class;
@@ -197,6 +202,7 @@ namespace HanabiLang.Interprets
         public static ScriptValue Continue => new ScriptValue(new ContinueType());
 
         public bool IsFunction => this.value is ScriptFns;
+        public bool IsBindedFunction => this.value is ScriptBindedFns;
         public ScriptFns TryFunction => this.value is ScriptFns ? (ScriptFns)this.value : null;
         public bool IsClass => this.value is ScriptClass;
         public ScriptClass TryClass => this.value is ScriptClass ? (ScriptClass)this.value : null;
