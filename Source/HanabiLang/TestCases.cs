@@ -297,6 +297,63 @@ const result2 = b()();
             CheckEquals(values["result2"], new ScriptValue(3.14));
         }
 
+        public static void ClassTest4()
+        {
+            string sourceCode = @"
+class Super1 {
+    fn A() => ""Super1""; 
+}
+
+class Middle1 : Super1 {
+    fn A() => super.A() + "" "" + ""Middle1""; 
+}
+
+class Test1 : Middle1 {
+    fn A() => super.A() + "" "" + ""Test1""; 
+    fn B() => () => () => () => () => super.A();
+}
+
+const a = Test1().A;
+const b = Test1().B;
+const result1 = a();
+const result2 = b()()()()();
+";
+
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue("Super1 Middle1 Test1"));
+            CheckEquals(values["result2"], new ScriptValue("Super1 Middle1"));
+        }
+
+        public static void ClassTest5()
+        {
+            string sourceCode = @"
+class Super1 {
+    fn A() => ""Super1""; 
+}
+
+class Middle1 : Super1 {
+    fn A() => super.A() + "" "" + ""Middle1""; 
+}
+
+class Test1 : Middle1 { 
+    var a = () => super.A;
+}
+
+class Test2 : Middle1 { 
+    var b = () => super;
+}
+
+const a = Test1().a;
+const b = Test2().b;
+const result1 = a()();
+const result2 = b().A();
+";
+
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue("Super1 Middle1"));
+            CheckEquals(values["result2"], new ScriptValue("Super1 Middle1"));
+        }
+
         public static void ForloopTest()
         {
             string sourceCode = @"

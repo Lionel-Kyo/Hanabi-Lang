@@ -391,43 +391,17 @@ namespace HanabiLang.Interprets
         {
             if (node.Name.Equals("this"))
             {
-                ScriptScope tempScope;
-                if (interpretScope.Type is ScriptObject)
-                    return new ValueReference(new ScriptValue((ScriptObject)interpretScope.Type));
-                else if ((tempScope = interpretScope.GetParentScope(s => s.Type is ScriptObject)) != null)
-                    return new ValueReference(new ScriptValue((ScriptObject)tempScope.Type));
-                throw new SystemException("Unexpected keyword this");
+                ScriptObject _thisObject = FindThisFromScope(interpretScope);
+                if (_thisObject == null)
+                    throw new SystemException("Unexpected keyword this");
+                return new ValueReference(new ScriptValue(_thisObject));
             }
             else if (node.Name.Equals("super"))
             {
-                ScriptClass currentClass = null;
-                ScriptScope _scope = interpretScope;
-                while (_scope != null)
-                {
-                    if (_scope.Type is ScriptClass)
-                    {
-                        currentClass = (ScriptClass)_scope.Type;
-                        break;
-                    }
-
-                    if (_scope.Type is ScriptFn)
-                    {
-                        _scope = ((ScriptFn)_scope.Type).Scope;
-                    }
-                    else if (_scope.Type is ScriptObject)
-                    {
-                        currentClass = ((ScriptObject)_scope.Type).ClassType;
-                        break;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                if (currentClass == null)
-                    throw new SystemException("Unexpected keyword super");
-
-                return new ValueReference(new ScriptValue(currentClass.SuperClass));
+                ScriptClass _superClass = FindSuperClassFromScope(interpretScope);
+                if (_superClass == null)
+                    throw new SystemException("Unexpected keyword suprr");
+                return new ValueReference(new ScriptValue(_superClass));
             }
 
             // Checking if the variable is defined in any scope above the current one
@@ -1329,6 +1303,51 @@ namespace HanabiLang.Interprets
             }
             throw new SystemException("Unexcepted interpret statement: " + node.NodeName);
         }
+
+        private static ScriptObject FindThisFromScope(ScriptScope interpretScope)
+        {
+            ScriptScope tempScope;
+            if (interpretScope.Type is ScriptObject)
+                return (ScriptObject)interpretScope.Type;
+            else if ((tempScope = interpretScope.GetParentScope(s => s.Type is ScriptObject)) != null)
+                return (ScriptObject)tempScope.Type;
+
+            return null;
+        }
+
+        private static ScriptClass FindSuperClassFromScope(ScriptScope interpretScope)
+        {
+            ScriptClass currentClass = null;
+            ScriptScope _scope = interpretScope;
+            while (_scope != null)
+            {
+                if (_scope.Type is ScriptClass)
+                {
+                    currentClass = (ScriptClass)_scope.Type;
+                    break;
+                }
+
+                if (_scope.Type is ScriptFn)
+                {
+                    _scope = ((ScriptFn)_scope.Type).Scope;
+                }
+                else if (_scope.Type is ScriptObject)
+                {
+                    currentClass = ((ScriptObject)_scope.Type).ClassType;
+                    break;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (currentClass != null)
+                return currentClass.SuperClass;
+
+            return null;
+        }
+
         public static ValueReference InterpretExpression(ScriptScope interpretScope, AstNode node)
         {
             if (node is ExpressionNode)
@@ -1344,56 +1363,26 @@ namespace HanabiLang.Interprets
                         specialAccess = rawRef;
                 }
 
-                ScriptValue left;
+                ScriptValue left = null;
                 if (specialAccess.Length <= 0)
                 {
                     left = InterpretExpression(interpretScope, realNode.Left).Ref;
                 }
-                else if (specialAccess.Equals("this"))
+                else if (specialAccess.Equals("this") || specialAccess.Equals("super"))
                 {
-                    ScriptScope tempScope;
-                    if (interpretScope.Type is ScriptObject)
-                        left = new ScriptValue((ScriptObject)interpretScope.Type);
-                    else if ((tempScope = interpretScope.GetParentScope(s => s.Type is ScriptObject)) != null)
-                        left = new ScriptValue((ScriptObject)tempScope.Type);
+                    ScriptObject _thisObject = FindThisFromScope(interpretScope);
+                    if (_thisObject == null && specialAccess.Equals("super"))
+                        left = new ScriptValue(FindSuperClassFromScope(interpretScope));
                     else
-                        throw new SystemException("Cannot use this out of object");
-                }
-                else if (specialAccess.Equals("super"))
-                {
-                    ScriptClass currentClass = null;
-                    ScriptScope _scope = interpretScope;
-                    while (_scope != null)
-                    {
-                        if (_scope.Type is ScriptClass)
-                        {
-                            currentClass = (ScriptClass)_scope.Type;
-                            break;
-                        }
-
-                        if (_scope.Type is ScriptFn)
-                        {
-                            _scope = ((ScriptFn)_scope.Type).Scope;
-                        }
-                        else if (_scope.Type is ScriptObject)
-                        {
-                            currentClass = ((ScriptObject)_scope.Type).ClassType;
-                            break;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                    if (currentClass == null)
-                        throw new SystemException("Cannot call super out of function");
-
-                    left = new ScriptValue(currentClass.SuperClass);
+                        left = new ScriptValue(_thisObject);
                 }
                 else
                 {
                     throw new SystemException($"Unexpected {specialAccess}");
                 }
+
+                if (left == null)
+                    throw new SystemException($"Cannot use {specialAccess} out of object");
 
                 if (_operater == ".")
                 {
@@ -1403,7 +1392,12 @@ namespace HanabiLang.Interprets
                     if (specialAccess.Equals("this"))
                         leftScope = ((ScriptObject)left.Value).Scope;
                     else if (specialAccess.Equals("super"))
-                        leftScope = ((ScriptClass)left.Value).Scope;
+                    {
+                        if (left.IsClass)
+                            leftScope = ((ScriptClass)left.Value).Scope;
+                        else
+                            leftScope = FindSuperClassFromScope(interpretScope).Scope;
+                    }
                     else if (left.Value is ScriptObject)
                         leftScope = ((ScriptObject)left.Value).Scope;
                     else if (left.Value is ScriptClass)
