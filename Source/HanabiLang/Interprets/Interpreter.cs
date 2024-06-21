@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
 using HanabiLang.Parses;
 using HanabiLang.Lexers;
 using HanabiLang.Interprets.ScriptTypes;
@@ -11,6 +10,7 @@ using HanabiLang.Interprets.Exceptions;
 using HanabiLang.Parses.Nodes;
 using System.Threading;
 using System.Xml.Linq;
+using System.Reflection;
 
 namespace HanabiLang.Interprets
 {
@@ -106,20 +106,98 @@ namespace HanabiLang.Interprets
             return result.ToString();
         }
 
+        /// <returns>Type/Assembly/null</returns>
+        private static object LoadTypeWithAssebly(bool isFromAssemblyName, string text)
+        {
+            //bool isFromAssemblyName = !System.IO.Path.IsPathRooted(text);
+            string directory = System.IO.Path.GetDirectoryName(isFromAssemblyName ? typeof(System.Random).Assembly.Location : text);
+            string typeName = isFromAssemblyName ? text : System.IO.Path.GetFileNameWithoutExtension(text);
+
+            string[] dlls = System.IO.Directory.GetFiles(directory, "*.dll", System.IO.SearchOption.TopDirectoryOnly);
+            string[] splitedTypeName = typeName.Split('.');
+            for (int i = 0; i < splitedTypeName.Length; i++)
+            {
+                string tempDllName = System.IO.Path.Combine(directory, string.Join(".", splitedTypeName.Take(splitedTypeName.Length - i)) + ".dll");
+                int index = Array.FindIndex(dlls, f => f.EndsWith(tempDllName));
+                if (index >= 0)
+                {
+                    try
+                    {
+                        Assembly assembly = Assembly.LoadFrom(dlls[index]);
+                        string[] splitedManifestModuleName = assembly.ManifestModule.Name.Split('.');
+                        string assemblyName = string.Join(".", splitedManifestModuleName.Take(splitedManifestModuleName.Length - 1));
+                        if (assemblyName.Equals(typeName))
+                        {
+                            return assembly;
+                        }
+                        else
+                        {
+                            return assembly.GetType(typeName);
+                        }
+                    }
+                    catch { }
+                }
+            }
+            return null;
+        }
+
         public static void ImportFile(ScriptScope interpretScope, AstNode node)
         {
             var realNode = (ImportNode)node;
-            Type csharpType = Type.GetType(realNode.Path);
-            if (csharpType != null)
-            {
-                string className = string.IsNullOrEmpty(realNode.AsName) ? csharpType.Name : realNode.AsName;
 
-                if (!ImportedItems.Types.TryGetValue(csharpType, out ScriptClass scriptClass))
+            List<string> fullPaths = new List<string>();
+            if (!string.IsNullOrEmpty(interpretScope?.ParentInterpreter?.Path))
+                fullPaths.Add(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(interpretScope.ParentInterpreter.Path), realNode.Path));
+            fullPaths.Add(realNode.Path);
+            fullPaths = fullPaths.Select(x => System.IO.Path.GetFullPath(x).Replace("\\", "/")).ToList();
+
+            int fullPathIndex = fullPaths.FindIndex(x => System.IO.File.Exists(x));
+
+            object loadReferenceResult = fullPathIndex >= 0 ? LoadTypeWithAssebly(false, fullPaths[fullPathIndex]) : Type.GetType(realNode.Path) ?? LoadTypeWithAssebly(true, realNode.Path);
+            ScriptClass scriptClass = null;
+            if (loadReferenceResult != null)
+            {
+                if (loadReferenceResult is Type)
                 {
-                    scriptClass = BuildInClasses.CSharpClassToScriptClass(csharpType, className);
+                    Type csType = (Type)loadReferenceResult;
+
+                    if (!ImportedItems.Types.TryGetValue(csType, out scriptClass))
+                    {
+                        scriptClass = BuildInClasses.CSharpClassToScriptClass(csType, csType.Name);
+                        ImportedItems.Types[csType] = scriptClass;
+                    }
+                }
+                else if (loadReferenceResult is Assembly)
+                {
+                    Assembly csAssembly = (Assembly)loadReferenceResult;
+                    string[] splitedManifestModuleName = csAssembly.ManifestModule.Name.Split('.');
+
+                    if (!ImportedItems.Assemblies.TryGetValue(csAssembly, out scriptClass))
+                    {
+                        scriptClass = new ScriptClass(splitedManifestModuleName[splitedManifestModuleName.Length - 2], null, null, null, true, AccessibilityLevel.Public);
+                        Type[] csTypes = csAssembly.DefinedTypes.Where(t => t.Attributes.HasFlag(TypeAttributes.Public)).ToArray();
+                        foreach (Type csType in csTypes)
+                        {
+                            try
+                            {
+                                if (!ImportedItems.Types.TryGetValue(csType, out ScriptClass subScriptClass))
+                                {
+                                    subScriptClass = BuildInClasses.CSharpClassToScriptClass(csType, csType.Name);
+                                    ImportedItems.Types[csType] = subScriptClass;
+                                }
+                                scriptClass.Scope.Classes[subScriptClass.Name] = subScriptClass;
+                            }
+                            catch { continue; }
+                        }
+                        ImportedItems.Assemblies[csAssembly] = scriptClass;
+                    }
                 }
 
+                if (scriptClass == null)
+                    throw new SystemException($"Fail to load {realNode.Path}");
+
                 ScriptScope scriptScope = scriptClass.Scope;
+                string className = string.IsNullOrEmpty(realNode.AsName) ? scriptClass.Name : realNode.AsName;
 
                 // Import as variable
                 if (realNode.Imports == null)
@@ -182,19 +260,13 @@ namespace HanabiLang.Interprets
                 return;
             }
 
-            List<string> fullPaths = new List<string>();
-            if (!string.IsNullOrEmpty(interpretScope?.ParentInterpreter?.Path))
-                fullPaths.Add(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(interpretScope.ParentInterpreter.Path), realNode.Path));
-            fullPaths.Add(realNode.Path);
-            fullPaths = fullPaths.Select(x => System.IO.Path.GetFullPath(x).Replace("\\", "/")).ToList();
-
-            int fullPathIndex = fullPaths.FindIndex(x => System.IO.File.Exists(x));
             if (fullPathIndex < 0)
                 throw new SystemException($"File {realNode.Path} not found");
 
             string fullPath = fullPaths[fullPathIndex];
             string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
-            string extension = System.IO.Path.GetExtension(fullPath).ToLower();
+            string extension = System.IO.Path.GetExtension(realNode.Path).ToLower();
+
             DateTime lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(fullPath);
             if (extension.Equals(".json"))
             {
@@ -319,7 +391,9 @@ namespace HanabiLang.Interprets
             {
                 if (scriptType is ScriptFns)
                 {
-                    return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)left.Value)));
+                    if (left.Value is ScriptObject)
+                        return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)left.Value)));
+                    return new ValueReference(new ScriptValue((ScriptFns)scriptType));
                 }
                 else if (scriptType is ScriptClass)
                     return new ValueReference(new ScriptValue((ScriptClass)scriptType));

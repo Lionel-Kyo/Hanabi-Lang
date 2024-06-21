@@ -512,6 +512,8 @@ namespace HanabiLang.Interprets
                 };
 
                 AccessibilityLevel level = field.IsPublic ? AccessibilityLevel.Public : AccessibilityLevel.Private;
+                if (level != AccessibilityLevel.Public)
+                    continue;
                 var getFns = new ScriptFns(field.Name);
                 getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, field.IsStatic, level));
 
@@ -621,6 +623,8 @@ namespace HanabiLang.Interprets
                     isSetFnStatic = property.SetMethod.IsStatic;
 
                 AccessibilityLevel overAllLevel = (int)getLevel < (int)setLevel ? getLevel : setLevel;
+                if (overAllLevel != AccessibilityLevel.Public)
+                    continue;
 
                 bool overAllIsStatic = true;
 
@@ -629,7 +633,7 @@ namespace HanabiLang.Interprets
                 else if (property.CanRead)
                     overAllIsStatic = property.GetMethod.IsStatic;
                 else if (property.CanWrite)
-                    overAllIsStatic = property.GetMethod.IsStatic;
+                    overAllIsStatic = property.SetMethod.IsStatic;
 
                 setFns = new ScriptFns(property.Name);
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>()

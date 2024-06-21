@@ -354,6 +354,23 @@ const result2 = b().A();
             CheckEquals(values["result2"], new ScriptValue("Super1 Middle1"));
         }
 
+        public static void ClassTest6()
+        {
+            string sourceCode = @"
+class Test1 { 
+    static fn A() {
+        return ""A"";
+    }
+}
+
+const a = Test1.A;
+const result1 = a();
+";
+
+            var values = Interpret(sourceCode, out var interpreter, "result1");
+            CheckEquals(values["result1"], new ScriptValue("A"));
+        }
+
         public static void ForloopTest()
         {
             string sourceCode = @"
