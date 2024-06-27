@@ -1,5 +1,12 @@
 Source/.vs/HanabiLang/v16/*
+Source/.vs/HanabiLang/v17/*
 Source/.vs/*
 
 Source/HanabiLang/bin/*
 Source/HanabiLang/obj/*
+
+Source/HanabiLangLib/bin/*
+Source/HanabiLangLib/obj/*
+
+Source/HanabiLangTest/bin/*
+Source/HanabiLangTest/obj/*
