@@ -24,5 +24,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptRange Range = new ScriptRange();
         public static readonly ScriptEnumerator Enumerator = new ScriptEnumerator();
         public static readonly ScriptException Exception = new ScriptException();
+        public static readonly ScriptJson Json = new ScriptJson();
     }
 }

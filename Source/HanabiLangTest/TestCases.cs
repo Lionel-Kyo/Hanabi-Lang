@@ -443,6 +443,40 @@ Test(12, d:34, b:56, c:78)
             CheckEquals(values["result3"], new ScriptValue(56));
             CheckEquals(values["result4"], new ScriptValue(12));
         }
+
+        public static void JsonTest()
+        {
+            string sourceCode = @"
+class Test {
+    public var t1 { get; set; }
+    public var t2: decimal { get; set; }
+    public var t3 { get; set; }
+}
+
+class A {
+    public var a { get; set; }
+    public var b { get; set; }
+    public var c { get; set; }
+    public var d: Test { get; set; }
+}
+
+var a = A();
+a.a = ""Hello"";
+a.b = 658654383;
+
+var result1 = Json.Serialize(a);
+
+var j2 = ""{ \""a\"": \""Hello world\"", \""b\"": 3.14, \""c\"": 12345,  \""d\"": { \""t1\"": \""Test1\"", \""t2\"": 12345, \""t3\"": 3.14 } }""
+
+var b = Json.Deserialize(j2, Type(A));
+var result2 = Json.Serialize(b.d);
+var result3 = Json.Serialize(b);
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2", "result3");
+            CheckEquals(values["result1"], new ScriptValue("{ \"a\": \"Hello\", \"b\": 658654383, \"c\": null, \"d\": null }"));
+            CheckEquals(values["result2"], new ScriptValue("{ \"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14 }"));
+            CheckEquals(values["result3"], new ScriptValue("{ \"a\": \"Hello world\", \"b\": 3.14, \"c\": 12345, \"d\": { \"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14 } }"));
+        }
     }
 }
 

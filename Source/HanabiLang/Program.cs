@@ -26,7 +26,7 @@ void ExecuteFile(string[] args)
     //Console.WriteLine(string.Join("\n", tokens));
     var parser = new Parser(tokens);
     var ast = parser.Parse();
-    Console.WriteLine(string.Join("\n", ast.Nodes));
+    //Console.WriteLine(string.Join("\n", ast.Nodes));
 
     path = Path.GetFullPath(path).Replace("\\", "/");
     DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);

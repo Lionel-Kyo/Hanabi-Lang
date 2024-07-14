@@ -162,6 +162,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             this(name, null, null, null, isStatic, level, false)
         { }
 
+        public bool TryGetValue(string name, out ScriptType value)
+        {
+            return this.Scope.TryGetValue(name, out value);
+        }
+
         protected void AddObjectFn(string name, List<FnParameter> parameters, BuildInFns.ScriptFnType fn,
             bool isStatic = false, AccessibilityLevel level = AccessibilityLevel.Public)
         {

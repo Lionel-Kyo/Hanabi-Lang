@@ -46,6 +46,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
                 this.CurrentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
                 this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
+                this.CurrentScope.Classes.Add("Json", BasicTypes.Json);
                 BuildInFns.AddBasicFunctions(this.CurrentScope);
             }
             else
@@ -270,30 +271,18 @@ namespace HanabiLang.Interprets
             DateTime lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(fullPath);
             if (extension.Equals(".json"))
             {
-                Interpreter newInterpreter = null;
-                if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
-                {
-                    List<string> lines = new List<string>();
-                    lines.Add("const jsonData = ");
-                    lines.AddRange(System.IO.File.ReadAllLines(fullPath));
-                    var tokens = Lexer.Tokenize(lines);
-                    var parser = new Parser(tokens);
-                    var ast = parser.Parse();
-                    //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true, false);
-                    ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
-                }
-                else
-                {
-                    newInterpreter = scriptInfo.Item2;
-                }
+                var tokens = Lexer.Tokenize(System.IO.File.ReadAllLines(fullPath));
+                var parser = new Parser(tokens);
+                var ast = parser.Parse();
+                if (ast.Nodes.Count != 1)
+                    throw new SystemException("Incorrect format of json");
 
-                var jsonData = newInterpreter.CurrentScope.Variables["jsonData"].Value;
+                var jsonValue = InterpretJson(ast.Nodes.First());
+
                 if (string.IsNullOrEmpty(realNode.AsName))
-                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, null, jsonData, true, true, AccessibilityLevel.Public);
+                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
                 else
-                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, null, jsonData, true, true, AccessibilityLevel.Public);
+                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
             }
             else
             {
@@ -403,54 +392,7 @@ namespace HanabiLang.Interprets
                     if ((int)accessLevel < (int)variable.Level)
                         throw new SystemException($"Cannot access {variable.Level} {variable.Name}");
 
-                    if (variable.Value == null)
-                    {
-                        ScriptObject _this = isStaticAccess ? null : (ScriptObject)left.Value;
-                        return new ValueReference(
-                            () =>
-                            {
-                                if (variable.Get == null)
-                                    throw new SystemException($"{variable.Name} cannot be read");
-                                var fnInfo = variable.Get.FindCallableInfo();
-                                if ((int)accessLevel < (int)fnInfo.Item1.Level)
-                                    throw new SystemException($"{variable.Name} cannot be read");
-                                return variable.Get.Call(_this, fnInfo);
-                            },
-                            x =>
-                            {
-                                if (variable.IsConstant || variable.Set == null)
-                                    throw new SystemException($"{variable.Name} cannot be written");
-
-                                if (variable.DataTypes != null)
-                                {
-                                    if (!x.IsObject)
-                                        throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                                    if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
-                                        throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                                }
-
-                                var fnInfo = variable.Set.FindCallableInfo(x);
-                                if ((int)accessLevel < (int)fnInfo.Item1.Level)
-                                    throw new SystemException($"{variable.Name} cannot be written");
-                                variable.Set.Call(_this, fnInfo);
-                            }
-                        );
-                    }
-                    return new ValueReference(() => variable.Value, x =>
-                    {
-                        if (variable.IsConstant)
-                            throw new SystemException($"const {variable.Name} cannot be written");
-
-                        if (variable.DataTypes != null)
-                        {
-                            if (!x.IsObject)
-                                throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                            if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
-                                throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                        }
-
-                        variable.Value = x;
-                    });
+                    return variable.GetValueReference(isStaticAccess ? null : (ScriptObject)left.Value, accessLevel);
                 }
                 else
                     throw new SystemException($"Unexcepted reference to variable");
@@ -486,46 +428,7 @@ namespace HanabiLang.Interprets
                     if (scriptType is ScriptVariable)
                     {
                         var variable = (ScriptVariable)scriptType;
-                        if (variable.Value == null)
-                        {
-                            return new ValueReference(
-                                () =>
-                                {
-                                    if (variable.Get == null)
-                                        throw new SystemException($"{node.Name} cannot be read");
-                                    return variable.Get.Call(null);
-                                },
-                                x =>
-                                {
-                                    if (variable.IsConstant || variable.Set == null)
-                                        throw new SystemException($"{variable.Name} cannot be written");
-
-                                    if (variable.DataTypes != null)
-                                    {
-                                        if (!x.IsObject)
-                                            throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                                        if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
-                                            throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                                    }
-
-                                    variable.Set.Call(null, x);
-                                });
-                        }
-                        return new ValueReference(() => variable.Value, x =>
-                        {
-                            if (variable.IsConstant)
-                                throw new SystemException($"const {variable.Name} cannot be written");
-
-                            if (variable.DataTypes != null)
-                            {
-                                if (!x.IsObject)
-                                    throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                                if (!variable.DataTypes.Contains(x.TryObject?.ClassType))
-                                    throw new SystemException($"{variable.Name} cannot be written by value: {x}, due to wrong data type");
-                            }
-
-                            variable.Value = x;
-                        });
+                        return variable.GetValueReference(null, AccessibilityLevel.Public);
                     }
                     else if (scriptType is ScriptObject)
                     {
@@ -1420,6 +1323,79 @@ namespace HanabiLang.Interprets
                 return currentClass.SuperClass;
 
             return null;
+        }
+
+        public static ValueReference InterpretJson(AstNode node)
+        {
+            if (node is IntNode)
+            {
+                var realNode = (IntNode)node;
+                return new ValueReference(new ScriptValue(realNode.Value));
+            }
+            else if (node is FloatNode)
+            {
+                var realNode = (FloatNode)node;
+                return new ValueReference(new ScriptValue(realNode.Value));
+            }
+            else if (node is StringNode)
+            {
+                var realNode = (StringNode)node;
+                return new ValueReference(new ScriptValue(realNode.Value));
+            }
+            else if (node is UnaryNode)
+            {
+                var realNode = (UnaryNode)node;
+                ScriptValue value = InterpretJson(realNode.Node).Ref;
+
+                if (realNode.Operator == "+")
+                    return new ValueReference(+value);
+                else if (realNode.Operator == "-")
+                    return new ValueReference(-value);
+                else
+                    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
+            }
+            else if (node is ListNode)
+            {
+                var realNode = (ListNode)node;
+
+                List<ScriptValue> values = new List<ScriptValue>();
+
+                foreach (var value in realNode.Elements)
+                {
+                    ScriptValue scriptValue = InterpretJson(value).Ref;
+                    if (scriptValue.Value is SingleUnzipList)
+                        values.AddRange(((SingleUnzipList)scriptValue.Value).Value);
+                    else
+                        values.Add(scriptValue);
+                }
+
+                return new ValueReference(new ScriptValue(values));
+            }
+            else if (node is DictNode)
+            {
+                var realNode = (DictNode)node;
+
+                var keyValues = new Dictionary<ScriptValue, ScriptValue>();
+
+                foreach (var keyValue in realNode.KeyValues)
+                {
+                    var key = InterpretJson(keyValue.Item1).Ref;
+                    var value = InterpretJson(keyValue.Item2).Ref;
+                    keyValues[key] = value;
+                }
+
+                return new ValueReference(new ScriptValue(keyValues));
+            }
+            else if (node is NullNode)
+            {
+                return new ValueReference(ScriptValue.Null);
+            }
+            else if (node is BooleanNode)
+            {
+                var realNode = (BooleanNode)node;
+                return new ValueReference(new ScriptValue(realNode.Value));
+            }
+            throw new SystemException($"Unexpected Node: {node.NodeName}");
         }
 
         public static ValueReference InterpretExpression(ScriptScope interpretScope, AstNode node)

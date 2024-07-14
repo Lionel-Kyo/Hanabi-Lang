@@ -95,6 +95,9 @@ namespace HanabiLang.Interprets
             if (csType == typeof(ScriptValue))
                 return value;
 
+            if (!(value.Value is ScriptObject))
+                return value.Value;
+
             var obj = (ScriptObject)value.Value;
 
             if (obj.ClassType is ScriptNull)
@@ -410,6 +413,8 @@ namespace HanabiLang.Interprets
 
             try
             {
+                if (type.Assembly.Equals(Assembly.GetExecutingAssembly()))
+                    return null;
                 return CSharpClassToScriptClass(type);
             }
             catch
@@ -758,7 +763,7 @@ namespace HanabiLang.Interprets
             {
                 string name = parameter.Name;
                 Type type = parameter.ParameterType;
-                object defaultValue = parameter.DefaultValue;
+                ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 IEnumerable<ScriptClass> acceptableTypes;
@@ -771,7 +776,7 @@ namespace HanabiLang.Interprets
                         dataTypes.Add(t);
                     }
                 }
-                scriptParameters.Add(new FnParameter(name, dataTypes));
+                scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
             }
 
             BuildInFns.ScriptFnType fn = args =>

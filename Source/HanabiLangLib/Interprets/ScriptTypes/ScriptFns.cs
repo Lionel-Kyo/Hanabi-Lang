@@ -253,7 +253,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     }
                     else
                     {
-                        if (_param.Value.DataTypes != null && !_param.Value.DataTypes.Contains(((ScriptObject)args[argCount].Value).ClassType))
+                        if (_param.Value.DataTypes != null && !_param.Value.DataTypes.Contains((args[argCount].TryObject)?.ClassType))
                         {
                             isMatchFn = false;
                             break;

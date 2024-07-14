@@ -25,6 +25,11 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         private ScriptObject() { }
 
+        public bool TryGetValue(string name, out ScriptType value)
+        {
+            return this.Scope.TryGetValue(name, out value);
+        }
+
         public override string ToString()
         {
             if (this.Scope.Parent.Functions.TryGetValue("ToStr", out ScriptFns fns))

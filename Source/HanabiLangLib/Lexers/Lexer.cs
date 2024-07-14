@@ -307,7 +307,7 @@ namespace HanabiLang.Lexers
                             index++;
                             break;
                         case '\"':
-                            text.Append('\'');
+                            text.Append('\"');
                             index++;
                             break;
                         case '\\':
@@ -416,7 +416,7 @@ namespace HanabiLang.Lexers
                             index++;
                             break;
                         case '\"':
-                            result.Append('\'');
+                            result.Append('\"');
                             index++;
                             break;
                         case '\\':
