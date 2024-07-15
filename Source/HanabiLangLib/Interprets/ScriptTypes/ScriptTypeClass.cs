@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     {
         public ScriptTypeClass() : base("Type", false)
         {
-            this.AddObjectFn(this.Name, new List<FnParameter>()
+            this.AddFunction(this.Name, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>
@@ -32,7 +32,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            this.AddObjectFn("IsSuperOf", new List<FnParameter>()
+            this.AddFunction("IsSuperOf", new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>

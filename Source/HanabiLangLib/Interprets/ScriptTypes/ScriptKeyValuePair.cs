@@ -23,7 +23,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ((KeyValuePair<ScriptValue, ScriptValue>)_this.BuildInObject).Value;
             }, null, false, null);
 
-            this.AddObjectFn("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
+            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 long index = (long)args[1].TryObject.BuildInObject;

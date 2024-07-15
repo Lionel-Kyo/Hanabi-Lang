@@ -14,7 +14,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptRange() :
             base("Range", isStatic: false)
         {
-            this.AddObjectFn(this.Name, new List<FnParameter>()
+            this.AddFunction(this.Name, new List<FnParameter>()
             {
                 new FnParameter("end", BasicTypes.Int, null),
             }, args =>
@@ -32,7 +32,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            this.AddObjectFn(this.Name, new List<FnParameter>()
+            this.AddFunction(this.Name, new List<FnParameter>()
             {
                 new FnParameter("start", BasicTypes.Int, null),
                 new FnParameter("end", BasicTypes.Int, null)
@@ -54,7 +54,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            this.AddObjectFn(this.Name, new List<FnParameter>()
+            this.AddFunction(this.Name, new List<FnParameter>()
             {
                 new FnParameter("start", BasicTypes.Int, null),
                 new FnParameter("end", BasicTypes.Int, null),
@@ -75,7 +75,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            this.AddObjectFn("GetEnumerator", new List<FnParameter>(), args =>
+            this.AddFunction("GetEnumerator", new List<FnParameter>(), args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 var result = BasicTypes.Enumerator.Create();

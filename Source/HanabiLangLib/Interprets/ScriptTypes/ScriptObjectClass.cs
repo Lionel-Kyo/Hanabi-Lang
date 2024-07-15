@@ -11,7 +11,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptObjectClass():
             base("object", isStatic: false)
         {
-            AddObjectFn("ToStr", new List<FnParameter>(),
+            AddFunction("ToStr", new List<FnParameter>(),
                 args =>
                 {
                     ScriptObject _this = (ScriptObject)args[0].Value;

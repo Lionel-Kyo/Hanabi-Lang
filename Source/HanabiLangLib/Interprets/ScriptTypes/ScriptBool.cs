@@ -13,7 +13,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptBool() : 
             base("bool", isStatic: false)
         {
-            this.AddObjectFn(this.Name, new List<FnParameter>()
+            this.AddFunction(this.Name, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>

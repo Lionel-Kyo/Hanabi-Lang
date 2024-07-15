@@ -12,8 +12,11 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptClass : ScriptType
     {
         public string Name { get; private set; }
-        // With non static variable definition node only
-        internal List<AstNode> Body { get; private set; }
+
+        /// <summary>
+        /// With non static VariableDefinitionNode / ScriptVariable only
+        /// </summary>
+        internal List<object> Body { get; private set; }
         internal ScriptScope Scope { get; private set; }
         public List<ScriptClass> SuperClasses { get; protected set; }
         public ScriptClass SuperClass { get; protected set; }
@@ -41,7 +44,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 this.SuperClass = new ScriptClass($"super_{name}", true);
                 this.SuperClass.Level = AccessibilityLevel.Private;
-                this.SuperClass.Body = new List<AstNode>();
+                this.SuperClass.Body = new List<object>();
 
                 foreach (var _class in this.SuperClasses)
                 { 
@@ -61,7 +64,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (body != null && !isImported)
             {
-                this.Body = new List<AstNode>();
+                this.Body = new List<object>();
                 foreach (var bodyNode in body)
                 {
                     if (bodyNode is FnDefineNode || bodyNode is ClassDefineNode)
@@ -115,14 +118,14 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (from.Body != null)
             {
-                foreach (VariableDefinitionNode variableDefine in from.Body)
+                Func<object, string> getBodyName = x => (x is VariableDefinitionNode ? ((VariableDefinitionNode)x).Name : ((ScriptVariable)x).Name);
+                foreach (object instanceVariable in from.Body)
                 {
-                    int varNameIndex = to.Body.FindIndex
-                        (x => ((VariableDefinitionNode)x).Name.Equals(variableDefine.Name));
+                    int varNameIndex = to.Body.FindIndex(x => getBodyName(x).Equals(getBodyName(instanceVariable)));
                     if (varNameIndex == -1)
-                        to.Body.Add(variableDefine);
+                        to.Body.Add(instanceVariable);
                     else if (replaceMember)
-                        to.Body[varNameIndex] = variableDefine;
+                        to.Body[varNameIndex] = instanceVariable;
                 }
             }
         }
@@ -164,10 +167,12 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public bool TryGetValue(string name, out ScriptType value)
         {
-            return this.Scope.TryGetValue(name, out value);
+            if (this.Scope.TryGetValue(name, out value))
+                return true;
+            return false;
         }
 
-        protected void AddObjectFn(string name, List<FnParameter> parameters, BuildInFns.ScriptFnType fn,
+        protected void AddFunction(string name, List<FnParameter> parameters, BasicFns.ScriptFnType fn,
             bool isStatic = false, AccessibilityLevel level = AccessibilityLevel.Public)
         {
             if (!this.Scope.Functions.TryGetValue(name, out ScriptFns scriptFns))
@@ -178,7 +183,24 @@ namespace HanabiLang.Interprets.ScriptTypes
             scriptFns.Fns.Add(new ScriptFn(parameters, this.Scope, fn, isStatic, level));
         }
 
-        protected void AddVariable(string name, BuildInFns.ScriptFnType getFn, BuildInFns.ScriptFnType setFn, bool isStatic, ScriptClass dataType)
+        protected void AddVariable(string name, bool isStatic, HashSet<ScriptClass> dataTypes)
+        {
+            var variable = new ScriptVariable(name, null, new ScriptValue(), false, isStatic, AccessibilityLevel.Public);
+
+            if (isStatic)
+            {
+                this.Scope.Variables.Add(name, variable);
+            }
+            else
+            {
+                if (this.Body == null)
+                    this.Body = new List<object> { variable };
+                else
+                    this.Body.Add(variable);
+            }
+        }
+
+        protected void AddVariable(string name, BasicFns.ScriptFnType getFn, BasicFns.ScriptFnType setFn, bool isStatic, HashSet<ScriptClass> dataTypes)
         {
             ScriptFns getFns = null;
             ScriptFns setFns = null;
@@ -192,10 +214,22 @@ namespace HanabiLang.Interprets.ScriptTypes
             if (setFn != null)
             {
                 setFns = new ScriptFns($"set_{name}");
-                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value", dataType) }, null, getFn, isStatic, AccessibilityLevel.Public));
+                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value", dataTypes) }, null, setFn, isStatic, AccessibilityLevel.Public));
             }
 
-            this.Scope.Variables.Add(name, new ScriptVariable(name, null, getFns, setFns, false, isStatic, AccessibilityLevel.Public));
+            var variable = new ScriptVariable(name, null, getFns, setFns, false, isStatic, AccessibilityLevel.Public);
+
+            if (isStatic)
+            {
+                this.Scope.Variables.Add(name, variable);
+            }
+            else
+            {
+                if (this.Body == null)
+                    this.Body = new List<object>{ variable }; 
+                else
+                    this.Body.Add(variable); 
+            }
         }
 
         public virtual ScriptObject Not(ScriptObject left)
@@ -376,25 +410,6 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             ScriptObject _object = Create();
 
-
-            // Data Class
-            /*var index = 0;
-            foreach (var parameter in this.Constructor)
-            {
-                classScope.Variables[parameter] = new InterpretedVariable(parameter,
-                                                  interpreter.InterpretExpression(
-                                                          callNode.Args[index]).Ref, false);
-                index++;
-            }*/
-
-            if (this.Body != null)
-            { 
-                foreach (var bodyNode in this.Body)
-                {
-                    Interpreter.InterpretChild(_object.Scope, bodyNode, false);
-                }
-            }
-
             // A Function with same name as class is constructor
             ScriptFns currentConstructor;
             
@@ -403,7 +418,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 var fnInfo = currentConstructor.FindCallableInfo(currentScope, args, keyArgs);
                 currentConstructor.Call(_object, fnInfo);
             }
-
             return new ScriptValue(_object);
         }
 

@@ -47,7 +47,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
                 this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
                 this.CurrentScope.Classes.Add("Json", BasicTypes.Json);
-                BuildInFns.AddBasicFunctions(this.CurrentScope);
+                BasicFns.AddBasicFunctions(this.CurrentScope);
             }
             else
             {

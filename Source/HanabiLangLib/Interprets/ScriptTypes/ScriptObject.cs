@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using HanabiLang.Interprets.ScriptTypes;
+using HanabiLang.Parses.Nodes;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
@@ -18,16 +20,27 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             this.ClassType = objectClass;
             this.Scope = new ScriptScope(this, objectClass.Scope);
-            // this.Scope.Variables["this"] = new ScriptVariable("this", new ScriptValue(this), true, false, AccessibilityLevel.Private);
-            //this.Scope.Variables["super"] = new ScriptVariable("super", new ScriptValue(this.ClassType.SuperClass), true, false, AccessibilityLevel.Private);
             this.BuildInObject = buildInObject;
+
+            if (objectClass.Body != null)
+            {
+                foreach (object item in objectClass.Body)
+                {
+                    if (item is VariableDefinitionNode)
+                        Interpreter.InterpretChild(this.Scope, (VariableDefinitionNode)item, false);
+                    else if (item is ScriptVariable)
+                        this.Scope.Variables.Add(((ScriptVariable)item).Name, (ScriptVariable)item);
+                }
+            }
         }
 
         private ScriptObject() { }
 
         public bool TryGetValue(string name, out ScriptType value)
         {
-            return this.Scope.TryGetValue(name, out value);
+            if (this.Scope.TryGetValue(name, out value))
+                return true;
+            return false;
         }
 
         public override string ToString()

@@ -459,9 +459,17 @@ namespace HanabiLang.Interprets
 
             bool isStatic = type.IsAbstract && type.IsSealed;
 
-            var scriptClass = new ScriptClass(string.IsNullOrEmpty(rename) ? type.Name : rename, null, null, null, isStatic, AccessibilityLevel.Public);
+            ScriptClass scriptClass;
+            if (typeof(ScriptClass).IsAssignableFrom(type))
+            {
+                scriptClass = (ScriptClass)Activator.CreateInstance(type, new object[0]);
+            }
+            else
+            {
+                scriptClass = new ScriptClass(string.IsNullOrEmpty(rename) ? type.Name : rename, null, null, null, isStatic, AccessibilityLevel.Public);
+                BuildInClasses.CSharpClassToScriptClass(scriptClass, type);
+            }
             ImportedItems.Types[type] = scriptClass;
-            BuildInClasses.CSharpClassToScriptClass(scriptClass, type);
             return scriptClass;
         }
 
@@ -497,7 +505,7 @@ namespace HanabiLang.Interprets
 
             foreach (var field in fields)
             {
-                BuildInFns.ScriptFnType getFn = args =>
+                BasicFns.ScriptFnType getFn = args =>
                 {
                     object value = null;
                     if (field.IsStatic)
@@ -522,7 +530,7 @@ namespace HanabiLang.Interprets
                 var getFns = new ScriptFns(field.Name);
                 getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, field.IsStatic, level));
 
-                BuildInFns.ScriptFnType setFn = args =>
+                BasicFns.ScriptFnType setFn = args =>
                 {
                     if (field.IsStatic)
                     {
@@ -555,9 +563,9 @@ namespace HanabiLang.Interprets
 
             foreach (var property in properties)
             {
-                BuildInFns.ScriptFnType getFn = null;
+                BasicFns.ScriptFnType getFn = null;
                 ScriptFns getFns = null;
-                BuildInFns.ScriptFnType setFn = null;
+                BasicFns.ScriptFnType setFn = null;
                 ScriptFns setFns = null;
 
                 if (property.CanRead)
@@ -683,9 +691,9 @@ namespace HanabiLang.Interprets
             }
         }
 
-        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method) => ToScriptFn(method, null);
+        public static Tuple<List<FnParameter>, BasicFns.ScriptFnType> ToScriptFn(MethodInfo method) => ToScriptFn(method, null);
 
-        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptFn(MethodInfo method, object createdObject)
+        public static Tuple<List<FnParameter>, BasicFns.ScriptFnType> ToScriptFn(MethodInfo method, object createdObject)
         {
             var returnType = method.ReturnType;
             var isStatic = method.IsStatic;
@@ -711,7 +719,7 @@ namespace HanabiLang.Interprets
                 scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
             }
 
-            BuildInFns.ScriptFnType fn = args =>
+            BasicFns.ScriptFnType fn = args =>
             {
                 if (isStatic || createdObject != null)
                 {
@@ -754,7 +762,7 @@ namespace HanabiLang.Interprets
             return Tuple.Create(scriptParameters, fn);
         }
 
-        public static Tuple<List<FnParameter>, BuildInFns.ScriptFnType> ToScriptConstructor(ScriptClass scriptClass, ConstructorInfo constructor)
+        public static Tuple<List<FnParameter>, BasicFns.ScriptFnType> ToScriptConstructor(ScriptClass scriptClass, ConstructorInfo constructor)
         {
             var isStatic = constructor.IsStatic;
             var csParameters = new List<Type>();
@@ -779,7 +787,7 @@ namespace HanabiLang.Interprets
                 scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
             }
 
-            BuildInFns.ScriptFnType fn = args =>
+            BasicFns.ScriptFnType fn = args =>
             {
                 object[] csObjects = new object[csParameters.Count];
 

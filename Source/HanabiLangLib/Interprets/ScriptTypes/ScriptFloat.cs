@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptFloat() :
             base("float", isStatic: false)
         {
-            this.AddObjectFn(this.Name, new List<FnParameter>()
+            this.AddFunction(this.Name, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>

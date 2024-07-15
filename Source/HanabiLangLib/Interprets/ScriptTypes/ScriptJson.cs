@@ -13,7 +13,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     {
         public ScriptJson() : base("Json", true)
         {
-            this.AddObjectFn("Deserialize", new List<FnParameter>()
+            this.AddFunction("Deserialize", new List<FnParameter>()
             {
                 new FnParameter("jsonText", BasicTypes.Str),
                 new FnParameter("objType", new HashSet<ScriptClass>{ BasicTypes.TypeClass, BasicTypes.Null }, new ScriptValue())
@@ -41,7 +41,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return jsonValue.Ref;
             });
 
-            this.AddObjectFn("Serialize", new List<FnParameter>()
+            this.AddFunction("Serialize", new List<FnParameter>()
             {
                 new FnParameter("obj")
             }, args =>
@@ -58,8 +58,12 @@ namespace HanabiLang.Interprets.ScriptTypes
             ScriptObject result = targetType.Call(null, new List<Parses.Nodes.AstNode>(), new Dictionary<string, Parses.Nodes.AstNode>()).TryObject;
             foreach (var kv in (Dictionary<ScriptValue, ScriptValue>)jsonDict.BuildInObject)
             {
-                if (result.Scope.Variables.TryGetValue(kv.Key.TryObject.ToString(), out ScriptVariable variable))
+                if (result.TryGetValue(kv.Key.TryObject.ToString(), out ScriptType member))
                 {
+                    if (!(member is ScriptVariable))
+                        continue;
+                    ScriptVariable variable = (ScriptVariable)member;
+
                     if (variable.IsStatic || variable.Level != AccessibilityLevel.Public || variable.Set == null)
                         continue;
 
@@ -136,14 +140,14 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
             else
             {
-                var kvs = obj.Scope.Variables.Where(x => !x.Value.IsStatic && x.Value.Level == AccessibilityLevel.Public && x.Value.Get != null).ToArray();
+                var variables = obj.Scope.Variables.Where(x => !x.Value.IsStatic && x.Value.Level == AccessibilityLevel.Public && x.Value.Get != null).ToArray();
 
-                if (kvs.Length <= 0)
+                if (variables.Length <= 0)
                     return isKey ? "\"{}\"" : "{}";
 
                 StringBuilder result = new StringBuilder();
                 result.Append("{ ");
-                foreach (var item in kvs)
+                foreach (var item in variables)
                 {
                     var varReference = item.Value.GetValueReference(obj, AccessibilityLevel.Public);
                     result.Append($"\"{item.Key}\": {ToJsonString(varReference.Ref.TryObject)}, ");

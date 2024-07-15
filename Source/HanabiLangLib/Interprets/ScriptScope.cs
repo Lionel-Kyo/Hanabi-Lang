@@ -7,16 +7,6 @@ using HanabiLang.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets
 {
-    public enum ScopeType
-    {
-        Normal,
-        Conditon,
-        Loop,
-        Function,
-        Class,
-        Object
-    }
-
     public class ScriptScope
     {
         public Dictionary<string, ScriptVariable> Variables { get; private set; }

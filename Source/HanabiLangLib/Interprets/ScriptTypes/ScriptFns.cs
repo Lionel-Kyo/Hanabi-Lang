@@ -66,14 +66,14 @@ namespace HanabiLang.Interprets.ScriptTypes
         /// The scope when the function is created 
         /// </summary>
         internal ScriptScope Scope { get; private set; }
-        public BuildInFns.ScriptFnType BuildInFn { get; private set; }
+        public BasicFns.ScriptFnType BuildInFn { get; private set; }
         public bool IsBuildIn => BuildInFn != null;
         public int MinArgs { get; private set; }
         public bool HasMultiArgs => Parameters.Count != 0 && Parameters[Parameters.Count - 1].IsMultiArgs;
         public bool IsStatic { get; private set; }
         public AccessibilityLevel Level { get; private set; }
 
-        private ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level)
+        private ScriptFn(List<FnParameter> parameters, List<AstNode> body, ScriptScope scope, BasicFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level)
         {
             this.Parameters = parameters;
             //this.ArgsMap = new Dictionary<string, int>();
@@ -86,7 +86,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.MinArgs = this.Parameters.Count(x => x.DefaultValue == null);
         }
 
-        internal ScriptFn(List<FnParameter> parameters, ScriptScope scope, BuildInFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
+        internal ScriptFn(List<FnParameter> parameters, ScriptScope scope, BasicFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
             this(parameters, null, scope, fn, isStatic, level)
         { }
 

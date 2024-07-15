@@ -9,7 +9,7 @@ using HanabiLang.Parses.Nodes;
 
 namespace HanabiLang.Interprets
 {
-    public class BuildInFns
+    public class BasicFns
     {
         public delegate ScriptValue ScriptFnType(List<ScriptValue> parameters);
         //public static Dictionary<string, ScriptFnType> Fns = new Dictionary<string, ScriptFnType>();
