@@ -724,7 +724,7 @@ namespace HanabiLang.Interprets
                 if (isPrintExpression)
                 {
                     if (result.Ref.IsClassTypeOf(BasicTypes.Str))
-                        Console.WriteLine($"\"{result.Ref}\"");
+                        Console.WriteLine(ScriptJson.StringToJsonString(result.Ref.ToString()));
                     else
                         Console.WriteLine(result.Ref);
                 }

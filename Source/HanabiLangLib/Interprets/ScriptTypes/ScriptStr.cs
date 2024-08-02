@@ -232,6 +232,26 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.BuildInObject = StrIterator((string)_this.BuildInObject);
                 return new ScriptValue(result);
             });
+
+            this.AddFunction("FromChar", new List<FnParameter>()
+            {
+                new FnParameter("character", BasicTypes.Int, null, false),
+            }, args =>
+            {
+                long character = (long)((ScriptObject)args[0].Value).BuildInObject;
+                return new ScriptValue(Convert.ToChar(character));
+            }, true);
+
+            this.AddFunction("ToChar", new List<FnParameter>()
+            {
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                string str = (string)((ScriptObject)args[0].Value).BuildInObject;
+                if (str.Length <= 0)
+                    throw new IndexOutOfRangeException("Empty string cannot convert to char");
+                return new ScriptValue((long)str[0]);
+            }, false);
         }
 
         public override ScriptObject Create() => new ScriptObject(this, "");

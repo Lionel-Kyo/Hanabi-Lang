@@ -103,7 +103,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             else if (obj.ClassType == BasicTypes.Bool)
                 return isKey ? $"\"{(((bool)obj.BuildInObject) ? "true" : "false")}\"" : ((bool)obj.BuildInObject) ? "true" : "false";
             else if (obj.ClassType == BasicTypes.Str)
-                return $"\"{obj.BuildInObject}\"";
+                return StringToJsonString((string)obj.BuildInObject);
             else if (obj.ClassType == BasicTypes.List)
             {
                 var list = (List<ScriptValue>)obj.BuildInObject;
@@ -156,6 +156,49 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.Append(" }");
                 return isKey ? $"\"{result}\"" : result.ToString();
             }
+        }
+
+        public static string StringToJsonString(string text)
+        {
+            StringBuilder result = new StringBuilder();
+            result.Append('\"');
+            foreach (char c in text)
+            {
+                switch (c)
+                {
+                    case '\'':
+                        result.Append("\\'");
+                        continue;
+                    case '\"':
+                        result.Append("\\\"");
+                        continue;
+                    case '\\':
+                        result.Append("\\\\");
+                        continue;
+                    case '\b':
+                        result.Append("\\b");
+                        continue;
+                    case '\f':
+                        result.Append("\\f");
+                        continue;
+                    case '\n':
+                        result.Append("\\n");
+                        continue;
+                    case '\r':
+                        result.Append("\\r");
+                        continue;
+                    case '\t':
+                        result.Append("\\t");
+                        continue;
+                }
+
+                if ((c >= ' ' && c <= '~') || c > '\u00A0') 
+                    result.Append(c);
+                else
+                    result.Append("\\u" + ((int)c).ToString("X4"));
+            }
+            result.Append('\"');
+            return result.ToString();
         }
     }
 }

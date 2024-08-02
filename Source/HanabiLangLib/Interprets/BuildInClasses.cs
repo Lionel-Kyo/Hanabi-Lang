@@ -452,8 +452,9 @@ namespace HanabiLang.Interprets
         public static ScriptClass CSharpClassToScriptClass(Type type, string rename = null)
         {
             bool isStruct = type.IsValueType && !type.IsEnum;
-            bool isEnum = type.IsValueType;
+            bool isEnum = type.IsValueType && type.IsEnum;
             bool isClass = type.IsClass;
+
             if (!isClass && !isStruct/* && !isEnum*/)
                 throw new SystemException("Only C# class/struct can be imported");
 
