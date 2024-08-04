@@ -23,13 +23,15 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptFns BuildInConstructor { get; private set; }
         public bool IsStatic { get; private set; }
         public AccessibilityLevel Level { get; private set; }
-        public bool IsBuildIn => this.Body == null;
+        public bool IsBuildIn { get; private set; }
 
         internal ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> superClasses,
             bool isStatic, AccessibilityLevel level, bool isImported = false)
         {
             this.Name = name;
             this.IsStatic = isStatic;
+            this.IsBuildIn = body == null;
+
             if (isImported)
                 this.Scope = currentScope;
             else
