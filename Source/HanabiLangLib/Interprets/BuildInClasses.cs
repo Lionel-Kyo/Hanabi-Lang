@@ -464,13 +464,15 @@ namespace HanabiLang.Interprets
             if (typeof(ScriptClass).IsAssignableFrom(type))
             {
                 scriptClass = (ScriptClass)Activator.CreateInstance(type, new object[0]);
+                ImportedItems.Types[type] = scriptClass;
             }
             else
             {
                 scriptClass = new ScriptClass(string.IsNullOrEmpty(rename) ? type.Name : rename, null, null, null, isStatic, AccessibilityLevel.Public);
+                ImportedItems.Types[type] = scriptClass;
                 BuildInClasses.CSharpClassToScriptClass(scriptClass, type);
             }
-            ImportedItems.Types[type] = scriptClass;
+            //ImportedItems.Types[type] = scriptClass;
             return scriptClass;
         }
 
@@ -498,7 +500,7 @@ namespace HanabiLang.Interprets
                 }
                 try
                 {
-                    var scriptFn = ToScriptFn(fn);
+                    var scriptFn = ToScriptFn(fn, null);
                     scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevel.Public));
                 }
                 catch (NotImplementedException) { }
@@ -691,8 +693,6 @@ namespace HanabiLang.Interprets
                 }
             }
         }
-
-        public static Tuple<List<FnParameter>, BasicFns.ScriptFnType> ToScriptFn(MethodInfo method) => ToScriptFn(method, null);
 
         public static Tuple<List<FnParameter>, BasicFns.ScriptFnType> ToScriptFn(MethodInfo method, object createdObject)
         {

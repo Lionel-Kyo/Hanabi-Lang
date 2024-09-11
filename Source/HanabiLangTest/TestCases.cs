@@ -477,6 +477,19 @@ var result3 = Json.Serialize(b);
             CheckEquals(values["result2"], new ScriptValue("{ \"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14 }"));
             CheckEquals(values["result3"], new ScriptValue("{ \"a\": \"Hello world\", \"b\": 3.14, \"c\": 12345, \"d\": { \"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14 } }"));
         }
+
+        public static void DictTest()
+        {
+            string sourceCode = @"
+const a = {
+    ""Test"": 12345
+};
+
+var result1 = a.GetValue(""Test"");
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1");
+            CheckEquals(values["result1"], new ScriptValue(12345));
+        }
     }
 }
 
