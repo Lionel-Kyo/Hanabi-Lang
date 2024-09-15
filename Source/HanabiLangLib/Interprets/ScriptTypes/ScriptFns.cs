@@ -405,7 +405,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public override string ToString()
         {
-            return $"<function: {this.Fns.Name} ({Object})>";
+            return $"<function: {this.Fns.Name} (object: {Object.ClassType.Name})>";
         }
     }
 }

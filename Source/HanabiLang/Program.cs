@@ -68,8 +68,13 @@ void Start()
             ast = parser.Parse();
             //Console.WriteLine(string.Join("\n", ast.Nodes));
         }
-        catch (ParseFormatNotCompleteException)
+        catch (ParseFormatNotCompleteException ex)
         {
+            if (lines.Count > 1 && line.Length <= 0)
+            {
+                lines = new List<string>();
+                Console.WriteLine(Parser.ExceptionToString(ex));
+            }
         }
         catch (Exception ex)
         {

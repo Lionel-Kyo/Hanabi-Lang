@@ -7,8 +7,6 @@ using System.Reflection;
 using HanabiLang.Parses.Nodes;
 using HanabiLang.Interprets.ScriptTypes;
 
-// To do: Script parameter with type defined cannot be pass null => C# nullable parameter cannot pass null in script calling
-
 namespace HanabiLang.Interprets
 {
     class BuildInClasses
@@ -322,6 +320,10 @@ namespace HanabiLang.Interprets
             else if (ImportedItems.Types.TryGetValue(csType, out var scriptClass))
             {
                 return new ScriptValue(new ScriptObject(scriptClass, csObj));
+            }
+            else if (csType.IsEnum && csType.IsValueType)
+            {
+                throw new NotImplementedException($"Not supported datatype {csType.Name}");
             }
 
             throw new SystemException($"Unexpected type: {csType.Name}");
