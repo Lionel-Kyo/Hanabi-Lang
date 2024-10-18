@@ -66,5 +66,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
 
         public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this));
+
+        public static KeyValuePair<ScriptValue, ScriptValue> AsCSharp(ScriptObject _this)
+        {
+            return (KeyValuePair<ScriptValue, ScriptValue>)_this.BuildInObject;
+        }
     }
 }

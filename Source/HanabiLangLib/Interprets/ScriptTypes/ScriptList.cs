@@ -599,5 +599,10 @@ namespace HanabiLang.Interprets.ScriptTypes
             result.Append(']');
             return result.ToString();
         }
+
+        public static List<ScriptValue> AsCSharp(ScriptObject _this)
+        {
+            return (List<ScriptValue>)_this.BuildInObject;
+        }
     }
 }

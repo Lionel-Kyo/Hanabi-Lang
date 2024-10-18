@@ -30,11 +30,14 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 if (args.Count >= 2 && !args[1].IsNull)
                 {
+                    ScriptObject typeObj = args[1].TryObject;
+                    ScriptClass targetType = (ScriptClass)typeObj.BuildInObject;
+                    if (jsonValue.Ref.TryObject.ClassType == targetType)
+                        return jsonValue.Ref;
+
                     if (jsonValue.Ref.TryObject.ClassType != BasicTypes.Dict)
                         throw new SystemException($"Cannot apply {jsonValue.Ref.TryObject.ClassType.Name} to object");
 
-                    ScriptObject typeObj = args[1].TryObject;
-                    ScriptClass targetType = (ScriptClass)typeObj.BuildInObject;
                     return new ScriptValue(ToScriptObject(jsonValue.Ref.TryObject, targetType));
                 }
 

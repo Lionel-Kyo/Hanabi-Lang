@@ -186,5 +186,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
 
         public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this, 0));
+
+        public static Dictionary<ScriptValue, ScriptValue> AsCSharp(ScriptObject _this)
+        {
+            return (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
+        }
     }
 }

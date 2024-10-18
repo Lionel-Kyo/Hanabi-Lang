@@ -229,5 +229,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return (string)this.ToStr(_this).BuildInObject;
         }
+
+        public static long AsCSharp(ScriptObject _this)
+        {
+            return (long)_this.BuildInObject;
+        }
     }
 }

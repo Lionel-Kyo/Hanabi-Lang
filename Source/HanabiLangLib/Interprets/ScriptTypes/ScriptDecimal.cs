@@ -230,5 +230,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return (string)this.ToStr(_this).BuildInObject;
         }
+
+        public static decimal AsCSharp(ScriptObject _this)
+        {
+            return (decimal)_this.BuildInObject;
+        }
     }
 }

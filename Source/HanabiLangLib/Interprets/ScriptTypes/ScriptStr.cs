@@ -303,5 +303,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return "\"" + (string)_this.BuildInObject +"\"";
         }
+
+        public static string AsCSharp(ScriptObject _this)
+        {
+            return (string)_this.BuildInObject;
+        }
     }
 }

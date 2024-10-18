@@ -26,7 +26,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     return new ScriptValue();
                 }, true, AccessibilityLevel.Public))
                 , false, true, AccessibilityLevel.Public);
-            this.Scope.Functions["Exit"] = new ScriptFns("Exit", new ScriptFn(new List<FnParameter> { new FnParameter("exitCode", BasicTypes.Int) }, null, _args =>
+            this.Scope.Functions["Exit"] = new ScriptFns("Exit", new ScriptFn(new List<FnParameter> { new FnParameter("exitCode", BasicTypes.Int, new ScriptValue(0)) }, null, _args =>
             {
                 int exitCode = (int)(long)((ScriptObject)_args[0].Value).BuildInObject;
                 Environment.Exit(exitCode);

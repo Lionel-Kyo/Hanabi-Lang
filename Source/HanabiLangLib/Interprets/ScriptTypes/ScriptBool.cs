@@ -83,5 +83,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return (string)this.ToStr(_this).BuildInObject;
         }
+
+        public static bool AsCSharp(ScriptObject _this)
+        {
+            return (bool)_this.BuildInObject;
+        }
     }
 }
