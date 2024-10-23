@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Testing
 {
-    internal static class Test
+    public static class Test
     {
         public static ScriptValue TestFn(ScriptValue scriptValue)
         {
@@ -74,6 +74,26 @@ namespace Testing
         public static double? NullableDouble(double? fake)
         {
             return fake;
+        }
+
+        public static Func<int, int, string> FnReturn()
+        {
+            return (a, b) =>
+            {
+                return $"Hello: {(a + b)}";
+            };
+        }
+
+        public delegate int TestDelegate(int a, int b);
+
+        public static int FnArg1(TestDelegate add)
+        {
+            return add(1, 2);
+        }
+
+        public static void FnArg2(Action<int, int> add)
+        {
+            add(1, 2);
         }
     }
 

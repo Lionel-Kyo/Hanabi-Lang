@@ -55,6 +55,16 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.DataTypes = fnParameter.DataTypes;
             this.Value = fnParameter.DefaultValue;
         }
+
+        public bool CheckType(ScriptValue value)
+        {
+            ScriptFns fns = value.TryFunction;
+            if (value.TryFunction != null && this.DataTypes.Contains(BasicTypes.FunctionClass))
+                return true;
+            if (value.TryObject != null && this.DataTypes.Contains(value.TryObject.ClassType)) 
+                return true;
+            return false;
+        }
     }
 
     public class ScriptFn : ScriptType
@@ -84,6 +94,8 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Level = level;
             // Number of arguments with no default value
             this.MinArgs = this.Parameters.Count(x => x.DefaultValue == null);
+            if (parameters.Count > 1 && parameters.Skip(1).Any(p => p.Name == parameters[0].Name))
+                throw new SystemException("Parameter name cannot be the same");
         }
 
         internal ScriptFn(List<FnParameter> parameters, ScriptScope scope, BasicFns.ScriptFnType fn, bool isStatic, AccessibilityLevel level) :
@@ -213,8 +225,8 @@ namespace HanabiLang.Interprets.ScriptTypes
                     {
                         if (tempParam.IsMultiArgs)
                         {
-                            if ((((ScriptObject)kv.Value.Value).ClassType != BasicTypes.List) ||
-                                (!((List<ScriptValue>)((ScriptObject)kv.Value.Value).BuildInObject).All(arg => tempParam.DataTypes.Contains(((ScriptObject)arg.Value).ClassType))))
+                            if ((kv.Value.TryObject?.ClassType != BasicTypes.List) ||
+                                (!ScriptList.AsCSharp(kv.Value.TryObject).All(arg => tempParam.CheckType(arg))))
                             {
                                 isMatchFn = false;
                                 break;
@@ -222,7 +234,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                         }
                         else
                         {
-                            if (!tempParam.DataTypes.Contains(((ScriptObject)kv.Value.Value).ClassType))
+                            if (!tempParam.CheckType(kv.Value))
                             {
                                 isMatchFn = false;
                                 break;
@@ -244,7 +256,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     if (_param.Value.IsMultiArgs)
                     {
                         var multiArgs = args.Skip(argCount).ToList();
-                        if (_param.Value.DataTypes != null && !multiArgs.All(arg => _param.Value.DataTypes.Contains(((ScriptObject)arg.Value).ClassType)))
+                        if (_param.Value.DataTypes != null && !multiArgs.All(arg => _param.Value.CheckType(arg)))
                         {
                             isMatchFn = false;
                             break;
@@ -253,7 +265,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     }
                     else
                     {
-                        if (_param.Value.DataTypes != null && !_param.Value.DataTypes.Contains((args[argCount].TryObject)?.ClassType))
+                        if (_param.Value.DataTypes != null && !_param.Value.CheckType(args[argCount]))
                         {
                             isMatchFn = false;
                             break;

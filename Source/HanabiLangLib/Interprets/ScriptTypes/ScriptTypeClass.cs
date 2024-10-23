@@ -24,6 +24,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 {
                     _this.BuildInObject = ((ScriptObject)args[1].Value).ClassType;
                 }
+                else if (args[1].Value is ScriptFns)
+                {
+                    _this.BuildInObject = BasicTypes.FunctionClass;
+                }
                 else
                 {
                     throw new SystemException($"{args[1].Value} is not class or object");

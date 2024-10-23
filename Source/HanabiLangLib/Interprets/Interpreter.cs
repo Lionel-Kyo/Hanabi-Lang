@@ -36,6 +36,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
                 this.CurrentScope.Classes.Add("object", BasicTypes.ObjectClass);
                 this.CurrentScope.Classes.Add("Type", BasicTypes.TypeClass);
+                this.CurrentScope.Classes.Add("Function", BasicTypes.FunctionClass);
                 this.CurrentScope.Classes.Add("str", BasicTypes.Str);
                 this.CurrentScope.Classes.Add("int", BasicTypes.Int);
                 this.CurrentScope.Classes.Add("float", BasicTypes.Float);

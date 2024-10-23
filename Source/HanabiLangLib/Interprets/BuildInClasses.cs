@@ -6,11 +6,18 @@ using System.Threading.Tasks;
 using System.Reflection;
 using HanabiLang.Parses.Nodes;
 using HanabiLang.Interprets.ScriptTypes;
+using System.Linq.Expressions;
+using System.Collections;
 
 namespace HanabiLang.Interprets
 {
     class BuildInClasses
     {
+        // Expression.Call<T>(Expression ex, IEnumerable<ParameterExpression> params)
+        private static MethodInfo ExpressionCall = typeof(Expression).GetMethods(BindingFlags.Public | BindingFlags.Static).Where(
+                        mi => mi.Name == "Lambda" && mi.IsGenericMethodDefinition && mi.GetParameters().Length == 2 &&
+                        mi.GetParameters()[0].ParameterType == typeof(Expression) && mi.GetParameters()[1].ParameterType == typeof(IEnumerable<ParameterExpression>)).ToArray().First();
+        
         private static dynamic GetCsArray(ScriptObject scriptList, Type valueType)
         {
             List<ScriptValue> list = (List<ScriptValue>)scriptList.BuildInObject;
@@ -93,10 +100,95 @@ namespace HanabiLang.Interprets
             if (csType == typeof(ScriptValue))
                 return value;
 
-            if (!(value.Value is ScriptObject))
+            if (value.IsFunction && csType.IsSubclassOf(typeof(Delegate)))
+            {
+                var fns = value.TryFunction;
+                var method = csType.GetMethod("Invoke");
+                var returnType = method.ReturnType;
+                //var isStatic = method.IsStatic;
+                var parameters = new List<ParameterExpression>();
+                HashSet<string> parameterNames = new HashSet<string>();
+                int parameterCount = 0;
+
+                var blockExpressions = new List<Expression>();
+                var variableExpressions = new List<ParameterExpression>();
+
+                Func<ScriptObject, ScriptValue[], ScriptValue> fnsCall = fns.Call;
+                Func<object, ScriptValue> fromCsObject = FromCsObject;
+                Func<ScriptValue, Type, dynamic> toCsObject = ToCsObject;
+
+                List<ParameterExpression> scriptVars = new List<ParameterExpression>();
+                foreach (var parameter in method.GetParameters())
+                {
+                    string name = string.IsNullOrEmpty(parameter.Name) ? "null" : parameter.Name;
+                    if (parameterNames.Contains(name))
+                        name = $"{name}_{parameterCount}";
+                    parameterNames.Add(name);
+                    Type type = parameter.ParameterType;
+                    ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
+                    ParameterExpression paramExpression = Expression.Parameter(type, name);
+                    parameters.Add(paramExpression);
+                    parameterCount++;
+
+                    // FromCsObject(paramExpression);
+                    MethodCallExpression fromCsObjectCall = Expression.Call(
+                        null,
+                        fromCsObject.Method,
+                        Expression.Convert(paramExpression, typeof(object)));
+                    ParameterExpression returnVar = Expression.Variable(typeof(ScriptValue), $"scriptValue_{parameterCount}");
+                    // ScriptValue scriptValue_{i} = FromCsObject(paramExpression);
+                    blockExpressions.Add(Expression.Assign(returnVar, Expression.Convert(fromCsObjectCall, typeof(ScriptValue))));
+                    scriptVars.Add(returnVar);
+                }
+
+                variableExpressions.AddRange(scriptVars);
+
+                // ScriptValue[] fnsCallArgs = scriptVars.ToArray();
+                NewArrayExpression fnsCallArgsExpression = Expression.NewArrayInit(typeof(ScriptValue), scriptVars);
+                var fnsCallArgsVar = Expression.Variable(typeof(ScriptValue[]), "fnsCallArgs");
+                blockExpressions.Add(Expression.Assign(fnsCallArgsVar, Expression.Convert(fnsCallArgsExpression, typeof(ScriptValue[]))));
+                variableExpressions.Add(fnsCallArgsVar);
+
+                MethodCallExpression fnsCallExpression = Expression.Call(
+                    Expression.Constant(fnsCall.Target),
+                    fnsCall.Method,
+                    Expression.Convert(Expression.Constant(null), typeof(ScriptObject)),
+                    fnsCallArgsVar);
+
+                if (returnType == null || returnType == typeof(void))
+                {
+                    blockExpressions.Add(fnsCallExpression);
+                    return ((LambdaExpression)ExpressionCall.MakeGenericMethod(csType).Invoke(null, new object[] { Expression.Block(variableExpressions, blockExpressions), parameters })).Compile();
+                }
+                else
+                {
+                    ParameterExpression fnsCallReturnVar = Expression.Variable(typeof(ScriptValue), "fnsCallReturn");
+                    blockExpressions.Add(Expression.Assign(fnsCallReturnVar, Expression.Convert(fnsCallExpression, typeof(ScriptValue))));
+                    variableExpressions.Add(fnsCallReturnVar);
+
+
+                    MethodCallExpression toCsObjectCallExpression = Expression.Call(
+                        null,
+                        toCsObject.Method,
+                        fnsCallReturnVar,
+                        Expression.Constant(returnType));
+
+                    ParameterExpression toCsObjectReturnVar = Expression.Variable(returnType, "toCsObjectReturn");
+                    blockExpressions.Add(Expression.Assign(toCsObjectReturnVar, Expression.Convert(toCsObjectCallExpression, returnType)));
+                    variableExpressions.Add(toCsObjectReturnVar);
+
+                    // return toCsObjectReturn;
+                    blockExpressions.Add(toCsObjectReturnVar);
+
+                    return ((LambdaExpression)ExpressionCall.MakeGenericMethod(csType).Invoke(null, new object[] { Expression.Block(variableExpressions, blockExpressions), parameters })).Compile();
+                    // return Expression.Lambda(Expression.Block(variableExpressions, blockExpressions), parameters).Compile();
+                }
+            }
+
+            if (!value.IsObject)
                 return value.Value;
 
-            var obj = (ScriptObject)value.Value;
+            var obj = (ScriptObject)value.TryObject;
 
             if (obj.ClassType is ScriptNull)
             {
@@ -294,6 +386,16 @@ namespace HanabiLang.Interprets
             else if (csType == typeof(decimal))
                 return new ScriptValue((decimal)csObj);
 
+            else if (csType.IsSubclassOf(typeof(Delegate)))
+            {
+                var fn = ((Delegate)csObj).Method;
+                var scriptFn = ToScriptFn(fn, ((Delegate)csObj).Target);
+                string name = fn.IsSpecialName ? "unknown" : fn.Name;
+                if (string.IsNullOrEmpty(name))
+                    name = "unknown";
+                return new ScriptValue(new ScriptFns(name, new ScriptFn(scriptFn.Item1, new ScriptScope(null, (ScriptScope)null), scriptFn.Item2, true, AccessibilityLevel.Public)));
+            }
+
 
             else if (csType.IsGenericType)
             {
@@ -379,6 +481,10 @@ namespace HanabiLang.Interprets
             {
                 acceptedTypes = new ScriptClass[] { BasicTypes.Int, BasicTypes.Float };
                 return BasicTypes.Decimal;
+            }
+            else if (type.IsSubclassOf(typeof(Delegate)))
+            {
+                return BasicTypes.FunctionClass;
             }
             else if (type == typeof(object))
             {
@@ -480,10 +586,10 @@ namespace HanabiLang.Interprets
 
         public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type)
         {
-            CSharpClassToScriptClass(scriptClass, type, null);
+            CSharpClassToScriptClass(scriptClass, type, null, null);
         }
 
-        public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type, object createdObject)
+        public static void CSharpClassToScriptClass(ScriptClass scriptClass, Type type, object createdObject, Func<MemberInfo, string> renameMember)
         {
             bool isStatic = type.IsAbstract && type.IsSealed;
 
@@ -495,10 +601,13 @@ namespace HanabiLang.Interprets
 
             foreach (var fn in staticFns)
             {
-                if (!classScope.Functions.TryGetValue(fn.Name, out ScriptFns scriptFns))
+                if (fn.IsSpecialName)
+                    continue;
+                string fnName = renameMember?.Invoke(fn) ?? fn.Name;
+                if (!classScope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
                 {
-                    scriptFns = new ScriptFns(fn.Name);
-                    classScope.Functions[fn.Name] = scriptFns;
+                    scriptFns = new ScriptFns(fnName);
+                    classScope.Functions[fnName] = scriptFns;
                 }
                 try
                 {
@@ -510,6 +619,7 @@ namespace HanabiLang.Interprets
 
             foreach (var field in fields)
             {
+                string fieldName = renameMember?.Invoke(field) ?? field.Name;
                 BasicFns.ScriptFnType getFn = args =>
                 {
                     object value = null;
@@ -532,7 +642,7 @@ namespace HanabiLang.Interprets
                 AccessibilityLevel level = field.IsPublic ? AccessibilityLevel.Public : AccessibilityLevel.Private;
                 if (level != AccessibilityLevel.Public)
                     continue;
-                var getFns = new ScriptFns(field.Name);
+                var getFns = new ScriptFns(fieldName);
                 getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, field.IsStatic, level));
 
                 BasicFns.ScriptFnType setFn = args =>
@@ -557,13 +667,13 @@ namespace HanabiLang.Interprets
                 };
 
 
-                var setFns = new ScriptFns(field.Name);
+                var setFns = new ScriptFns(fieldName);
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
                     {
                         new FnParameter("value")
                     }, null, setFn, createdObject != null ? true : field.IsStatic, level));
 
-                classScope.Variables[field.Name] = new ScriptVariable(field.Name, null, getFns, setFns, false, field.IsStatic, level);
+                classScope.Variables[fieldName] = new ScriptVariable(fieldName, null, getFns, setFns, false, field.IsStatic, level);
             }
 
             foreach (var property in properties)
@@ -573,6 +683,7 @@ namespace HanabiLang.Interprets
                 BasicFns.ScriptFnType setFn = null;
                 ScriptFns setFns = null;
 
+                string propertyName = renameMember?.Invoke(property) ?? property.Name;
                 if (property.CanRead)
                 {
                     getFn = args =>
@@ -595,7 +706,7 @@ namespace HanabiLang.Interprets
                     };
                 }
 
-                AccessibilityLevel getLevel = property.CanRead && property.GetMethod.IsPublic ? 
+                AccessibilityLevel getLevel = property.CanRead && property.GetMethod.IsPublic ?
                     AccessibilityLevel.Public : AccessibilityLevel.Private;
 
                 bool isGetFnStatic = true;
@@ -604,7 +715,7 @@ namespace HanabiLang.Interprets
                 else if (property.CanRead)
                     isGetFnStatic = property.GetMethod.IsStatic;
 
-                getFns = new ScriptFns(property.Name);
+                getFns = new ScriptFns(propertyName);
                 getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, isGetFnStatic, getLevel));
 
                 if (property.CanWrite)
@@ -631,7 +742,7 @@ namespace HanabiLang.Interprets
                     };
                 }
 
-                AccessibilityLevel setLevel = property.CanWrite && property.SetMethod.IsPublic ? 
+                AccessibilityLevel setLevel = property.CanWrite && property.SetMethod.IsPublic ?
                     AccessibilityLevel.Public : AccessibilityLevel.Private;
 
                 bool isSetFnStatic = true;
@@ -653,13 +764,13 @@ namespace HanabiLang.Interprets
                 else if (property.CanWrite)
                     overAllIsStatic = property.SetMethod.IsStatic;
 
-                setFns = new ScriptFns(property.Name);
+                setFns = new ScriptFns(propertyName);
                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
                 {
                     new FnParameter("value")
                 }, null, setFn, isSetFnStatic, setLevel));
 
-                classScope.Variables[property.Name] = new ScriptVariable(property.Name, null, getFns, setFns, false, overAllIsStatic, overAllLevel);
+                classScope.Variables[propertyName] = new ScriptVariable(propertyName, null, getFns, setFns, false, overAllIsStatic, overAllLevel);
             }
 
 
@@ -671,10 +782,11 @@ namespace HanabiLang.Interprets
                 {
                     if (fn.IsSpecialName)
                         continue;
-                    if (!classScope.Functions.TryGetValue(fn.Name, out ScriptFns scriptFns))
+                    string fnName = renameMember?.Invoke(fn) ?? fn.Name;
+                    if (!classScope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
                     {
-                        scriptFns = new ScriptFns(fn.Name);
-                        classScope.Functions[fn.Name] = scriptFns;
+                        scriptFns = new ScriptFns(fnName);
+                        classScope.Functions[fnName] = scriptFns;
                     }
                     try
                     {
@@ -702,9 +814,14 @@ namespace HanabiLang.Interprets
             var isStatic = method.IsStatic;
             var csParameters = new List<Type>();
             var scriptParameters = new List<FnParameter>();
+            HashSet<string> parameterNames = new HashSet<string>();
+            int parameterCount = 0;
             foreach (var parameter in method.GetParameters())
             {
-                string name = parameter.Name;
+                string name = string.IsNullOrEmpty(parameter.Name) ? "null" : parameter.Name;
+                if (parameterNames.Contains(name))
+                    name = $"{name}_{parameterCount}";
+                parameterNames.Add(name);
                 Type type = parameter.ParameterType;
                 ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
                 csParameters.Add(type);
@@ -720,6 +837,7 @@ namespace HanabiLang.Interprets
                     }
                 }
                 scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
+                parameterCount++;
             }
 
             BasicFns.ScriptFnType fn = args =>
@@ -732,7 +850,7 @@ namespace HanabiLang.Interprets
                 else
                 {
                     if (args.Count - 1 != csParameters.Count)
-                        throw new SystemException($"Required {csParameters.Count}, recevied {args.Count}");
+                        throw new SystemException($"Required {csParameters.Count + 1}, recevied {args.Count}");
                 }
 
                 object[] csObjects = new object[csParameters.Count];
@@ -770,9 +888,14 @@ namespace HanabiLang.Interprets
             var isStatic = constructor.IsStatic;
             var csParameters = new List<Type>();
             var scriptParameters = new List<FnParameter>();
+            HashSet<string> parameterNames = new HashSet<string>();
+            int parameterCount = 0;
             foreach (var parameter in constructor.GetParameters())
             {
-                string name = parameter.Name;
+                string name = string.IsNullOrEmpty(parameter.Name) ? "null" : parameter.Name;
+                if (parameterNames.Contains(name))
+                    name = $"{name}_{parameterCount}";
+                parameterNames.Add(name);
                 Type type = parameter.ParameterType;
                 ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
                 csParameters.Add(type);
@@ -788,6 +911,7 @@ namespace HanabiLang.Interprets
                     }
                 }
                 scriptParameters.Add(new FnParameter(name, dataTypes, defaultValue, isMultipleArgs));
+                parameterCount++;
             }
 
             BasicFns.ScriptFnType fn = args =>
