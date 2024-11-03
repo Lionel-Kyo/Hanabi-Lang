@@ -11,6 +11,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 {
     public class ScriptClass : ScriptType
     {
+        public string ConstructorName => $"{this.Name}::New";
         public string Name { get; private set; }
 
         /// <summary>
@@ -61,7 +62,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             }
 
-            this.BuildInConstructor = new ScriptFns(this.Name);
+            this.BuildInConstructor = new ScriptFns(this.ConstructorName);
             this.Level = level;
 
             if (body != null && !isImported)
@@ -87,6 +88,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
             }
 
+            if (this.Body == null)
+                this.Body = new List<object>();
+
             if (this.SuperClass != null)
                 CopyClassMember(this.SuperClass, this, false);
         }
@@ -95,8 +99,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             foreach (var fns in from.Scope.Functions)
             {
-                // Console.WriteLine($"{from.Name} -> {to.Name} ({fns.Key})");
-                string fnName = fns.Key.Equals(from.Name) ? to.Name : fns.Key;
+                // Change constructor name
+                string fnName = fns.Key.Equals(from.ConstructorName) ? to.ConstructorName : fns.Key;
+                //string fnName = fns.Key;
                 if (!to.Scope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
                 {
                     scriptFns = new ScriptFns(fnName);
@@ -412,13 +417,15 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             ScriptObject _object = Create();
 
-            // A Function with same name as class is constructor
-            ScriptFns currentConstructor;
-            
-            if (this.Scope.Functions.TryGetValue(this.Name, out currentConstructor))
+            if (this.Scope.Functions.TryGetValue(ConstructorName, out ScriptFns currentConstructor))
             {
                 var fnInfo = currentConstructor.FindCallableInfo(currentScope, args, keyArgs);
                 currentConstructor.Call(_object, fnInfo);
+            }
+            else
+            {
+                if (args.Count > 0 || keyArgs.Count > 0)
+                    throw new NotImplementedException($"Match function call for {ConstructorName} does not exist\nAvaliable Function: ()");
             }
             return new ScriptValue(_object);
         }

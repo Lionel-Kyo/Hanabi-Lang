@@ -14,6 +14,8 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptObject NullValue = Null.Create();
         public static readonly ScriptTypeClass TypeClass = new ScriptTypeClass();
         public static readonly SciptFunctionClass FunctionClass = new SciptFunctionClass();
+        public static readonly ScriptIterator Iterator = new ScriptIterator();
+        public static readonly ScriptUnzipable Unzipable = new ScriptUnzipable();
         public static readonly ScriptInt Int = new ScriptInt();
         public static readonly ScriptFloat Float = new ScriptFloat();
         public static readonly ScriptDecimal Decimal = new ScriptDecimal();
@@ -23,7 +25,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptDict Dict = new ScriptDict();
         public static readonly ScriptKeyValuePair KeyValuePair = new ScriptKeyValuePair();
         public static readonly ScriptRange Range = new ScriptRange();
-        public static readonly ScriptEnumerator Enumerator = new ScriptEnumerator();
         public static readonly ScriptException Exception = new ScriptException();
         public static readonly ScriptJson Json = new ScriptJson();
     }

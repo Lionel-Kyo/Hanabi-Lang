@@ -45,7 +45,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Classes.Add("range", BasicTypes.Range);
                 this.CurrentScope.Classes.Add("List", BasicTypes.List);
                 this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
-                this.CurrentScope.Classes.Add("Enumerator", BasicTypes.Enumerator);
+                this.CurrentScope.Classes.Add("Iterator", BasicTypes.Iterator);
                 this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
                 this.CurrentScope.Classes.Add("Json", BasicTypes.Json);
                 BasicFns.AddBasicFunctions(this.CurrentScope);
@@ -439,6 +439,8 @@ namespace HanabiLang.Interprets
                     else if (scriptType is ScriptFns)
                     {
                         var fn = (ScriptFns)scriptType;
+                        if (scope.Type is ScriptObject)
+                            return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)scope.Type)));
                         return new ValueReference(new ScriptValue(fn));
                     }
                     else if (scriptType is ScriptClass)
@@ -570,14 +572,14 @@ namespace HanabiLang.Interprets
 
                 var scriptObject = (ScriptObject)interpretScope.Parent.Type;
                 if (specialAccess.Equals("this") &&
-                    scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.Name, out ScriptType thisFns))
+                    scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.ConstructorName, out ScriptType thisFns))
                 {
                     var fn = (ScriptFns)thisFns;
                     var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
                     return new ValueReference(fn.Call(scriptObject, callableInfo));
                 }
                 else if (specialAccess.Equals("super") &&
-                    scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.Name, out ScriptType superFns))
+                    scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.ConstructorName, out ScriptType superFns))
                 {
                     var fn = (ScriptFns)superFns;
                     var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
@@ -593,12 +595,6 @@ namespace HanabiLang.Interprets
                 var fn = (ScriptFns)fnRef.Value;
                 var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
                 return new ValueReference(fn.Call(null, callableInfo));
-            }
-            else if (fnRef.IsBindedFunction)
-            {
-                var fn = (ScriptBindedFns)fnRef.Value;
-                var callableInfo = fn.Fns.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
-                return new ValueReference(fn.Fns.Call(fn.Object, callableInfo));
             }
             else if (fnRef.IsClass)
             {
@@ -622,12 +618,6 @@ namespace HanabiLang.Interprets
                     var fn = (ScriptFns)referenceCallResult.Value;
                     var callableInfo = fn.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
                     return new ValueReference(fn.Call(null, callableInfo));
-                }
-                else if (referenceCallResult.IsBindedFunction)
-                {
-                    var fn = (ScriptBindedFns)referenceCallResult.Value;
-                    var callableInfo = fn.Fns.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
-                    return new ValueReference(fn.Fns.Call(fn.Object, callableInfo));
                 }
                 else if (referenceCallResult.IsClass)
                 {
@@ -677,15 +667,6 @@ namespace HanabiLang.Interprets
                             throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Name}");
 
                         return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, callableInfo));
-                    }
-                    else if (value.IsBindedFunction)
-                    {
-                        var fn = (ScriptBindedFns)value.Value;
-                        var callableInfo = fn.Fns.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
-                        if ((int)accessLevel < (int)callableInfo.Item1.Level)
-                            throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Fns.Name}");
-
-                        return new ValueReference(fn.Fns.Call(isStaticAccess ? fn.Object : (ScriptObject)left.Value, callableInfo));
                     }
                     else if (value.IsClass)
                     {
@@ -1115,35 +1096,17 @@ namespace HanabiLang.Interprets
                 var realNode = (ForNode)node;
                 var location = InterpretExpression(interpretScope, realNode.Location).Ref;
 
-
                 if (!location.IsObject)
                     throw new SystemException("For loop running failed, variable is not enumerable");
 
                 ScriptObject scriptObject = (ScriptObject)location.Value;
 
-                if (!scriptObject.Scope.TryGetValue("GetEnumerator", out ScriptType getEnumerator))
+                if (!ScriptIterator.TryGetIterator(scriptObject, out var iter))
                     throw new SystemException("For loop running failed, variable is not enumerable");
-
-                if (!(getEnumerator is ScriptFns))
-                    throw new SystemException("For loop running failed, variable is not enumerable");
-
-                //var enumeratorInfo = ((ScriptFns)getEnumerator).GetFnInfo(interpretScope, new Dictionary<string, AstNode>());
-                var enumeratorInfo = ((ScriptFns)getEnumerator).FindCallableInfo();
-                var enumerator = ((ScriptFns)getEnumerator).Call(scriptObject, enumeratorInfo);
-
-                if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
-                    throw new SystemException("For loop running failed, variable is not enumerable");
-
-                var list = (IEnumerable<ScriptValue>)(((ScriptObject)enumerator.Value).BuildInObject);
-
-                /*this.currentScope = new ScriptScope(ScopeType.Loop, this.currentScope);
-
-                this.currentScope.Variables[realNode.Initializer] =
-                    new ScriptVariable(realNode.Initializer, new ScriptValue(0), false);*/
 
                 var hasBreak = false;
 
-                foreach (var item in list)
+                foreach (var item in iter)
                 {
                     var scope = new ScriptScope(null, interpretScope);
 
@@ -1364,8 +1327,8 @@ namespace HanabiLang.Interprets
                 foreach (var value in realNode.Elements)
                 {
                     ScriptValue scriptValue = InterpretJson(value).Ref;
-                    if (scriptValue.Value is SingleUnzipList)
-                        values.AddRange(((SingleUnzipList)scriptValue.Value).Value);
+                    if (scriptValue.IsUnzipable)
+                        values.AddRange(scriptValue.TryUnzipable);
                     else
                         values.Add(scriptValue);
                 }
@@ -1571,8 +1534,8 @@ namespace HanabiLang.Interprets
                 foreach (var value in realNode.Elements)
                 {
                     ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
-                    if (scriptValue.Value is SingleUnzipList)
-                        values.AddRange(((SingleUnzipList)scriptValue.Value).Value);
+                    if (scriptValue.IsUnzipable)
+                        values.AddRange(scriptValue.TryUnzipable);
                     else
                         values.Add(scriptValue);
                 }

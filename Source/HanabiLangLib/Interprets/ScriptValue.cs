@@ -8,7 +8,7 @@ using HanabiLang.Parses.Nodes;
 
 namespace HanabiLang.Interprets
 {
-    public class ScriptValue
+    public class ScriptValue : IComparable<ScriptValue>
     {
         private ScriptType value { get; set; }
         public ScriptType Value => value;
@@ -19,11 +19,6 @@ namespace HanabiLang.Interprets
         }
 
         public ScriptValue(ScriptFns fn)
-        {
-            this.value = fn;
-        }
-
-        public ScriptValue(ScriptBindedFns fn)
         {
             this.value = fn;
         }
@@ -202,13 +197,14 @@ namespace HanabiLang.Interprets
         public static ScriptValue Continue => new ScriptValue(new ContinueType());
 
         public bool IsFunction => this.value is ScriptFns;
-        public bool IsBindedFunction => this.value is ScriptBindedFns;
         public ScriptFns TryFunction => this.value is ScriptFns ? (ScriptFns)this.value : null;
         public bool IsClass => this.value is ScriptClass;
         public ScriptClass TryClass => this.value is ScriptClass ? (ScriptClass)this.value : null;
         public bool IsObject => this.value is ScriptObject;
         public ScriptObject TryObject => this.value is ScriptObject ? (ScriptObject)this.value : null;
         public bool IsNull => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptNull;
+        public bool IsUnzipable => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptUnzipable;
+        public IEnumerable<ScriptValue> TryUnzipable => IsUnzipable ? ScriptUnzipable.AsCSharp(this.TryObject) : null;
         public bool IsBreak => this.value is BreakType;
         public bool IsContinue => this.value is ContinueType;
         public bool IsDefinedTypes => this.value is DefinedTypes;
@@ -377,22 +373,13 @@ namespace HanabiLang.Interprets
 
         public static ScriptValue OperatorSingleUnzip(ScriptValue a)
         {
-            if (a.value is ScriptObject)
+            var obj = a.TryObject;
+            if (obj != null)
             {
-                if (!((ScriptObject)a.value).ClassType.Scope.TryGetValue("GetEnumerator", out ScriptType getEnumerator)) 
+                if (!ScriptIterator.TryGetIterator(obj, out var iter))
                     throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
 
-                if (!(getEnumerator is ScriptFns))
-                    throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
-
-                var enumeratorInfo = ((ScriptFns)getEnumerator).FindCallableInfo();
-                var enumerator = ((ScriptFns)getEnumerator).Call((ScriptObject)a.value, enumeratorInfo);
-
-                if (!(((ScriptObject)enumerator.Value).BuildInObject is IEnumerable<ScriptValue>))
-                    throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
-
-                var list = (IEnumerable<ScriptValue>)((ScriptObject)enumerator.Value).BuildInObject;
-                return new ScriptValue() { value = new SingleUnzipList(list) };
+                return new ScriptValue(BasicTypes.Unzipable.Create(iter));
             }
             throw new SystemException("operator * is not defined");
         }
@@ -425,6 +412,20 @@ namespace HanabiLang.Interprets
         public override int GetHashCode()
         {
             return this.value.GetHashCode();
+        }
+
+        public int CompareTo(ScriptValue other)
+        {
+            if (this.IsObject)
+            {
+                ScriptObject _this = this.TryObject;
+                if (_this.ClassType.TryGetValue("CompareTo", out ScriptType fns) && fns is ScriptFns)
+                {
+                    var _fns = (ScriptFns)fns;
+                    return Convert.ToInt32(_fns.Call(_this, other).TryObject.BuildInObject);
+                }
+            }
+            return 0;
         }
     }
 }

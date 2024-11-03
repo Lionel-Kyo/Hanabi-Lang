@@ -29,7 +29,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                     if (item is VariableDefinitionNode)
                         Interpreter.InterpretChild(this.Scope, (VariableDefinitionNode)item, false);
                     else if (item is ScriptVariable)
-                        this.Scope.Variables.Add(((ScriptVariable)item).Name, (ScriptVariable)item);
+                        this.Scope.Variables[((ScriptVariable)item).Name] = (ScriptVariable)item;
                 }
             }
         }
@@ -45,11 +45,12 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public override string ToString()
         {
-            if (this.Scope.Parent.Functions.TryGetValue("ToStr", out ScriptFns fns))
+            if (this.ClassType.TryGetValue("ToStr", out ScriptType fns) && fns is ScriptFns)
             {
-                return (string)((ScriptObject)fns.Call(this).Value).BuildInObject;
+                var _fns  = (ScriptFns)fns;
+                return ScriptStr.AsCSharp((ScriptObject)_fns.Call(this).Value);
             }
-            return (string)ClassType.ToStr(this).BuildInObject;
+            return ScriptStr.AsCSharp(ClassType.ToStr(this));
         }
 
         public override int GetHashCode()

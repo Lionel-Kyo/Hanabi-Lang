@@ -61,7 +61,8 @@ namespace HanabiLang.Interprets.ScriptTypes
             ScriptFns fns = value.TryFunction;
             if (value.TryFunction != null && this.DataTypes.Contains(BasicTypes.FunctionClass))
                 return true;
-            if (value.TryObject != null && this.DataTypes.Contains(value.TryObject.ClassType)) 
+            if (value.TryObject != null && 
+                (this.DataTypes.Contains(value.TryObject.ClassType) || value.TryObject.ClassType.SuperClasses.FindIndex(c => this.DataTypes.Contains(c)) >= 0)) 
                 return true;
             return false;
         }
@@ -111,9 +112,9 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptFns : ScriptType
     {
         public string Name { get; private set; }
-
         public List<ScriptFn> Fns { get; private set; }
-        public ScriptFns(string name, params ScriptFn[] fns)
+
+        public ScriptFns(string name, IEnumerable<ScriptFn> fns)
         {
             this.Name = name;
             if (string.IsNullOrEmpty(this.Name))
@@ -122,12 +123,22 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Fns.AddRange(fns);
         }
 
+        public ScriptFns(string name, params ScriptFn[] fns)
+            : this(name, (IEnumerable<ScriptFn>)fns)
+        {
+        }
+
         public int IndexOfOverridableFn(ScriptFn fn) => this.Fns.FindIndex(x =>
         {
             if (x.Parameters.Count != fn.Parameters.Count)
                 return false;
             for (int i = 0; i < x.Parameters.Count; i++)
             {
+                if (x.Parameters[i].DataTypes == null && fn.Parameters[i].DataTypes == null)
+                    continue;
+                else if ((x.Parameters[i].DataTypes == null && fn.Parameters[i].DataTypes != null) ||
+                    x.Parameters[i].DataTypes != null && fn.Parameters[i].DataTypes == null)
+                    return false;
                 if (!x.Parameters[i].DataTypes.SetEquals(fn.Parameters[i].DataTypes))
                     return false;
             }
@@ -143,8 +154,9 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
             else if (addOverridable)
             {
-                this.Fns.RemoveAt(overrideIndex);
-                this.Fns.Add(fn);
+                //this.Fns.RemoveAt(overrideIndex);
+                //this.Fns.Add(fn);
+                this.Fns[overrideIndex] = fn;
             }
         }
 
@@ -163,10 +175,9 @@ namespace HanabiLang.Interprets.ScriptTypes
             foreach (var arg in args)
             {
                 ScriptValue value = Interpreter.InterpretExpression(currentScope, arg).Ref;
-                if (value.Value is SingleUnzipList)
+                if (value.IsUnzipable)
                 {
-                    SingleUnzipList singleUnzipList = (SingleUnzipList)value.Value;
-                    resultArgs.AddRange(singleUnzipList.Value);
+                    resultArgs.AddRange(value.TryUnzipable);
                 }
                 else
                 {
@@ -315,20 +326,44 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
         {
-            return FindCallableFnParams(args, keyArgs);
+            List<ScriptValue> resultArgs = new List<ScriptValue>();
+            foreach (var value in args)
+            {
+                if (value.IsUnzipable)
+                {
+                    resultArgs.AddRange(value.TryUnzipable);
+                }
+                else
+                {
+                    resultArgs.Add(value);
+                }
+            }
+            return FindCallableFnParams(resultArgs, keyArgs);
         }
 
         internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(params ScriptValue[] values)
         {
-            return FindCallableFnParams(values.ToList(), null);
+            List<ScriptValue> resultArgs = new List<ScriptValue>();
+            foreach (var value in values)
+            {
+                if (value.IsUnzipable)
+                {
+                    resultArgs.AddRange(value.TryUnzipable);
+                }
+                else
+                {
+                    resultArgs.Add(value);
+                }
+            }
+            return FindCallableFnParams(resultArgs, null);
         }
 
-        internal ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
+        internal virtual ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
         {
             return Call(callableInfo.Item1, _this, callableInfo.Item2);
         }
 
-        public ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
+        public virtual ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
         {
             var fnInfo = FindCallableInfo(value);
             return Call(fnInfo.Item1, _this, fnInfo.Item2);
@@ -405,19 +440,28 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
     }
 
-    public class ScriptBindedFns : ScriptType
+    public class ScriptBindedFns : ScriptFns
     {
-        public ScriptFns Fns { get; private set; }
         public ScriptObject Object { get; private set; }
-        public ScriptBindedFns(ScriptFns scriptFns, ScriptObject scriptScope)
+
+        public ScriptBindedFns(ScriptFns scriptFns, ScriptObject scriptObject): base(scriptFns.Name, scriptFns.Fns)
         {
-            this.Fns = scriptFns;
-            this.Object = scriptScope;
+            this.Object = scriptObject;
+        }
+
+        internal override ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
+        {
+            return base.Call(this.Object ?? _this, callableInfo);
+        }
+
+        public override ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
+        {
+            return base.Call(this.Object ?? _this, value);
         }
 
         public override string ToString()
         {
-            return $"<function: {this.Fns.Name} (object: {Object.ClassType.Name})>";
+            return $"<function: {this.Name} (object: {Object.ClassType.Name})>";
         }
     }
 }

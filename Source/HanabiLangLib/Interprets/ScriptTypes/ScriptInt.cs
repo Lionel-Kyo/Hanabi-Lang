@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptInt() :
             base("int", isStatic: false)
         {
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>
@@ -21,21 +21,44 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject value = (ScriptObject)args[1].Value;
                 if (value.ClassType is ScriptInt)
                 {
-                    _this.BuildInObject = value.BuildInObject;
+                    _this.BuildInObject = AsCSharp(value);
                 }
                 else if (value.ClassType is ScriptDecimal)
                 {
-                    _this.BuildInObject = (long)(decimal)value.BuildInObject;
+                    _this.BuildInObject = (long)ScriptDecimal.AsCSharp(value);
                 }
                 else if (value.ClassType is ScriptFloat)
                 {
-                    _this.BuildInObject = (long)(double)value.BuildInObject;
+                    _this.BuildInObject = (long)ScriptFloat.AsCSharp(value);
                 }
                 else if (value.ClassType is ScriptStr)
                 {
-                    _this.BuildInObject = long.Parse((string)value.BuildInObject);
+                    _this.BuildInObject = long.Parse(ScriptStr.AsCSharp(value));
                 }
+                _this.BuildInObject = (long)0;
                 return ScriptValue.Null;
+            });
+
+            this.AddFunction("CompareTo", new List<FnParameter>()
+            {
+                new FnParameter("value"),
+            }, args =>
+            {
+                long _this = AsCSharp(args[0].TryObject);
+                ScriptObject value = (ScriptObject)args[1].Value;
+                if (value.ClassType is ScriptInt)
+                {
+                    return new ScriptValue(_this.CompareTo(AsCSharp(value)));
+                }
+                else if (value.ClassType is ScriptDecimal)
+                {
+                    return new ScriptValue(_this.CompareTo(ScriptDecimal.AsCSharp(value)));
+                }
+                else if (value.ClassType is ScriptFloat)
+                {
+                    return new ScriptValue(_this.CompareTo(ScriptFloat.AsCSharp(value)));
+                }
+                return new ScriptValue(0);
             });
         }
 

@@ -10,7 +10,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     {
         public ScriptTypeClass() : base("Type", false)
         {
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>

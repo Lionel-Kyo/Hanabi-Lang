@@ -6,36 +6,44 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
     public class ScriptDict : ScriptClass
     {
         public ScriptDict() :
-            base("Dict", isStatic: false)
+            base("Dict", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
         {
             AddVariable("Length", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Count);
+                return new ScriptValue(AsCSharp(_this).Count);
+            }, null, false, null);
+
+            AddVariable("Iter", args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var result = BasicTypes.Iterator.Create(AsCSharp(_this).Select(kv => new ScriptValue(BasicTypes.KeyValuePair.Create(kv))));
+                return new ScriptValue(result);
             }, null, false, null);
 
             AddVariable("Keys", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Keys.ToList());
+                return new ScriptValue(AsCSharp(_this).Keys.ToList());
             }, null, false, null);
 
             AddVariable("Values", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)((ScriptObject)args[0].Value).BuildInObject).Values.ToList());
+                return new ScriptValue(AsCSharp(_this).Values.ToList());
             }, null, false, null);
 
             this.AddFunction("Clear", new List<FnParameter>(), args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                ((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Clear();
+                ScriptObject _this = args[0].TryObject;
+                AsCSharp(_this).Clear();
                 return ScriptValue.Null;
             });
 
@@ -44,9 +52,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("key")
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];
-                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).ContainsKey(key));
+                return new ScriptValue(AsCSharp(_this).ContainsKey(key));
             });
 
             this.AddFunction("ContainsValue", new List<FnParameter>()
@@ -54,9 +62,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("value")
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
                 ScriptValue value = args[1];
-                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).ContainsValue(value));
+                return new ScriptValue(AsCSharp(_this).ContainsValue(value));
             });
 
             this.AddFunction("Remove", new List<FnParameter>()
@@ -64,9 +72,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("key")
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];
-                return new ScriptValue(((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Remove(key));
+                return new ScriptValue(AsCSharp(_this).Remove(key));
             });
 
             this.AddFunction("GetValue", new List<FnParameter>()
@@ -74,36 +82,44 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("key")
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];
-                var dict = ((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
+                var dict = AsCSharp(_this);
                 if (dict.TryGetValue(key, out var value))
                     return value;
                 return ScriptValue.Null;
             });
 
-            this.AddFunction("GetEnumerator", new List<FnParameter>(), args =>
+            this.AddFunction("ToObject", new List<FnParameter>()
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                var result = BasicTypes.Enumerator.Create();
-                result.BuildInObject = DictIterator((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject);
-                return new ScriptValue(result);
-            });
-
-            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("index") }, args =>
+            }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                ScriptValue index = args[1];
-                var dictValue = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
-
-                return dictValue[index];
+                ScriptObject obj = BasicTypes.ObjectClass.Create();
+                foreach (var kv in AsCSharp(_this))
+                {
+                    if (kv.Key.TryObject?.ClassType == BasicTypes.Str)
+                    {
+                        string name = ScriptStr.AsCSharp(kv.Key.TryObject);
+                        obj.Scope.Variables[name] = new ScriptVariable(name, null, kv.Value, true, false, AccessibilityLevel.Public);
+                    }
+                }
+                return new ScriptValue(obj);
             });
-            this.AddFunction("set_[]", new List<FnParameter> { new FnParameter("index"), new FnParameter("value") }, args =>
+
+            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("key") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                ScriptValue index = args[1];
-                var dictValue = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject; 
-                dictValue[index] = args[2];
+                ScriptValue key = args[1];
+
+                return AsCSharp(_this)[key];
+            });
+            this.AddFunction("set_[]", new List<FnParameter> { new FnParameter("key"), new FnParameter("value") }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptValue key = args[1];
+
+                AsCSharp(_this)[key] = args[2];
                 return ScriptValue.Null;
             });
         }
@@ -115,8 +131,8 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             if (value.ClassType is ScriptDict)
             {
-                var a = (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject;
-                var b = (Dictionary<ScriptValue, ScriptValue>)value.BuildInObject;
+                var a = AsCSharp(_this);
+                var b = AsCSharp(value);
 
                 if (a.Equals(b))
                     return ScriptBool.True;
@@ -136,13 +152,13 @@ namespace HanabiLang.Interprets.ScriptTypes
             return ScriptBool.False;
         }
 
-        private static IEnumerable<ScriptValue> DictIterator(Dictionary<ScriptValue, ScriptValue> value)
-        {
-            foreach (var c in value)
-            {
-                yield return new ScriptValue(BasicTypes.KeyValuePair.Create(c));
-            }
-        }
+        //private static IEnumerable<ScriptValue> DictIterator(Dictionary<ScriptValue, ScriptValue> value)
+        //{
+        //    foreach (var c in value)
+        //    {
+        //        yield return new ScriptValue(BasicTypes.KeyValuePair.Create(c));
+        //    }
+        //}
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
@@ -155,10 +171,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 currentIndent += 2;
             }
             int count = 0;
-            foreach (var item in (Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject)
+            foreach (var item in AsCSharp(_this))
             {
                 if (!(item.Key.IsObject && item.Value.IsObject))
-                    throw new SystemException("item.Key.IsObject or item.Value.IsObject is not object");
+                    throw new SystemException("Cannot convert Dict to str, Key not object or Value is not object");
 
                 ScriptObject keyObject = (ScriptObject)item.Key.Value;
                 ScriptObject valueObject = (ScriptObject)item.Value.Value;
@@ -166,7 +182,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result.Append($"{keyObject.ClassType.ToJsonString(keyObject, basicIndent, currentIndent)}");
                 result.Append(": ");
                 result.Append($"{valueObject.ClassType.ToJsonString(valueObject, basicIndent, currentIndent)}");
-                if (count < ((Dictionary<ScriptValue, ScriptValue>)_this.BuildInObject).Count - 1)
+                if (count < AsCSharp(_this).Count - 1)
                 {
                     result.Append(", ");
                     if (basicIndent != 0)

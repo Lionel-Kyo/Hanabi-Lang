@@ -13,7 +13,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptBool() : 
             base("bool", isStatic: false)
         {
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>
@@ -23,19 +23,19 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject value = (ScriptObject)args[1].Value;
                 if (value.ClassType is ScriptInt)
                 {
-                    _this.BuildInObject = Convert.ToBoolean((long)value.BuildInObject);
+                    _this.BuildInObject = Convert.ToBoolean(ScriptInt.AsCSharp(value));
                 }
                 else if (value.ClassType is ScriptDecimal)
                 {
-                    _this.BuildInObject = Convert.ToBoolean((decimal)value.BuildInObject);
+                    _this.BuildInObject = Convert.ToBoolean(ScriptDecimal.AsCSharp(value));
                 }
                 else if (value.ClassType is ScriptFloat)
                 {
-                    _this.BuildInObject = Convert.ToBoolean((float)value.BuildInObject);
+                    _this.BuildInObject = Convert.ToBoolean(ScriptFloat.AsCSharp(value));
                 }
                 else if (value.ClassType is ScriptStr)
                 {
-                    _this.BuildInObject = Convert.ToBoolean((string)value.BuildInObject);
+                    _this.BuildInObject = Convert.ToBoolean(ScriptStr.AsCSharp(value));
                 }
 
                 return ScriptValue.Null;

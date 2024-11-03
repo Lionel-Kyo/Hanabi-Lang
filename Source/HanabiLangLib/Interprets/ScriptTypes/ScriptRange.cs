@@ -12,9 +12,9 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptRange : ScriptClass
     {
         public ScriptRange() :
-            base("Range", isStatic: false)
+            base("Range", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
         {
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("end", BasicTypes.Int, null),
             }, args =>
@@ -22,7 +22,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 long start = 0;
                 long end = 0;
                 long step = 1;
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
 
                 end = (long)((ScriptObject)args[1].Value).BuildInObject;
                 if (end < 0 && step > 0)
@@ -32,7 +32,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("start", BasicTypes.Int, null),
                 new FnParameter("end", BasicTypes.Int, null)
@@ -41,20 +41,18 @@ namespace HanabiLang.Interprets.ScriptTypes
                 long start = 0;
                 long end = 0;
                 long step = 1;
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
 
                 start = (long)((ScriptObject)args[1].Value).BuildInObject;
                 end = (long)((ScriptObject)args[2].Value).BuildInObject;
                 if (end < 0 && step > 0)
                     step *= -1;
 
-                /*if (step == 0)
-                    throw new SystemException("step cannot be 0");*/
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
             });
 
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("start", BasicTypes.Int, null),
                 new FnParameter("end", BasicTypes.Int, null),
@@ -64,25 +62,21 @@ namespace HanabiLang.Interprets.ScriptTypes
                 long start = 0;
                 long end = 0;
                 long step = 1;
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
                 start = (long)((ScriptObject)args[1].Value).BuildInObject;
                 end = (long)((ScriptObject)args[2].Value).BuildInObject;
                 step = (long)((ScriptObject)args[3].Value).BuildInObject;
 
-                /*if (step == 0)
-                    throw new SystemException("step cannot be 0");*/
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
             });
 
-            this.AddFunction("GetEnumerator", new List<FnParameter>(), args =>
+            AddVariable("Iter", args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                var result = BasicTypes.Enumerator.Create();
-                var value = (Tuple<long, long, long>)_this.BuildInObject;
-                result.BuildInObject = RangeIterator(value.Item1, value.Item2, value.Item3);
+                var range = AsCSharp(args[0].TryObject);
+                var result = BasicTypes.Iterator.Create(RangeIterator(range.Item1, range.Item2, range.Item3));
                 return new ScriptValue(result);
-            });
+            }, null, false, null);
         }
 
         public override ScriptObject Create() => new ScriptObject(this, Tuple.Create((long)0, (long)0, (long)0));
@@ -131,6 +125,11 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             var value = (Tuple<long, long, long>)_this.BuildInObject;
             return $"[{value.Item1}, {value.Item2}, {value.Item3}]";
+        }
+
+        public static Tuple<long, long, long> AsCSharp(ScriptObject _this)
+        {
+            return (Tuple<long, long, long>)_this.BuildInObject;
         }
     }
 }

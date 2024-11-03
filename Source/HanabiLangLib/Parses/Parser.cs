@@ -214,10 +214,26 @@ namespace HanabiLang.Parses
         {
             var left = this.Factor(skipIndexers, skipArrowFn);
 
-            while (HasNextToken && NextTokenType == TokenType.DOT)
+            while (HasNextToken &&
+                (NextTokenType == TokenType.DOT || 
+                NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
+                (!skipIndexers && NextTokenType == TokenType.OPEN_SQURE_BRACKET)))
             {
-                this.Expect(TokenType.DOT);
-                left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), ".");
+                if (NextTokenType == TokenType.DOT)
+                {
+                    this.Expect(TokenType.DOT);
+                    left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), ".");
+                }
+                // Function call
+                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                {
+                    left = FunctionCall(left);
+                }
+                // Indexer
+                else if (!skipIndexers && NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+                {
+                    left = this.CheckIndexersAccess(left);
+                }
             }
 
             return left;
@@ -1147,6 +1163,11 @@ namespace HanabiLang.Parses
                 throw new ParseException("Class can only contains definition but not implement", keywordToken);
             }
 
+            foreach (var fn in members.Where(x => x is FnDefineStatementNode).Select(x => (FnDefineStatementNode)x).Where(fn => fn.Name.Equals(name)))
+            {
+                fn.ChangeToConstructorName(name);
+            }
+
             return new ClassDefineNode(name, members, superClasses, isStatic, level);
         }
 
@@ -1213,32 +1234,30 @@ namespace HanabiLang.Parses
         }
         private AstNode Identifier(bool skipIndexers)
         {
-            var currentToken = this.tokens[this.currentTokenIndex];
+            var currentToken = Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
 
-            this.currentTokenIndex++;
+            //// Function call
+            //if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+            //{
+            //    //return FunctionCall(currentToken);
+            //    return FunctionCall(new VariableReferenceNode(currentToken.Raw));
+            //}
+            //else if (HasNextToken && NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+            //{
+            //    if (!skipIndexers)
+            //    {
+            //        this.currentTokenIndex--;
 
-            // Function call
-            if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
-            {
-                //return FunctionCall(currentToken);
-                return FunctionCall(new VariableReferenceNode(currentToken.Raw));
-            }
-            else if (HasNextToken && NextTokenType == TokenType.OPEN_SQURE_BRACKET)
-            {
-                if (!skipIndexers)
-                {
-                    this.currentTokenIndex--;
+            //        var obj = this.Expression(true);
+            //        var indexersAccess = this.CheckIndexersAccess(obj);
 
-                    var obj = this.Expression(true);
-                    var indexersAccess = this.CheckIndexersAccess(obj);
+            //        return indexersAccess;
+            //    }
+            //}
 
-                    return indexersAccess;
-                }
-            }
-
-            var res = new VariableReferenceNode(currentToken.Raw);
-            res.Line = currentToken.Line;
-            return res;
+            var result = new VariableReferenceNode(currentToken.Raw);
+            result.Line = currentToken.Line;
+            return result;
         }
         private AstNode CheckIndexersAccess(AstNode child)
         {

@@ -12,7 +12,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptFloat() :
             base("float", isStatic: false)
         {
-            this.AddFunction(this.Name, new List<FnParameter>()
+            this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>
@@ -36,6 +36,28 @@ namespace HanabiLang.Interprets.ScriptTypes
                     _this.BuildInObject = double.Parse((string)value.BuildInObject);
                 }
                 return ScriptValue.Null;
+            });
+
+            this.AddFunction("CompareTo", new List<FnParameter>()
+            {
+                new FnParameter("value"),
+            }, args =>
+            {
+                double _this = AsCSharp(args[0].TryObject);
+                ScriptObject value = (ScriptObject)args[1].Value;
+                if (value.ClassType is ScriptInt)
+                {
+                    return new ScriptValue(_this.CompareTo(AsCSharp(value)));
+                }
+                else if (value.ClassType is ScriptDecimal)
+                {
+                    return new ScriptValue(_this.CompareTo(ScriptDecimal.AsCSharp(value)));
+                }
+                else if (value.ClassType is ScriptFloat)
+                {
+                    return new ScriptValue(_this.CompareTo(ScriptFloat.AsCSharp(value)));
+                }
+                return new ScriptValue(0);
             });
         }
         public override ScriptObject Create() => new ScriptObject(this, (double)0);

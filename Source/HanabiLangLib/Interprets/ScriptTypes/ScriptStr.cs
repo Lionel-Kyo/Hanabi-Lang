@@ -12,30 +12,43 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptStr : ScriptClass
     {
         public ScriptStr() :
-            base("str", isStatic: false)
+            base("str", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
         {
-            this.AddFunction(this.Name, new List<FnParameter>() 
+            this.AddFunction(ConstructorName, new List<FnParameter>() 
             {
                 new FnParameter("value")
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
+                ScriptObject _this = args[0].TryObject;
                 if (args.Count == 2)
                 {
-                    ScriptObject value = (ScriptObject)args[1].Value;
+                    ScriptObject value = args[1].TryObject;
                     _this.BuildInObject = value.ToString();
                 }
                 return ScriptValue.Null;
             });
+
+            AddVariable("Iter", args =>
+            {
+                string text = AsCSharp(args[0].TryObject);
+                var result = BasicTypes.Iterator.Create(text.Select(c => new ScriptValue(c)));
+                return new ScriptValue(result);
+            }, null, false, null);
+
+            AddVariable("Length", args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                return new ScriptValue(AsCSharp(_this).Length);
+            }, null, false, null);
 
             this.AddFunction("SubStr", new List<FnParameter>()
             {
                 new FnParameter("startIndex", BasicTypes.Int)
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).Substring((int)startIndex));
+                ScriptObject _this = args[0].TryObject;
+                long startIndex = ScriptInt.AsCSharp(args[1].TryObject);
+                return new ScriptValue(AsCSharp(_this).Substring((int)startIndex));
             });
 
             this.AddFunction("SubStr", new List<FnParameter>()
@@ -44,10 +57,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("length", BasicTypes.Int)
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                long startIndex = (long)((ScriptObject)args[1].Value).BuildInObject;
-                long length = (long)((ScriptObject)args[2].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).Substring((int)startIndex, (int)length));
+                ScriptObject _this = args[0].TryObject;
+                long startIndex = ScriptInt.AsCSharp(args[1].TryObject);
+                long length = ScriptInt.AsCSharp(args[2].TryObject);
+                return new ScriptValue(AsCSharp(_this).Substring((int)startIndex, (int)length));
             });
 
             this.AddFunction("Contains", new List<FnParameter>()
@@ -55,9 +68,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("value", BasicTypes.Str),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string value = (string)((ScriptObject)args[1].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).Contains(value));
+                ScriptObject _this = args[0].TryObject;
+                string value = AsCSharp(args[1].TryObject);
+                return new ScriptValue(AsCSharp(_this).Contains(value));
             });
 
             this.AddFunction("IndexOf", new List<FnParameter>()
@@ -67,15 +80,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string value = (string)((ScriptObject)args[1].Value).BuildInObject;
-                int startIndex = (int)((ScriptObject)args[2].Value).BuildInObject;
+                ScriptObject _this = args[0].TryObject;
+                string value = AsCSharp(args[1].TryObject);
+                int startIndex = (int)ScriptInt.AsCSharp(args[2].TryObject);
                 if (args[3].IsNull)
                 {
-                    return new ScriptValue(((string)_this.BuildInObject).IndexOf(value, startIndex));
+                    return new ScriptValue(AsCSharp(_this).IndexOf(value, startIndex));
                 }
-                int count = (int)((ScriptObject)args[3].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).IndexOf(value, startIndex, count));
+                int count = (int)ScriptInt.AsCSharp(args[3].TryObject);
+                return new ScriptValue(AsCSharp(_this).IndexOf(value, startIndex, count));
             });
 
             this.AddFunction("LastIndexOf", new List<FnParameter>()
@@ -85,15 +98,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string value = (string)((ScriptObject)args[1].Value).BuildInObject;
-                int startIndex = (int)((ScriptObject)args[2].Value).BuildInObject;
+                ScriptObject _this = args[0].TryObject;
+                string value = AsCSharp(args[1].TryObject);
+                int startIndex = (int)ScriptInt.AsCSharp(args[2].TryObject);
                 if (args[3].IsNull)
                 {
-                    return new ScriptValue(((string)_this.BuildInObject).LastIndexOf(value, startIndex));
+                    return new ScriptValue(AsCSharp(_this).LastIndexOf(value, startIndex));
                 }
-                int count = (int)((ScriptObject)args[3].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).LastIndexOf(value, startIndex, count));
+                int count = (int)ScriptInt.AsCSharp(args[3].TryObject);
+                return new ScriptValue(AsCSharp(_this).LastIndexOf(value, startIndex, count));
             });
 
             this.AddFunction("Remove", new List<FnParameter>()
@@ -102,14 +115,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                int startIndex = (int)((ScriptObject)args[1].Value).BuildInObject;
+                ScriptObject _this = args[0].TryObject;
+                int startIndex = (int)ScriptInt.AsCSharp(args[1].TryObject);
                 if (args[2].IsNull)
                 {
-                    return new ScriptValue(((string)_this.BuildInObject).Remove(startIndex));
+                    return new ScriptValue(AsCSharp(_this).Remove(startIndex));
                 }
-                int count = (int)((ScriptObject)args[2].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).Remove(startIndex, count));
+                int count = (int)ScriptInt.AsCSharp(args[2].TryObject);
+                return new ScriptValue(AsCSharp(_this).Remove(startIndex, count));
             });
 
             this.AddFunction("Replace", new List<FnParameter>()
@@ -118,10 +131,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("newValue", BasicTypes.Str),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string oldValue = (string)((ScriptObject)args[1].Value).BuildInObject;
-                string newValue = (string)((ScriptObject)args[2].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).Replace(oldValue, newValue));
+                ScriptObject _this = args[0].TryObject;
+                string oldValue = AsCSharp(args[1].TryObject);
+                string newValue = AsCSharp(args[2].TryObject);
+                return new ScriptValue(AsCSharp(_this).Replace(oldValue, newValue));
             });
 
             this.AddFunction("Split", new List<FnParameter>()
@@ -129,18 +142,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("separator", BasicTypes.Str, null, true),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                ScriptObject separators = (ScriptObject)args[1].Value;
-                string[] separator = new string[((List<ScriptValue>)separators.BuildInObject).Count];
-                for (int i = 0; i < ((List<ScriptValue>)separators.BuildInObject).Count; i++)
-                {
-                    separator[i] = (string)(((ScriptObject)((List<ScriptValue>)separators.BuildInObject)[i].Value).BuildInObject);
-                }
-                List<ScriptValue> result = new List<ScriptValue>();
-                foreach (string value in ((string)_this.BuildInObject).Split(separator, StringSplitOptions.None))
-                {
-                    result.Add(new ScriptValue(value));
-                }
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject separators = args[1].TryObject;
+                string[] separator = ScriptList.AsCSharp(separators).Select(v => AsCSharp(v.TryObject)).ToArray();
+                List<ScriptValue> result = AsCSharp(_this).Split(separator, StringSplitOptions.None).Select(s =>  new ScriptValue(s)).ToList();
                 return new ScriptValue(result);
             });
 
@@ -149,9 +154,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("value", BasicTypes.Str),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string value = (string)((ScriptObject)args[1].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).StartsWith(value));
+                ScriptObject _this = args[0].TryObject;
+                string value = AsCSharp(args[1].TryObject);
+                return new ScriptValue(AsCSharp(_this).StartsWith(value));
             });
 
             this.AddFunction("EndsWith", new List<FnParameter>()
@@ -159,16 +164,23 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("value", BasicTypes.Str),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string value = (string)((ScriptObject)args[1].Value).BuildInObject;
-                return new ScriptValue(((string)_this.BuildInObject).EndsWith(value));
+                ScriptObject _this = args[0].TryObject;
+                string value = AsCSharp(args[1].TryObject);
+                return new ScriptValue(AsCSharp(_this).EndsWith(value));
+            });
+
+            this.AddFunction("ToUpper", new List<FnParameter>()
+            , args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                return new ScriptValue(AsCSharp(_this).ToUpper());
             });
 
             this.AddFunction("ToLower", new List<FnParameter>()
             , args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((string)_this.BuildInObject).ToLower());
+                ScriptObject _this = args[0].TryObject;
+                return new ScriptValue(AsCSharp(_this).ToLower());
             });
 
             this.AddFunction("Trim", new List<FnParameter>()
@@ -176,15 +188,11 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("chars", BasicTypes.Str, null, true),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                char[] chars = new char[args.Count - 1];
-                if (chars.Length == 0)
-                    return new ScriptValue(((string)_this.BuildInObject).Trim());
-                for (int i = 1; i < args.Count; i++)
-                {
-                    chars[i - 1] = ((string)((ScriptObject)args[i].Value).BuildInObject)[0];
-                }
-                return new ScriptValue(((string)_this.BuildInObject).Trim(chars));
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject chars = args[1].TryObject;
+                if (ScriptList.AsCSharp(chars).Count == 0)
+                    return new ScriptValue(AsCSharp(_this).Trim());
+                return new ScriptValue(AsCSharp(_this).Trim(ScriptList.AsCSharp(chars).Select(c => AsCSharp(c.TryObject)[0]).ToArray()));
             });
 
             this.AddFunction("TrimStart", new List<FnParameter>()
@@ -192,15 +200,11 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("chars", BasicTypes.Str, null, true),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                char[] chars = new char[args.Count - 1];
-                if (chars.Length == 0)
-                    return new ScriptValue(((string)_this.BuildInObject).TrimStart(' '));
-                for (int i = 1; i < args.Count; i++)
-                {
-                    chars[i - 1] = ((string)((ScriptObject)args[i].Value).BuildInObject)[0];
-                }
-                return new ScriptValue(((string)_this.BuildInObject).TrimStart(chars));
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject chars = args[1].TryObject;
+                if (ScriptList.AsCSharp(chars).Count == 0)
+                    return new ScriptValue(AsCSharp(_this).TrimStart());
+                return new ScriptValue(AsCSharp(_this).TrimStart(ScriptList.AsCSharp(chars).Select(c => AsCSharp(c.TryObject)[0]).ToArray()));
             });
 
             this.AddFunction("TrimEnd", new List<FnParameter>()
@@ -208,29 +212,39 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("chars", BasicTypes.Str, null, true),
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                char[] chars = new char[args.Count - 1];
-                if (chars.Length == 0)
-                    return new ScriptValue(((string)_this.BuildInObject).TrimStart(' '));
-                for (int i = 1; i < args.Count; i++)
-                {
-                    chars[i - 1] = ((string)((ScriptObject)args[i].Value).BuildInObject)[0];
-                }
-                return new ScriptValue(((string)_this.BuildInObject).TrimEnd(chars));
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject chars = args[1].TryObject;
+                if (ScriptList.AsCSharp(chars).Count == 0)
+                    return new ScriptValue(AsCSharp(_this).TrimEnd());
+                return new ScriptValue(AsCSharp(_this).TrimEnd(ScriptList.AsCSharp(chars).Select(c => AsCSharp(c.TryObject)[0]).ToArray()));
             });
 
-            AddVariable("Length", args =>
+            this.AddFunction("PadLeft", new List<FnParameter>()
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(((string)((ScriptObject)args[0].Value).BuildInObject).Length);
-            }, null, false, null);
+                new FnParameter("totalLength", BasicTypes.Int),
+                new FnParameter("paddingChar", BasicTypes.Str, new ScriptValue()),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                int totalLength = (int)ScriptInt.AsCSharp(args[1].TryObject);
+                string paddingChar = AsCSharp(args[2].TryObject) ?? " ";
+                if (paddingChar.Length <= 0)
+                    throw new ArgumentException("paddingChar should not be empty");
+                return new ScriptValue(AsCSharp(_this).PadLeft(totalLength, paddingChar[0]));
+            });
 
-            this.AddFunction("GetEnumerator", new List<FnParameter>(), args =>
+            this.AddFunction("PadRight", new List<FnParameter>()
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                var result = BasicTypes.Enumerator.Create();
-                result.BuildInObject = StrIterator((string)_this.BuildInObject);
-                return new ScriptValue(result);
+                new FnParameter("totalLength", BasicTypes.Int),
+                new FnParameter("paddingChar", BasicTypes.Str, new ScriptValue()),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                int totalLength = (int)ScriptInt.AsCSharp(args[1].TryObject);
+                string paddingChar = AsCSharp(args[2].TryObject) ?? " ";
+                if (paddingChar.Length <= 0)
+                    throw new ArgumentException("paddingChar should not be empty");
+                return new ScriptValue(AsCSharp(_this).PadRight(totalLength, paddingChar[0]));
             });
 
             this.AddFunction("FromChar", new List<FnParameter>()
@@ -238,7 +252,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 new FnParameter("character", BasicTypes.Int, null, false),
             }, args =>
             {
-                long character = (long)((ScriptObject)args[0].Value).BuildInObject;
+                long character = ScriptInt.AsCSharp(args[0].TryObject);
                 return new ScriptValue(Convert.ToChar(character));
             }, true);
 
@@ -246,12 +260,37 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
             }, args =>
             {
-                ScriptObject _this = (ScriptObject)args[0].Value;
-                string str = (string)((ScriptObject)args[0].Value).BuildInObject;
+                ScriptObject _this = args[0].TryObject;
+                string str = AsCSharp(args[0].TryObject);
                 if (str.Length <= 0)
                     throw new IndexOutOfRangeException("Empty string cannot convert to char");
                 return new ScriptValue((long)str[0]);
             }, false);
+
+            this.AddFunction("Join", new List<FnParameter>()
+            {
+                new FnParameter("seperator", BasicTypes.Str, null, false),
+                new FnParameter("values", BasicTypes.Iterator, null, false),
+            }, args =>
+            {
+                string seperator = AsCSharp(args[0].TryObject);
+                ScriptIterator.TryGetIterator(args[1].TryObject, out var values);
+                return new ScriptValue(string.Join(seperator, values));
+            }, true);
+
+            this.AddFunction("CompareTo", new List<FnParameter>()
+            {
+                new FnParameter("value"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject value = args[1].TryObject;
+                if (value != null && value.ClassType is ScriptStr)
+                {
+                    return new ScriptValue(AsCSharp(_this).CompareTo(AsCSharp(value)));
+                }
+                return new ScriptValue(0);
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, "");
@@ -261,20 +300,18 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public override ScriptObject Add(ScriptObject _this, ScriptObject value)
         {
-            StringBuilder result = new StringBuilder((string)_this.BuildInObject);
-            result.Append(value.ToString());
-            return BasicTypes.Str.Create(result);
+            return BasicTypes.Str.Create(AsCSharp(_this) + value.ToString());
         }
 
         public override ScriptObject Multiply(ScriptObject _this, ScriptObject value)
         {
             if (value.ClassType is ScriptInt)
             {
-                StringBuilder result = new StringBuilder((string)_this.BuildInObject);
-                long number = (long)value.BuildInObject;
+                StringBuilder result = new StringBuilder(AsCSharp(_this));
+                long number = ScriptInt.AsCSharp(value);
                 for (long i = 1; i < number; i++)
                 {
-                    result.Append((string)_this.BuildInObject);
+                    result.Append(AsCSharp(_this));
                 }
                 return BasicTypes.Str.Create(result);
             }
@@ -282,13 +319,13 @@ namespace HanabiLang.Interprets.ScriptTypes
             return base.Multiply(_this, value);
         }
 
-        private static IEnumerable<ScriptValue> StrIterator(string value)
-        {
-            foreach (char c in value)
-            {
-                yield return new ScriptValue(c);
-            }
-        }
+        //private static IEnumerable<ScriptValue> StrIterator(string value)
+        //{
+        //    foreach (char c in value)
+        //    {
+        //        yield return new ScriptValue(c);
+        //    }
+        //}
 
         public override ScriptObject ToStr(ScriptObject _this) => _this;
 

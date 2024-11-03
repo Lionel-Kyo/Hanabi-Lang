@@ -490,6 +490,71 @@ var result1 = a.GetValue(""Test"");
             var values = Interpret(sourceCode, out var interpreter, "result1");
             CheckEquals(values["result1"], new ScriptValue(12345));
         }
+
+
+        public static void IteratorTest()
+        {
+            string sourceCode = @"
+class Test: Iterator {
+    private let values = null;
+    public let Iter => TestIterator.Create(this.values);
+
+    public fn Test(values: Iterator) {
+        this.values = values
+    }
+
+    private class TestIterator {
+        private let values = null;
+        private let index = -1;
+
+        public fn TestIterator(values) {
+            this.values = values;
+        }
+
+        private fn GetCurrent() {
+            return this.values[this.index];
+        }
+
+        private fn MoveNext() {
+            if this.index + 1 >= this.values.Length {
+                return false;
+            }
+            this.index++;
+            return true;
+        }
+
+        private fn Reset() {
+            this.index = -1;
+        }
+
+        public static fn Create(values) {
+            let result = TestIterator(values);
+            return Iterator(result.GetCurrent, result.MoveNext, result.Reset);
+        }
+    }
+}
+
+const test = Test([*range(10, 20)]);
+const result1 = test.ToList();
+const result2 = test.Iter.ToList();
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            var result = Enumerable.Range(10, 10).Select(i => new ScriptValue(i)).ToList();
+            CheckEquals(values["result1"], new ScriptValue(result));
+            CheckEquals(values["result2"], new ScriptValue(result));
+        }
+
+        public static void IteratorTest2()
+        {
+            string sourceCode = @"
+const result1 = range(25, 50).SelectWithIndex((value, index) => *[value, index]).Where((value, index) => index >= 10).Select((value, index) => $""{index}: {value}"").ToList();
+const result2 = range(25, 50).Iter.SelectWithIndex((value, index) => *[value, index]).Where((value, index) => index >= 10).Select((value, index) => $""{index}: {value}"").ToList();
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            var result = Enumerable.Range(25, 25).Select((value, index) => Tuple.Create(value, index)).Where(vi => vi.Item2 >= 10).Select(vi => new ScriptValue($"{vi.Item2}: {vi.Item1}")).ToList();
+            CheckEquals(values["result1"], new ScriptValue(result));
+            CheckEquals(values["result2"], new ScriptValue(result));
+        }
     }
 }
 

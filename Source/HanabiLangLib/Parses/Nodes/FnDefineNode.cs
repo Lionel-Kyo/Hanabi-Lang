@@ -46,6 +46,11 @@ namespace HanabiLang.Parses.Nodes
             this.Level = level;
         }
 
+        public void ChangeToConstructorName(string className)
+        {
+            this.Name = $"{className}::New";
+        }
+
         public override string ToString()
         {
             StringBuilder result = new StringBuilder();
