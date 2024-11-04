@@ -49,7 +49,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.SuperClass.Level = AccessibilityLevel.Private;
                 this.SuperClass.Body = new List<object>();
 
-                foreach (var _class in this.SuperClasses)
+                foreach (var _class in ((IEnumerable<ScriptClass>)this.SuperClasses).Reverse())
                 { 
                     if (_class.BuildInConstructor.Fns.Count != 0)
                         throw new SystemException("Inherit from C# class is not supported");
@@ -187,7 +187,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 scriptFns = new ScriptFns(name);
                 this.Scope.Functions[name] = scriptFns;
             }
-            scriptFns.Fns.Add(new ScriptFn(parameters, this.Scope, fn, isStatic, level));
+            //scriptFns.Fns.Add(new ScriptFn(parameters, this.Scope, fn, isStatic, level));
+            // override function
+            scriptFns.AddFn(new ScriptFn(parameters, this.Scope, fn, isStatic, level), true);
         }
 
         protected void AddVariable(string name, bool isStatic, HashSet<ScriptClass> dataTypes)
@@ -196,7 +198,9 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (isStatic)
             {
-                this.Scope.Variables.Add(name, variable);
+                // this.Scope.Variables.Add(name, variable);
+                // replace variable
+                this.Scope.Variables[name] =  variable;
             }
             else
             {
@@ -228,7 +232,9 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (isStatic)
             {
-                this.Scope.Variables.Add(name, variable);
+                // this.Scope.Variables.Add(name, variable);
+                // replace variable
+                this.Scope.Variables[name] = variable;
             }
             else
             {

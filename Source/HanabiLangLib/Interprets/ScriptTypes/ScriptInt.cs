@@ -35,7 +35,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 {
                     _this.BuildInObject = long.Parse(ScriptStr.AsCSharp(value));
                 }
-                _this.BuildInObject = (long)0;
                 return ScriptValue.Null;
             });
 

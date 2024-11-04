@@ -248,10 +248,10 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                ScriptFns match = (ScriptFns)args[1].Value;
+                ScriptFns action = (ScriptFns)args[1].Value;
                 AsCSharp(_this).ForEach(x =>
                 {
-                    ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
+                    ScriptObject result = (ScriptObject)action.Call(null, x).Value;
                 });
                 return ScriptValue.Null;
             });
