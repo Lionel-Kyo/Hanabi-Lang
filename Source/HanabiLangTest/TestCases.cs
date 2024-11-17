@@ -272,7 +272,7 @@ const result2 = TestClass(""Hello"").ToStr();
 
             var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
             CheckEquals(values["result1"], new ScriptValue("Hello is Middle3"));
-            CheckEquals(values["result2"], new ScriptValue("Super2 Middle2"));
+            CheckEquals(values["result2"], new ScriptValue("Super1 Middle1"));
         }
 
         public static void ClassTest3()
@@ -473,9 +473,9 @@ var result2 = Json.Serialize(b.d);
 var result3 = Json.Serialize(b);
 ";
             var values = Interpret(sourceCode, out var interpreter, "result1", "result2", "result3");
-            CheckEquals(values["result1"], new ScriptValue("{ \"a\": \"Hello\", \"b\": 658654383, \"c\": null, \"d\": null }"));
-            CheckEquals(values["result2"], new ScriptValue("{ \"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14 }"));
-            CheckEquals(values["result3"], new ScriptValue("{ \"a\": \"Hello world\", \"b\": 3.14, \"c\": 12345, \"d\": { \"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14 } }"));
+            CheckEquals(values["result1"], new ScriptValue("{\"a\": \"Hello\", \"b\": 658654383, \"c\": null, \"d\": null}"));
+            CheckEquals(values["result2"], new ScriptValue("{\"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14}"));
+            CheckEquals(values["result3"], new ScriptValue("{\"a\": \"Hello world\", \"b\": 3.14, \"c\": 12345, \"d\": {\"t1\": \"Test1\", \"t2\": 12345, \"t3\": 3.14}}"));
         }
 
         public static void DictTest()

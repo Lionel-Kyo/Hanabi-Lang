@@ -36,24 +36,42 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
+            this.AddFunction("IsSubOf", new List<FnParameter>()
+            {
+                new FnParameter("value")
+            }, args =>
+            {
+                ScriptObject valueObject = args[1].TryObject;
+                ScriptClass valueClass = null;
+                if (valueObject != null && valueObject.ClassType == BasicTypes.TypeClass)
+                    valueClass = AsCSharp(valueObject);
+
+                if (valueClass == null)
+                    throw new SystemException($"input is not Type object");
+
+                ScriptClass thisType = AsCSharp(args[0].TryObject);
+                if (thisType == valueClass)
+                    return new ScriptValue(true);
+                return new ScriptValue(thisType.SuperClasses?.Contains(valueClass) ?? false);
+            });
+
             this.AddFunction("IsSuperOf", new List<FnParameter>()
             {
                 new FnParameter("value")
             }, args =>
             {
-                ScriptClass valueType = null;
-                if (args[1].Value is ScriptObject)
-                {
-                    if (((ScriptObject)args[1].Value).ClassType == BasicTypes.TypeClass)
-                        valueType = (ScriptClass)((ScriptObject)args[1].Value).BuildInObject;
-                }
-                if (valueType == null)
+                ScriptObject valueObject = args[1].TryObject;
+                ScriptClass valueClass = null;
+                if (valueObject != null && valueObject.ClassType == BasicTypes.TypeClass)
+                    valueClass = AsCSharp(valueObject);
+
+                if (valueClass == null)
                     throw new SystemException($"input is not Type object");
 
-                ScriptClass thisType = (ScriptClass)((ScriptObject)args[0].Value).BuildInObject;
-                if (thisType == valueType)
+                ScriptClass thisType = AsCSharp(args[0].TryObject);
+                if (thisType == valueClass)
                     return new ScriptValue(true);
-                return new ScriptValue(valueType.SuperClasses?.Contains(thisType) ?? false);
+                return new ScriptValue(valueClass.SuperClasses?.Contains(thisType) ?? false);
             });
 
             this.AddVariable("Value", args => new ScriptValue((ScriptClass)((ScriptObject)args[0].Value).BuildInObject), null, false, null);
@@ -69,5 +87,10 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
 
         public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"<Type: {((ScriptClass)_this.BuildInObject).Name}>");
+
+        public static ScriptClass AsCSharp(ScriptObject _this)
+        {
+            return (ScriptClass)_this.BuildInObject;
+        }
     }
 }

@@ -24,9 +24,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 long step = 1;
                 ScriptObject _this = args[0].TryObject;
 
-                end = (long)((ScriptObject)args[1].Value).BuildInObject;
-                if (end < 0 && step > 0)
-                    step *= -1;
+                end = ScriptInt.AsCSharp(args[1].TryObject);
 
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
@@ -43,10 +41,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 long step = 1;
                 ScriptObject _this = args[0].TryObject;
 
-                start = (long)((ScriptObject)args[1].Value).BuildInObject;
-                end = (long)((ScriptObject)args[2].Value).BuildInObject;
-                if (end < 0 && step > 0)
-                    step *= -1;
+                start = ScriptInt.AsCSharp(args[1].TryObject);
+                end = ScriptInt.AsCSharp(args[2].TryObject);
+                if (start > end && step > 0)
+                    step = -1;
 
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
@@ -63,9 +61,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                 long end = 0;
                 long step = 1;
                 ScriptObject _this = args[0].TryObject;
-                start = (long)((ScriptObject)args[1].Value).BuildInObject;
-                end = (long)((ScriptObject)args[2].Value).BuildInObject;
-                step = (long)((ScriptObject)args[3].Value).BuildInObject;
+                start = ScriptInt.AsCSharp(args[1].TryObject);
+                end = ScriptInt.AsCSharp(args[2].TryObject);
+                step = ScriptInt.AsCSharp(args[3].TryObject);
 
                 _this.BuildInObject = Tuple.Create(start, end, step);
                 return ScriptValue.Null;
@@ -86,10 +84,9 @@ namespace HanabiLang.Interprets.ScriptTypes
         private static IEnumerable<ScriptValue> RangeIterator(long start, long stop, long step)
         {
             long x = start;
-
             while (true)
             {
-                if (step < 0 && x <= stop || 0 < step && stop <= x)
+                if ((step < 0 && x <= stop) || (step > 0 && x >= stop))
                     break;
                 yield return new ScriptValue(x);
                 x += step;

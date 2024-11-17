@@ -43,6 +43,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             return false;
         }
 
+        public bool IsTypeOrSubOf(ScriptClass type)
+        {
+            return this.ClassType == type || (this.ClassType?.SuperClasses.Contains(type) ?? false);
+        }
+
         public override string ToString()
         {
             if (this.ClassType.TryGetValue("ToStr", out ScriptType fns) && fns is ScriptFns)

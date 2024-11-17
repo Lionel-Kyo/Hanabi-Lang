@@ -44,7 +44,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     internal class FnTempParameter
     {
         public bool IsMultiArgs { get; private set; }
-        public HashSet<ScriptClass> DataTypes { get; private set; }
+        public ScriptClass[] DataTypes { get; private set; }
         public ScriptValue Value { get; set; }
 
         public bool IsValid => Value != null;
@@ -52,17 +52,16 @@ namespace HanabiLang.Interprets.ScriptTypes
         public FnTempParameter(FnParameter fnParameter)
         {
             this.IsMultiArgs = fnParameter.IsMultiArgs;
-            this.DataTypes = fnParameter.DataTypes;
+            this.DataTypes = fnParameter.DataTypes?.ToArray();
             this.Value = fnParameter.DefaultValue;
         }
 
         public bool CheckType(ScriptValue value)
         {
-            ScriptFns fns = value.TryFunction;
             if (value.TryFunction != null && this.DataTypes.Contains(BasicTypes.FunctionClass))
                 return true;
-            if (value.TryObject != null && 
-                (this.DataTypes.Contains(value.TryObject.ClassType) || value.TryObject.ClassType.SuperClasses.FindIndex(c => this.DataTypes.Contains(c)) >= 0)) 
+            ScriptObject obj = value.TryObject;
+            if (obj != null && Array.FindIndex(DataTypes, type => obj.IsTypeOrSubOf(type)) >= 0)
                 return true;
             return false;
         }

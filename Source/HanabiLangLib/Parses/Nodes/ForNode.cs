@@ -9,13 +9,13 @@ namespace HanabiLang.Parses.Nodes
     class ForNode : AstNode, IStatementNode
     {
         public string Initializer { get; private set; }
-        public AstNode Location { get; private set; }
+        public AstNode Iterator { get; private set; }
         public List<AstNode> Body { get; private set; }
 
-        public ForNode(string initializer, AstNode location, List<AstNode> body)
+        public ForNode(string initializer, AstNode iterator, List<AstNode> body)
         {
             this.Initializer = initializer;
-            this.Location = location;
+            this.Iterator = iterator;
             this.Body = body;
         }
 
@@ -24,7 +24,7 @@ namespace HanabiLang.Parses.Nodes
             StringBuilder result = new StringBuilder();
             result.Append(this.NodeName);
             result.Append('(');
-            result.Append(Location.ToString());
+            result.Append(Iterator.ToString());
             result.Append(' ');
             foreach (var statement in Body)
             {

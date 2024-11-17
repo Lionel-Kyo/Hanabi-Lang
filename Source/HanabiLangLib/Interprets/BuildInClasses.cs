@@ -16,7 +16,7 @@ namespace HanabiLang.Interprets
         // Expression.Call<T>(Expression ex, IEnumerable<ParameterExpression> params)
         private static MethodInfo ExpressionCall = typeof(Expression).GetMethods(BindingFlags.Public | BindingFlags.Static).Where(
                         mi => mi.Name == "Lambda" && mi.IsGenericMethodDefinition && mi.GetParameters().Length == 2 &&
-                        mi.GetParameters()[0].ParameterType == typeof(Expression) && mi.GetParameters()[1].ParameterType == typeof(IEnumerable<ParameterExpression>)).ToArray().First();
+                        mi.GetParameters()[0].ParameterType == typeof(Expression) && mi.GetParameters()[1].ParameterType == typeof(IEnumerable<ParameterExpression>)).ToArray().FirstOrDefault();
         
         private static dynamic GetCsArray(ScriptObject scriptList, Type valueType)
         {
@@ -114,7 +114,7 @@ namespace HanabiLang.Interprets
                 var variableExpressions = new List<ParameterExpression>();
 
                 Func<ScriptObject, ScriptValue[], ScriptValue> fnsCall = fns.Call;
-                Func<object, ScriptValue> fromCsObject = FromCsObject;
+                Func<object, Type, ScriptValue> fromCsObject = FromCsObject;
                 Func<ScriptValue, Type, dynamic> toCsObject = ToCsObject;
 
                 List<ParameterExpression> scriptVars = new List<ParameterExpression>();
@@ -125,7 +125,7 @@ namespace HanabiLang.Interprets
                         name = $"{name}_{parameterCount}";
                     parameterNames.Add(name);
                     Type type = parameter.ParameterType;
-                    ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
+                    ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue, parameter.ParameterType) : null;
                     ParameterExpression paramExpression = Expression.Parameter(type, name);
                     parameters.Add(paramExpression);
                     parameterCount++;
@@ -134,7 +134,9 @@ namespace HanabiLang.Interprets
                     MethodCallExpression fromCsObjectCall = Expression.Call(
                         null,
                         fromCsObject.Method,
-                        Expression.Convert(paramExpression, typeof(object)));
+                        Expression.Convert(paramExpression, typeof(object)),
+                        Expression.Constant((Type)null)
+                        );
                     ParameterExpression returnVar = Expression.Variable(typeof(ScriptValue), $"scriptValue_{parameterCount}");
                     // ScriptValue scriptValue_{i} = FromCsObject(paramExpression);
                     blockExpressions.Add(Expression.Assign(returnVar, Expression.Convert(fromCsObjectCall, typeof(ScriptValue))));
@@ -337,6 +339,15 @@ namespace HanabiLang.Interprets
                 else if (csType == typeof(double))
                     return (double)decimalValue;
             }
+            else if (obj.IsTypeOrSubOf(BasicTypes.Enum))
+            {
+                ScriptValue scriptValue = ScriptEnum.GetEnumValue(obj);
+                ScriptObject intObject = scriptValue.TryObject;
+                if (intObject == null || intObject.ClassType != BasicTypes.Int)
+                    throw new NotSupportedException("C# enum must be integer");
+
+                return Enum.ToObject(csType, ScriptInt.AsCSharp(intObject));
+            }
             else if (ImportedItems.Types.ContainsValue(obj.ClassType))
             {
                 return obj.BuildInObject;
@@ -345,11 +356,11 @@ namespace HanabiLang.Interprets
             throw new SystemException($"Expected type: {csType.Name}");
         }
 
-        private static ScriptValue FromCsObject(object csObj)
+        private static ScriptValue FromCsObject(object csObj, Type forcedCsType=null)
         {
             if (csObj == null)
                 return ScriptValue.Null;
-            Type csType = csObj.GetType();
+            Type csType = forcedCsType ?? csObj.GetType();
 
             if (csType == typeof(ScriptValue))
                 return (ScriptValue)csObj;
@@ -563,8 +574,24 @@ namespace HanabiLang.Interprets
             bool isEnum = type.IsValueType && type.IsEnum;
             bool isClass = type.IsClass;
 
-            if (!isClass && !isStruct/* && !isEnum*/)
+            if (!isClass && !isStruct && !isEnum)
                 throw new SystemException("Only C# class/struct can be imported");
+
+            if (isEnum)
+            {
+                var enumClass = new ScriptClass(string.IsNullOrEmpty(rename) ? type.Name : rename, new List<AstNode>(),
+                    null, new List<ScriptClass> { BasicTypes.Enum }, false, AccessibilityLevel.Public);
+                ImportedItems.Types[type] = enumClass;
+                foreach (string name in Enum.GetNames(type))
+                {
+                    ScriptObject obj = enumClass.Create();
+                    long longValue = (long)Convert.ChangeType(Enum.Parse(type, name), typeof(long));
+                    obj.BuildInObject = Tuple.Create(name, new ScriptValue(longValue));
+                    enumClass.Scope.Variables[name] = new ScriptVariable(name, null,
+                        new ScriptValue(obj), true, true, AccessibilityLevel.Public);
+                }
+                return enumClass;
+            }
 
             bool isStatic = type.IsAbstract && type.IsSealed;
 
@@ -636,7 +663,7 @@ namespace HanabiLang.Interprets
                         object _this = ((ScriptObject)args[0].Value).BuildInObject;
                         value = field.GetValue(field.IsStatic ? null : _this);
                     }
-                    return FromCsObject(value);
+                    return FromCsObject(value, field.FieldType);
                 };
 
                 AccessibilityLevel level = field.IsPublic ? AccessibilityLevel.Public : AccessibilityLevel.Private;
@@ -702,7 +729,7 @@ namespace HanabiLang.Interprets
                             object _this = ((ScriptObject)args[0].Value).BuildInObject;
                             value = property.GetValue(_this);
                         }
-                        return FromCsObject(value);
+                        return FromCsObject(value, property.PropertyType);
                     };
                 }
 
@@ -823,7 +850,7 @@ namespace HanabiLang.Interprets
                     name = $"{name}_{parameterCount}";
                 parameterNames.Add(name);
                 Type type = parameter.ParameterType;
-                ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
+                ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue, parameter.ParameterType) : null;
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 IEnumerable<ScriptClass> acceptableTypes;
@@ -877,7 +904,7 @@ namespace HanabiLang.Interprets
 
                 object returnObj = method.Invoke(invokeObject, csObjects);
 
-                return FromCsObject(returnObj);
+                return FromCsObject(returnObj, method.ReturnType);
             };
            
             return Tuple.Create(scriptParameters, fn);
@@ -897,7 +924,7 @@ namespace HanabiLang.Interprets
                     name = $"{name}_{parameterCount}";
                 parameterNames.Add(name);
                 Type type = parameter.ParameterType;
-                ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue) : null;
+                ScriptValue defaultValue = parameter.HasDefaultValue ? FromCsObject(parameter.DefaultValue, parameter.ParameterType) : null;
                 csParameters.Add(type);
                 bool isMultipleArgs = parameter.IsDefined(typeof(ParamArrayAttribute), false);
                 IEnumerable<ScriptClass> acceptableTypes;

@@ -1171,7 +1171,45 @@ namespace HanabiLang.Parses
             return new ClassDefineNode(name, members, superClasses, isStatic, level);
         }
 
+        private AstNode EnumDefinition(AccessibilityLevel level)
+        {
+            Token keywordToken = this.Expect(TokenType.KEYWORD);
 
+            var name = this.tokens[this.currentTokenIndex].Raw;
+
+            this.Expect(TokenType.IDENTIFIER);
+            this.Expect(TokenType.OPEN_CURLY_BRACKET);
+
+            var members = new Dictionary<string, AstNode>();
+            int count = 0;
+            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+            {
+                var key = this.tokens[this.currentTokenIndex].Raw;
+                this.Expect(TokenType.IDENTIFIER);
+                if (HasNextToken && NextTokenType == TokenType.EQUALS)
+                {
+                    this.Expect(TokenType.EQUALS);
+                    AstNode value = this.Expression();
+                    members[key] = value;
+                }
+                else
+                {
+                    members[key] = new IntNode(count);
+                    count++;
+                }
+
+                if (HasNextToken && NextTokenType == TokenType.CLOSE_CURLY_BRACKET)
+                    break;
+                else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                    Expect(TokenType.COMMA);
+                else
+                    throw new ParseFormatNotCompleteException("enum expected ',' or '}'", this.tokens[this.currentTokenIndex - 1]);
+            }
+
+            this.Expect(true, TokenType.CLOSE_CURLY_BRACKET);
+            return new EnumDefineNode(name, members, level);
+        }
+        
         private FnReferenceCallNode FunctionCall(AstNode node)
         {
             Token bracketToken = this.Expect(TokenType.OPEN_ROUND_BRACKET);
@@ -1380,6 +1418,10 @@ namespace HanabiLang.Parses
                 {
                     return this.ClassDefinition(isStatic, accessibilityLevel);
                 }
+                else if (keyword.Equals("enum"))
+                {
+                    return this.EnumDefinition(accessibilityLevel);
+                }
             }
             throw new ParseException($"Unexpected {level} defined",
                 this.tokens[this.currentTokenIndex]);
@@ -1423,6 +1465,7 @@ namespace HanabiLang.Parses
                         else if (token.Raw.Equals("switch")) result = this.SwitchStatement();
                         else if (token.Raw.Equals("fn")) result = this.FunctionDefinition(false, AccessibilityLevel.Public, false, false);
                         else if (token.Raw.Equals("class")) result = this.ClassDefinition(false, AccessibilityLevel.Public);
+                        else if (token.Raw.Equals("enum")) result = this.EnumDefinition(AccessibilityLevel.Public);
                         else if (token.Raw.Equals("for")) result = this.ForStatement();
                         else if (token.Raw.Equals("while")) result = this.WhileStatement();
                         else if (token.Raw.Equals("return")) result = this.ReturnStatement();

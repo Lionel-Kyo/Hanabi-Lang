@@ -26,6 +26,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptKeyValuePair KeyValuePair = new ScriptKeyValuePair();
         public static readonly ScriptRange Range = new ScriptRange();
         public static readonly ScriptException Exception = new ScriptException();
+        public static readonly ScriptEnum Enum = new ScriptEnum();
         public static readonly ScriptJson Json = new ScriptJson();
     }
 }

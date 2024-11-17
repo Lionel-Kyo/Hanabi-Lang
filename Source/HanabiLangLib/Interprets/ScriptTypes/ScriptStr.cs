@@ -253,7 +253,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 long character = ScriptInt.AsCSharp(args[0].TryObject);
-                return new ScriptValue(Convert.ToChar(character));
+                return new ScriptValue((char)character);
             }, true);
 
             this.AddFunction("ToChar", new List<FnParameter>()

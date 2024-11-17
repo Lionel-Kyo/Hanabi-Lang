@@ -705,10 +705,11 @@ namespace HanabiLang.Interprets
                 var result = InterpretExpression(interpretScope, node);
                 if (isPrintExpression)
                 {
+                    string _temp;
                     if (result.Ref.IsClassTypeOf(BasicTypes.Str))
-                        Console.WriteLine(ScriptJson.StringToJsonString(result.Ref.ToString()));
+                        Console.WriteLine(ScriptJson.StringToJsonString(result.Ref.ToString(), false));
                     else
-                        Console.WriteLine(result.Ref);
+                        Console.WriteLine((_temp = ScriptJson.StringToJsonString(result.Ref.ToString(), false)).Substring(1, _temp.Length - 2));
                 }
                 return result;
             }
@@ -797,7 +798,7 @@ namespace HanabiLang.Interprets
                                 throw new SystemException($"Unexpected error: {item.Name}");
                             dataTypes = (DefinedTypes)type.Value;
 
-                            if (!dataTypes.Value.Any(ex => ex == exceptionObject.ClassType || (ex?.SuperClasses?.Contains(exceptionObject.ClassType) ?? false)))
+                            if (!dataTypes.Value.Any(ex => exceptionObject.IsTypeOrSubOf(ex)))
                                 continue;
                         }
 
@@ -1094,7 +1095,7 @@ namespace HanabiLang.Interprets
             else if (node is ForNode)
             {
                 var realNode = (ForNode)node;
-                var location = InterpretExpression(interpretScope, realNode.Location).Ref;
+                var location = InterpretExpression(interpretScope, realNode.Iterator).Ref;
 
                 if (!location.IsObject)
                     throw new SystemException("For loop running failed, variable is not enumerable");
@@ -1240,6 +1241,25 @@ namespace HanabiLang.Interprets
 
                 interpretScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
                     interpretScope, superClasses, realNode.IsStatic, realNode.Level);
+                return ValueReference.Empty;
+            }
+            else if (node is EnumDefineNode)
+            {
+                var realNode = (EnumDefineNode)node;
+
+                var enumClass = new ScriptClass(realNode.Name, new List<AstNode>(),
+                    null, new List<ScriptClass> { BasicTypes.Enum }, false, realNode.Level);
+
+                interpretScope.Classes[realNode.Name] = enumClass;
+
+                foreach (var kv in realNode.Members)
+                {
+                    var value = InterpretExpression(interpretScope, kv.Value).Ref;
+                    ScriptObject obj = enumClass.Create();
+                    obj.BuildInObject = Tuple.Create(kv.Key, value);
+                    enumClass.Scope.Variables[kv.Key] = new ScriptVariable(kv.Key, null,
+                        new ScriptValue(obj), true, true, AccessibilityLevel.Public);
+                }
                 return ValueReference.Empty;
             }
             throw new SystemException("Unexcepted interpret statement: " + node.NodeName);

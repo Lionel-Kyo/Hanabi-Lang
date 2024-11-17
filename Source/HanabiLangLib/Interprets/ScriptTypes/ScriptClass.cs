@@ -26,7 +26,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn { get; private set; }
 
-        internal ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> superClasses,
+        internal ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> definedSuperClasses,
             bool isStatic, AccessibilityLevel level, bool isImported = false)
         {
             this.Name = name;
@@ -40,16 +40,14 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (!this.IsStatic && !this.Name.Equals("object"))
             {
-                this.SuperClasses = superClasses;
-
-                if (this.SuperClasses == null || this.SuperClasses.Count <= 0)
-                    this.SuperClasses = new List<ScriptClass>() { BasicTypes.ObjectClass };
+                if (definedSuperClasses == null || definedSuperClasses.Count <= 0)
+                    definedSuperClasses = new List<ScriptClass>() { BasicTypes.ObjectClass };
 
                 this.SuperClass = new ScriptClass($"super_{name}", true);
                 this.SuperClass.Level = AccessibilityLevel.Private;
                 this.SuperClass.Body = new List<object>();
 
-                foreach (var _class in ((IEnumerable<ScriptClass>)this.SuperClasses).Reverse())
+                foreach (var _class in ((IEnumerable<ScriptClass>)definedSuperClasses).Reverse())
                 { 
                     if (_class.BuildInConstructor.Fns.Count != 0)
                         throw new SystemException("Inherit from C# class is not supported");
@@ -59,7 +57,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                     CopyClassMember(_class, this.SuperClass, true);
                 }
-
+                this.SuperClasses = GetAllSuperClassesFromDefinedSuperClasses(definedSuperClasses).ToList();
             }
 
             this.BuildInConstructor = new ScriptFns(this.ConstructorName);
@@ -137,24 +135,24 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        private static List<ScriptClass> GetSuperClasses(ScriptClass _class)
+        private static HashSet<ScriptClass> GetAllSuperClassesFromDefinedSuperClasses(List<ScriptClass> definedSuperClasses)
         {
-            if (_class.SuperClasses == null)
+            if (definedSuperClasses == null)
                 return null;
-            List<ScriptClass> result = new List<ScriptClass>();
-            foreach (ScriptClass superClass in _class.SuperClasses)
+
+            HashSet<ScriptClass> result = new HashSet<ScriptClass>();
+            foreach (ScriptClass superClass in definedSuperClasses)
             {
                 result.Add(superClass);
-                var classes = GetSuperClasses(superClass);
+                var classes = GetAllSuperClassesFromDefinedSuperClasses(superClass.SuperClasses);
                 if (classes != null)
                 {
                     foreach (ScriptClass interClass in classes)
                     {
-                        if (!result.Contains(interClass))
-                            result.Add(interClass);
+                        result.Add(interClass);
                     }
                 }
-                    
+
             }
             return result;
         }
