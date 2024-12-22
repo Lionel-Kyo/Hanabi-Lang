@@ -18,6 +18,7 @@ namespace HanabiLang.Lexers
         SINGLE_ARROW,
         DOUBLE_ARROW,
         DOT,
+        QUESTION_DOT,
         COMMA,
         COLON,
         SEMI_COLON,

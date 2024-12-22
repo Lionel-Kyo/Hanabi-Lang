@@ -38,7 +38,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             else
                 this.Scope = new ScriptScope(this, currentScope);
 
-            if (!this.IsStatic && !this.Name.Equals("object"))
+            if (!this.IsStatic && !(this.Name.Equals("object") || this.Name.Equals("null")))
             {
                 if (definedSuperClasses == null || definedSuperClasses.Count <= 0)
                     definedSuperClasses = new List<ScriptClass>() { BasicTypes.ObjectClass };

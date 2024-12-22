@@ -215,7 +215,7 @@ namespace HanabiLang.Parses
             var left = this.Factor(skipIndexers, skipArrowFn);
 
             while (HasNextToken &&
-                (NextTokenType == TokenType.DOT || 
+                (NextTokenType == TokenType.DOT || NextTokenType == TokenType.QUESTION_DOT ||
                 NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
                 (!skipIndexers && NextTokenType == TokenType.OPEN_SQURE_BRACKET)))
             {
@@ -223,6 +223,11 @@ namespace HanabiLang.Parses
                 {
                     this.Expect(TokenType.DOT);
                     left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), ".");
+                }
+                else if (NextTokenType == TokenType.QUESTION_DOT)
+                {
+                    this.Expect(TokenType.QUESTION_DOT);
+                    left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), "?.");
                 }
                 // Function call
                 else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
@@ -239,27 +244,97 @@ namespace HanabiLang.Parses
             return left;
         }
 
-        private AstNode Term(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermArithmetic1(bool skipIndexers, bool skipArrowFn)
         {
             var left = this.TermDot(skipIndexers, skipArrowFn);
 
             while (HasNextToken &&
-                   (this.tokens[this.currentTokenIndex].Raw == "*" || this.tokens[this.currentTokenIndex].Raw == "/"))
+                (NextToken.Raw == "*" || NextToken.Raw == "/" || NextToken.Raw == "%"))
             {
-                var currentToken = this.tokens[this.currentTokenIndex];
-
+                var currentToken = NextToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermDot(skipIndexers, skipArrowFn), currentToken.Raw);
             }
 
-            // For function calling
-            if (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
+            return left;
+        }
+
+        private AstNode TermArithmetic2(bool skipIndexers, bool skipArrowFn)
+        {
+            var left = this.TermArithmetic1(skipIndexers, skipArrowFn);
+
+            while (HasNextToken &&
+                (NextToken.Raw == "+" || NextToken.Raw == "-"))
             {
-                left = FunctionCall(left);
+                var currentToken = NextToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermArithmetic1(skipIndexers, skipArrowFn), currentToken.Raw);
             }
 
-            return skipIndexers ? left : CheckIndexersAccess(left);
+            return left;
+        }
+
+        private AstNode TermComparative(bool skipIndexers, bool skipArrowFn)
+        {
+            var left = this.TermArithmetic2(skipIndexers, skipArrowFn);
+
+            while (HasNextToken &&
+                (NextToken.Raw == ">=" || NextToken.Raw == "<=" || NextToken.Raw == ">" || NextToken.Raw == "<"))
+            {
+                var currentToken = NextToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermArithmetic2(skipIndexers, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermEqual(bool skipIndexers, bool skipArrowFn)
+        {
+            var left = this.TermComparative(skipIndexers, skipArrowFn);
+
+            while (HasNextToken &&
+                (NextToken.Raw == "==" || NextToken.Raw == "!="))
+            {
+                if (NextToken.Raw == "==" || NextToken.Raw == "!=")
+                {
+                    var currentToken = NextToken;
+                    this.Expect(TokenType.OPERATOR);
+                    left = new ExpressionNode(left, this.TermComparative(skipIndexers, skipArrowFn), currentToken.Raw);
+                }
+            }
+
+            return left;
+        }
+
+        private AstNode TermAnd(bool skipIndexers, bool skipArrowFn)
+        {
+            var left = this.TermEqual(skipIndexers, skipArrowFn);
+
+            while (HasNextToken &&
+                (NextToken.Raw == "&&"))
+            {
+                var currentToken = NextToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermEqual(skipIndexers, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermOr(bool skipIndexers, bool skipArrowFn)
+        {
+            var left = this.TermAnd(skipIndexers, skipArrowFn);
+
+            while (HasNextToken &&
+                (NextToken.Raw == "||"))
+            {
+                var currentToken = NextToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermAnd(skipIndexers, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
         }
 
         private AstNode Expression(bool skipIndexers = false, bool skipEquals = false, bool skipArrowFn = false)
@@ -267,42 +342,13 @@ namespace HanabiLang.Parses
             if (!HasNextToken)
                 throw new ParseFormatNotCompleteException("Format is not complete", this.tokens[this.currentTokenIndex - 1]);
 
-            var left = this.Term(skipIndexers, skipArrowFn);
+            var left = this.TermOr(skipIndexers, skipArrowFn);
 
-            if (this.currentTokenIndex >= this.tokens.Count)
-            {
+            if (!HasNextToken)
                 return left;
-            }
 
             Token currentToken = this.tokens[this.currentTokenIndex];
             string currentRaw = currentToken.Raw;
-
-            while (currentRaw == "+" || currentRaw == "-" ||
-                   currentRaw == "==" || currentRaw == "!=" ||
-                   currentRaw == ">" || currentRaw == "<" ||
-                   currentRaw == ">=" || currentRaw == "<=" ||
-                   currentRaw == "%")
-            {
-
-                this.Expect(TokenType.OPERATOR);
-
-                left = new ExpressionNode(left, this.Term(skipIndexers, skipArrowFn), currentToken.Raw);
-                left.Line = currentToken.Line;
-
-                if (!HasNextToken)
-                    return left;
-                currentToken = this.tokens[this.currentTokenIndex];
-                currentRaw = currentToken.Raw;
-            }
-
-            // && and ||
-            if (this.currentTokenIndex < this.tokens.Count &&
-                (currentRaw == "||" || currentRaw == "&&"))
-            {
-                this.Expect(TokenType.OPERATOR);
-
-                left = new ExpressionNode(left, this.Expression(), currentRaw);
-            }
 
             if (this.currentTokenIndex < this.tokens.Count &&
                 currentToken.Type == TokenType.QUESTION_MARK)
@@ -329,7 +375,6 @@ namespace HanabiLang.Parses
                 this.Expect(TokenType.OPERATOR);
                 return new VariableAssignmentNode(left, new ExpressionNode(left, new IntNode(1), currentRaw[0].ToString()));
             }
-
             if (this.currentTokenIndex < this.tokens.Count &&
                 (currentRaw == "+=" || currentRaw == "-=" || currentRaw == "*=" || currentRaw == "/=" || currentRaw == "%="))
             {
@@ -1210,7 +1255,7 @@ namespace HanabiLang.Parses
             return new EnumDefineNode(name, members, level);
         }
         
-        private FnReferenceCallNode FunctionCall(AstNode node)
+        private AstNode FunctionCall(AstNode node)
         {
             Token bracketToken = this.Expect(TokenType.OPEN_ROUND_BRACKET);
 
@@ -1255,48 +1300,30 @@ namespace HanabiLang.Parses
 
             Expect(true, TokenType.CLOSE_ROUND_BRACKET);
 
-            FnReferenceCallNode lastFnRefCall = new FnReferenceCallNode(node, arguments, keyArguments);
-            while (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+            AstNode result = new FnReferenceCallNode(node, arguments, keyArguments);
+            while (HasNextToken && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.OPEN_ROUND_BRACKET))
             {
-                lastFnRefCall = FunctionCall(lastFnRefCall);
+                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+                {
+                    result = CheckIndexersAccess(result);
+                }
+                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                {
+                    result = FunctionCall(result);
+                }
             }
 
-            /*AstNode lastFnRefCall = new FnCallNode(currentToken.Raw, arguments);
-            while (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_ROUND_BRACKET)
-            {
-                lastFnRefCall = FnRefCall(lastFnRefCall);
-            }*/
-
-            return lastFnRefCall;
+            return result;
         }
         private AstNode Identifier(bool skipIndexers)
         {
             var currentToken = Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
 
-            //// Function call
-            //if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
-            //{
-            //    //return FunctionCall(currentToken);
-            //    return FunctionCall(new VariableReferenceNode(currentToken.Raw));
-            //}
-            //else if (HasNextToken && NextTokenType == TokenType.OPEN_SQURE_BRACKET)
-            //{
-            //    if (!skipIndexers)
-            //    {
-            //        this.currentTokenIndex--;
-
-            //        var obj = this.Expression(true);
-            //        var indexersAccess = this.CheckIndexersAccess(obj);
-
-            //        return indexersAccess;
-            //    }
-            //}
-
-            var result = new VariableReferenceNode(currentToken.Raw);
+            AstNode result = new VariableReferenceNode(currentToken.Raw);
             result.Line = currentToken.Line;
             return result;
         }
+
         private AstNode CheckIndexersAccess(AstNode child)
         {
             if (!HasNextToken)
@@ -1316,15 +1343,18 @@ namespace HanabiLang.Parses
 
             AstNode result = new IndexersNode(child, expression);
 
-            if (HasNextToken && NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+            while (HasNextToken && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.OPEN_ROUND_BRACKET))
             {
-                return this.CheckIndexersAccess(result);
+                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+                {
+                    result = CheckIndexersAccess(result);
+                }
+                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                {
+                    result = FunctionCall(result);
+                }
             }
-
-            if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
-                result = FunctionCall(result);
             return result;
-
         }
 
 
@@ -1454,8 +1484,7 @@ namespace HanabiLang.Parses
                     {
                         AstNode result;
 
-                        if (token.Raw.Equals("var") || token.Raw.Equals("auto") ||
-                            token.Raw.Equals("let") || token.Raw.Equals("const"))
+                        if (token.Raw.Equals("var") || token.Raw.Equals("let") || token.Raw.Equals("const"))
                             result = this.VariableDefinition(token.Raw.Equals("const"), false, AccessibilityLevel.Public);
                         else if (token.Raw.Equals("public") || token.Raw.Equals("protected") ||
                             token.Raw.Equals("private") || token.Raw.Equals("static"))

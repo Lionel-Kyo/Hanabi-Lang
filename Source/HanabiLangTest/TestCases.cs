@@ -555,6 +555,33 @@ const result2 = range(25, 50).Iter.SelectWithIndex((value, index) => *[value, in
             CheckEquals(values["result1"], new ScriptValue(result));
             CheckEquals(values["result2"], new ScriptValue(result));
         }
+
+        public static void OperaterTest1()
+        {
+            string sourceCode = @"
+const step = 1;
+const x = 0;
+const stop = 0;
+const result1 = (step < 0 && x <= stop) || (step > 0 && x >= stop);
+const result2 = step < 0 && x <= stop || step > 0 && x >= stop;
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue(true));
+            CheckEquals(values["result2"], new ScriptValue(true));
+        }
+
+        public static void OperaterTest2()
+        {
+            string sourceCode = @"
+let a = range(10).ToList();
+const result1 = a?.Where(x => x > 5)?.ToList() ?? [];
+a = null;
+const result2 = a?.Where(x => x > 5)?.ToList() ?? [];
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue(Enumerable.Range(6, 4).Select(i => new ScriptValue(i)).ToList()));
+            CheckEquals(values["result2"], new ScriptValue(new List<ScriptValue>()));
+        }
     }
 }
 

@@ -236,6 +236,33 @@ namespace HanabiLang.Interprets.ScriptTypes
             result.Append('\"');
             foreach (char c in text)
             {
+                switch (c)
+                {
+                    case '\'':
+                        result.Append("\\'");
+                        continue;
+                    case '\"':
+                        result.Append("\\\"");
+                        continue;
+                    case '\\':
+                        result.Append("\\\\");
+                        continue;
+                    case '\b':
+                        result.Append("\\b");
+                        continue;
+                    case '\f':
+                        result.Append("\\f");
+                        continue;
+                    case '\n':
+                        result.Append("\\n");
+                        continue;
+                    case '\r':
+                        result.Append("\\r");
+                        continue;
+                    case '\t':
+                        result.Append("\\t");
+                        continue;
+                }
                 if (ensureAscii)
                 {
                     if (c >= ' ' && c <= '~')
@@ -245,33 +272,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
                 else
                 {
-                    switch (c)
-                    {
-                        case '\'':
-                            result.Append("\\'");
-                            continue;
-                        case '\"':
-                            result.Append("\\\"");
-                            continue;
-                        case '\\':
-                            result.Append("\\\\");
-                            continue;
-                        case '\b':
-                            result.Append("\\b");
-                            continue;
-                        case '\f':
-                            result.Append("\\f");
-                            continue;
-                        case '\n':
-                            result.Append("\\n");
-                            continue;
-                        case '\r':
-                            result.Append("\\r");
-                            continue;
-                        case '\t':
-                            result.Append("\\t");
-                            continue;
-                    }
 
                     if (char.IsControl(c) || char.IsLowSurrogate(c) || char.IsHighSurrogate(c))
                         result.Append("\\u" + ((int)c).ToString("X4"));

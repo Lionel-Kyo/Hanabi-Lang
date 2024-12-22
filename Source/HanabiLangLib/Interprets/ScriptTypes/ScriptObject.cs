@@ -45,7 +45,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public bool IsTypeOrSubOf(ScriptClass type)
         {
-            return this.ClassType == type || (this.ClassType?.SuperClasses.Contains(type) ?? false);
+            return this.ClassType == type || (this.ClassType?.SuperClasses?.Contains(type) ?? false);
         }
 
         public override string ToString()

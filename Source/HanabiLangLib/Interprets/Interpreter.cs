@@ -601,6 +601,11 @@ namespace HanabiLang.Interprets
                 var _class = (ScriptClass)fnRef.Value;
                 return new ValueReference(_class.Call(interpretScope, realNode.Args, realNode.KeyArgs));
             }
+            // Null-Conditional
+            else if (fnRef.IsNull && realNode.Reference is ExpressionNode && ((ExpressionNode)realNode.Reference).Operator == "?.")
+            {
+                return new ValueReference(fnRef);
+            }
 
             throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
         }
@@ -1418,8 +1423,12 @@ namespace HanabiLang.Interprets
                 if (left == null)
                     throw new SystemException($"Cannot use {specialAccess} out of object");
 
-                if (_operater == ".")
+                if (_operater == "." || _operater == "?.")
                 {
+                    if (left.IsNull && _operater == "?.")
+                    {
+                        return new ValueReference(left);
+                    }
                     bool isStaticAccess = left.Value is ScriptClass;
 
                     ScriptScope leftScope = null;
@@ -1452,13 +1461,15 @@ namespace HanabiLang.Interprets
                         return VariableReference((VariableReferenceNode)realNode.Right, left,
                             leftScope, accessLevel, isStaticAccess);
                     }
-                    throw new SystemException($"Unexcepted operation {left}'.'");
+                    throw new SystemException($"Unexcepted operation {left}'{_operater}'");
                 }
 
                 ScriptValue right = null;
 
                 if (_operater == "&&")
                 {
+                    // Short-Circuit Evaluation
+                    // Left operand is false, the entire expression will always be false.
                     if (left.IsObject && ((ScriptObject)left.Value).ClassType is ScriptBool &&
                         !(bool)((ScriptObject)left.Value).BuildInObject)
                         return new ValueReference(new ScriptValue(false));
@@ -1467,6 +1478,8 @@ namespace HanabiLang.Interprets
                 }
                 else if (_operater == "||")
                 {
+                    // Short-Circuit Evaluation
+                    // Left operand is true, the entire expression will always be true.
                     if (left.IsObject && ((ScriptObject)left.Value).ClassType is ScriptBool &&
                         (bool)((ScriptObject)left.Value).BuildInObject)
                         return new ValueReference(new ScriptValue(true));
