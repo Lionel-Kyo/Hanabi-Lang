@@ -216,8 +216,8 @@ namespace HanabiLang.Parses
 
             while (HasNextToken &&
                 (NextTokenType == TokenType.DOT || NextTokenType == TokenType.QUESTION_DOT ||
-                NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
-                (!skipIndexers && NextTokenType == TokenType.OPEN_SQURE_BRACKET)))
+                NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET ||
+                (!skipIndexers && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET))))
             {
                 if (NextTokenType == TokenType.DOT)
                 {
@@ -230,12 +230,12 @@ namespace HanabiLang.Parses
                     left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), "?.");
                 }
                 // Function call
-                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
                     left = FunctionCall(left);
                 }
                 // Indexer
-                else if (!skipIndexers && NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+                else if (!skipIndexers && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET))
                 {
                     left = this.CheckIndexersAccess(left);
                 }
@@ -1257,7 +1257,7 @@ namespace HanabiLang.Parses
         
         private AstNode FunctionCall(AstNode node)
         {
-            Token bracketToken = this.Expect(TokenType.OPEN_ROUND_BRACKET);
+            Token bracketToken = this.Expect(TokenType.OPEN_ROUND_BRACKET, TokenType.QUESTION_OPEN_ROUND_BRACKET);
 
             var arguments = new List<AstNode>();
             var keyArguments = new Dictionary<string, AstNode>();
@@ -1300,14 +1300,18 @@ namespace HanabiLang.Parses
 
             Expect(true, TokenType.CLOSE_ROUND_BRACKET);
 
-            AstNode result = new FnReferenceCallNode(node, arguments, keyArguments);
-            while (HasNextToken && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.OPEN_ROUND_BRACKET))
+            AstNode result = new FnReferenceCallNode(node, arguments, keyArguments, bracketToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET);
+            while (HasNextToken && 
+                (NextTokenType == TokenType.OPEN_SQURE_BRACKET || 
+                NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET || 
+                NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
+                NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET))
             {
-                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET)
                 {
                     result = CheckIndexersAccess(result);
                 }
-                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
                     result = FunctionCall(result);
                 }
@@ -1329,27 +1333,31 @@ namespace HanabiLang.Parses
             if (!HasNextToken)
                 return child;
 
-            var token = this.tokens[this.currentTokenIndex];
+            var token = this.NextToken;
 
-            if (NextTokenType != TokenType.OPEN_SQURE_BRACKET)
+            if (!(token.Type == TokenType.OPEN_SQURE_BRACKET || token.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
                 return child;
 
-            this.currentTokenIndex++;
+            this.Expect(TokenType.OPEN_SQURE_BRACKET, TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
             var expression = this.Expression();
             expression.Line = token.Line;
 
             this.Expect(TokenType.CLOSE_SQURE_BRACKET);
 
-            AstNode result = new IndexersNode(child, expression);
+            AstNode result = new IndexersNode(child, expression, token.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
-            while (HasNextToken && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.OPEN_ROUND_BRACKET))
+            while (HasNextToken &&
+                (NextTokenType == TokenType.OPEN_SQURE_BRACKET ||
+                NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET ||
+                NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
+                NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET))
             {
-                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET)
+                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET)
                 {
                     result = CheckIndexersAccess(result);
                 }
-                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
                     result = FunctionCall(result);
                 }

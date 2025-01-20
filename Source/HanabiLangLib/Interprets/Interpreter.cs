@@ -381,12 +381,18 @@ namespace HanabiLang.Interprets
             {
                 if (scriptType is ScriptFns)
                 {
+                    var fns = (ScriptFns)scriptType;
                     if (left.Value is ScriptObject)
                         return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)left.Value)));
                     return new ValueReference(new ScriptValue((ScriptFns)scriptType));
                 }
                 else if (scriptType is ScriptClass)
+                {
+                    var _class = (ScriptClass)scriptType;
+                    if ((int)accessLevel < (int)_class.Level)
+                        throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
                     return new ValueReference(new ScriptValue((ScriptClass)scriptType));
+                }
                 else if (scriptType is ScriptVariable)
                 {
                     var variable = (ScriptVariable)scriptType;
@@ -602,7 +608,7 @@ namespace HanabiLang.Interprets
                 return new ValueReference(_class.Call(interpretScope, realNode.Args, realNode.KeyArgs));
             }
             // Null-Conditional
-            else if (fnRef.IsNull && realNode.Reference is ExpressionNode && ((ExpressionNode)realNode.Reference).Operator == "?.")
+            else if (fnRef.IsNull && (realNode.IsNullConditional || (realNode.Reference is ExpressionNode && ((ExpressionNode)realNode.Reference).Operator == "?.")))
             {
                 return new ValueReference(fnRef);
             }
@@ -610,6 +616,9 @@ namespace HanabiLang.Interprets
             throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
         }
 
+        /// <summary>
+        /// Obsolete
+        /// </summary>
         private static ValueReference FnReferenceCall(FnReferenceCallNode fnCall,
             ScriptScope interpretScope, ScriptValue left, ScriptScope leftScope,
             AccessibilityLevel accessLevel, bool isStaticAccess)
@@ -628,6 +637,10 @@ namespace HanabiLang.Interprets
                 {
                     var _class = (ScriptClass)referenceCallResult.Value;
                     return new ValueReference(_class.Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
+                }
+                else if (referenceCallResult.IsNull && fnCall.IsNullConditional)
+                {
+                    return new ValueReference(referenceCallResult);
                 }
 
                 throw new SystemException($"Unexpected function call");
@@ -679,6 +692,10 @@ namespace HanabiLang.Interprets
                         if ((int)accessLevel < (int)_class.Level)
                             throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
                         return new ValueReference(_class.Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
+                    }
+                    else if (value.IsNull && fnCall.IsNullConditional)
+                    {
+                        return new ValueReference(value);
                     }
                     throw new SystemException($"{fnName} is not callable");
                 }
@@ -1453,6 +1470,7 @@ namespace HanabiLang.Interprets
 
                     if (realNode.Right is FnReferenceCallNode)
                     {
+                        // Obsolete
                         return FnReferenceCall((FnReferenceCallNode)realNode.Right, interpretScope, left,
                             leftScope, accessLevel, isStaticAccess);
                     }
@@ -1594,12 +1612,14 @@ namespace HanabiLang.Interprets
             {
                 var realNode = (IndexersNode)node;
 
-                var list = InterpretExpression(interpretScope, realNode.Object);
+                var left = InterpretExpression(interpretScope, realNode.Object);
 
-                if (!(list.Ref.Value is ScriptObject))
+                if (realNode.IsNullConditional && left.Ref.IsNull)
+                    return new ValueReference(new ScriptValue());
+
+                ScriptObject obj = left.Ref.TryObject;
+                if (obj == null)
                     throw new SystemException("Indexer can only apply in object");
-
-                ScriptObject obj = (ScriptObject)list.Ref.Value;
 
                 var index = InterpretExpression(interpretScope, realNode.Index);
 

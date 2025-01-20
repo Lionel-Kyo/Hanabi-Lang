@@ -10,11 +10,13 @@ namespace HanabiLang.Parses.Nodes
     {
         public AstNode Object { get; private set; }
         public AstNode Index { get; private set; }
+        public bool IsNullConditional { get; private set; }
 
-        public IndexersNode(AstNode obj, AstNode index)
+        public IndexersNode(AstNode obj, AstNode index, bool isNullConditional)
         {
             this.Object = obj;
             this.Index = index;
+            this.IsNullConditional = isNullConditional;
         }
 
         public override string ToString()
@@ -23,7 +25,7 @@ namespace HanabiLang.Parses.Nodes
             result.Append(this.NodeName);
             result.Append('(');
             result.Append(Object.ToString());
-            result.Append(' ');
+            result.Append(this.IsNullConditional ? " ? ": " ");
             result.Append(Index.ToString());
             result.Append(')');
             //result.Append("  ");

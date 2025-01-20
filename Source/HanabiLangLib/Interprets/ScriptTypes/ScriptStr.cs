@@ -291,6 +291,18 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
                 return new ScriptValue(0);
             });
+
+            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                long index = ScriptInt.AsCSharp(args[1].TryObject);
+                string value = AsCSharp(_this);
+
+                if ((index >= value.Length) || index < 0 && index < (value.Length * -1))
+                    throw new IndexOutOfRangeException();
+
+                return new ScriptValue(value[(int)ScriptInt.Modulo(index, value.Length)]);
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, "");

@@ -14,12 +14,14 @@ namespace HanabiLang.Parses.Nodes
         public AstNode Reference { get; private set; }
         public List<AstNode> Args { get; private set; }
         public Dictionary<string, AstNode> KeyArgs { get; private set; }
+        public bool IsNullConditional { get; private set; }
 
-        public FnReferenceCallNode(AstNode reference, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
+        public FnReferenceCallNode(AstNode reference, List<AstNode> args, Dictionary<string, AstNode> keyArgs, bool isNullConditional)
         {
             this.Reference = reference;
             this.Args = args;
             this.KeyArgs = keyArgs;
+            this.IsNullConditional = isNullConditional;
         }
 
         public override string ToString()
@@ -28,7 +30,7 @@ namespace HanabiLang.Parses.Nodes
             result.Append(this.NodeName);
             result.Append('(');
             result.Append(Reference);
-            result.Append(' ');
+            result.Append(this.IsNullConditional ? " ? " : " ");
             foreach (var arg in Args)
             {
                 result.Append($"[{arg}]");

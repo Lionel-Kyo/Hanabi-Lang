@@ -754,6 +754,16 @@ namespace HanabiLang.Lexers
                             tokens.Add(new Token(TokenType.QUESTION_DOT, "?.", lineIndex));
                             i++;
                         }
+                        else if (i + 1 < line.Length && line[i + 1] == '(')
+                        {
+                            tokens.Add(new Token(TokenType.QUESTION_OPEN_ROUND_BRACKET, "?(", lineIndex));
+                            i++;
+                        }
+                        else if (i + 1 < line.Length && line[i + 1] == '[')
+                        {
+                            tokens.Add(new Token(TokenType.QUESTION_OPEN_SQURE_BRACKET, "?[", lineIndex));
+                            i++;
+                        }
                         else
                         {
                             tokens.Add(new Token(TokenType.QUESTION_MARK, c.ToString(), lineIndex));
