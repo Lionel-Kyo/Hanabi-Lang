@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HanabiLang.Interprets.Exceptions;
+using HanabiLangLib.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
@@ -27,6 +28,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptRange Range = new ScriptRange();
         public static readonly ScriptException Exception = new ScriptException();
         public static readonly ScriptEnum Enum = new ScriptEnum();
+        public static readonly ScriptFnEvent FnEvent = new ScriptFnEvent();
         public static readonly ScriptJson Json = new ScriptJson();
     }
 }

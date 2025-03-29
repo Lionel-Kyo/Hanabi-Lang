@@ -47,6 +47,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
                 this.CurrentScope.Classes.Add("Iterator", BasicTypes.Iterator);
                 this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
+                this.CurrentScope.Classes.Add("FnEvent", BasicTypes.FnEvent);
                 this.CurrentScope.Classes.Add("Json", BasicTypes.Json);
                 BasicFns.AddBasicFunctions(this.CurrentScope);
             }
