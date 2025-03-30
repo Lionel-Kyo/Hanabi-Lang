@@ -15,26 +15,26 @@ A Programming Language that use C# as interpreter
 ## Define variables  
 ### Mutable  
 ```
-// var varableName = value;  
+// let varableName = value;  
 // Type not provided:  
 
-var text = "Hello World";  
-var value = 12345;  
-var values = [1, 2, 3, 4, 5];  
-var keyValues = { "a": 1, "b": 2 };  
+let text = "Hello World";  
+let value = 12345;  
+let values = [1, 2, 3, 4, 5];  
+let keyValues = { "a": 1, "b": 2 };  
 
 // Type provided:  
 
-var text: str = "Hello World";  
-var value: int = 12345;  
-var values: List = [1, 2, 3, 4, 5];  
-var keyValues: Dict = { "a": 1, "b": 2 };  
+let text: str = "Hello World";  
+let value: int = 12345;  
+let values: List = [1, 2, 3, 4, 5];  
+let keyValues: Dict = { "a": 1, "b": 2 };  
 ```
 
 ### Immutable   
 ```
 // Note that elements in List and Dict are still mutable, due to it is not reassigning the variable.  
-// var varableName = value; 
+// let varableName = value; 
 // Type not provided:  
 
 const text = "Hello World";  
@@ -106,4 +106,23 @@ const Add = (left: int, right: int) => {
 const Add = (left, right) => left + right;  
 
 const Add = (left: int, right: int) => left + right;  
+```
+
+### Catch Expression  
+
+```
+// catch without default value, last variable must be error.  
+
+let a, b, error = catch(null + null); // a: null, b: null, error: Exception  
+
+let a, error = catch(3.14 * 3.14); // a: 9.8596, error: null  
+
+let a = catch(3.14 * 3.14); // a: null  
+
+// catch with default value  
+
+let a = catch(int("Test"), 0); // a: 0  
+
+let a = catch(int("12345"), 0); // a: 12345  
+
 ```

@@ -11,6 +11,9 @@ using HanabiLang.Parses.Nodes;
 using System.Threading;
 using System.Xml.Linq;
 using System.Reflection;
+using HanabiLangLib.Parses.Nodes;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
+using HanabiLangLib.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets
 {
@@ -461,12 +464,95 @@ namespace HanabiLang.Interprets
             throw new SystemException($"{node.Name} is not defined");
         }
 
-        private static ValueReference VariableDefinition(VariableDefinitionNode node, ScriptScope scope)
+        private static void VariableDefinition(VariableDefinitionNode node, ScriptScope scope)
         {
-            if (scope.Variables.TryGetValue(node.Name, out ScriptVariable existedVariable))
+            bool isMultiDefine = node.Names.Count > 1;
+
+            ScriptValue setValue = node.Value == null ? null : InterpretExpression(scope, node.Value).Ref;
+            List<ScriptValue> setValues = null;
+            int setVarCount = node.Names.Count;
+
+            if (setValue != null && setValue.IsCatchedExpresion) 
             {
-                if (existedVariable.IsConstant)
-                    throw new SystemException($"Cannot reassigned constant variable {node.Name}");
+                isMultiDefine = node.Names.Count > 2;
+                var catchedExpresion = ScriptCatchedExpression.AsCSharp(setValue.TryObject);
+
+                if (node.Names.Count == 1)
+                {
+                    var variable = new ScriptVariable(node.Names[0], null, catchedExpresion.Item2 == null ? new ScriptValue() : new ScriptValue(BasicTypes.Exception.Create(catchedExpresion.Item2)), node.IsConstant, node.IsStatic, node.Level);
+                    scope.Variables[node.Names[0]] = variable;
+                    return;
+                }
+
+                if (catchedExpresion.Item2 == null)
+                {
+                    var _value = catchedExpresion.Item1 ?? new ScriptValue();
+                    if (isMultiDefine)
+                    {
+                        if (ScriptIterator.TryGetIterator(_value.TryObject, out var _setValues))
+                        {
+                            if (_setValues is List<ScriptValue>)
+                                setValues = (List<ScriptValue>)_setValues;
+                            else
+                                setValues = _setValues.ToList();
+
+                            if (setValues.Count + 1 != node.Names.Count)
+                            {
+                                var ex = new SystemException($"Expect {setValues.Count + 1} variables to define, found {node.Names.Count} variable(s)");
+                                var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(BasicTypes.Exception.Create(ex)), node.IsConstant, node.IsStatic, node.Level);
+                                scope.Variables[node.Names[node.Names.Count - 1]] = variable;
+                                setValues = Enumerable.Range(0, node.Names.Count - 1).Select(i => new ScriptValue()).ToList();
+                            }
+                            else
+                            {
+                                var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(), node.IsConstant, node.IsStatic, node.Level);
+                                scope.Variables[node.Names[node.Names.Count - 1]] = variable;
+                            }
+                            setVarCount = node.Names.Count - 1;
+                        }
+                        else
+                        {
+                            var ex = new SystemException($"{_value} is not a iterator");
+                            var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(BasicTypes.Exception.Create(ex)), node.IsConstant, node.IsStatic, node.Level);
+                            scope.Variables[node.Names[node.Names.Count - 1]] = variable;
+                            setValues = Enumerable.Range(0, node.Names.Count - 1).Select(i => new ScriptValue()).ToList();
+                            setVarCount = node.Names.Count - 1;
+                        }
+                    }
+                    else
+                    {
+                        var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(), node.IsConstant, node.IsStatic, node.Level);
+                        scope.Variables[node.Names[node.Names.Count - 1]] = variable;
+                        setValue = _value;
+                        setVarCount = node.Names.Count - 1;
+                    }
+                }
+                else
+                {
+                    var ex = catchedExpresion.Item2;
+                    var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(BasicTypes.Exception.Create(ex)), node.IsConstant, node.IsStatic, node.Level);
+                    scope.Variables[node.Names[node.Names.Count - 1]] = variable;
+                    if (isMultiDefine)
+                        setValues = Enumerable.Range(0, node.Names.Count - 1).Select(i => new ScriptValue()).ToList();
+                    else
+                        setValue = new ScriptValue();
+                    setVarCount = node.Names.Count - 1;
+                }
+            }
+
+
+            if (isMultiDefine && setValue != null && setValues == null)
+            {
+                if (!ScriptIterator.TryGetIterator(setValue.TryObject, out var _setValues))
+                    throw new SystemException($"{setValue} is not a iterator");
+
+                if (_setValues is List<ScriptValue>)
+                    setValues = (List<ScriptValue>)_setValues;
+                else
+                    setValues = _setValues.ToList();
+
+                if (setValues.Count != node.Names.Count)
+                    throw new SystemException($"Expect {node.Names.Count} variables to define, found {setValues.Count} value(s)");
             }
 
             DefinedTypes dataTypes = null;
@@ -474,87 +560,208 @@ namespace HanabiLang.Interprets
             {
                 ScriptValue type = InterpretExpression(scope, node.DataType).Ref;
                 if (!type.IsDefinedTypes)
-                    throw new SystemException($"Unexpected error: {node.Name}");
+                    throw new SystemException($"Unexpected error: {node.Names}");
                 dataTypes = (DefinedTypes)type.Value;
             }
 
-            ScriptValue setValue = node.Value == null ? null :
-                InterpretExpression(scope, node.Value).Ref;
-
-            if (dataTypes != null && setValue != null)
+            for (int i = 0; i < setVarCount; i++) 
             {
-                if (node.SetFn == null || (node.SetFn != null && node.SetFn.Body.Count <= 0))
+                if (scope.Variables.TryGetValue(node.Names[i], out ScriptVariable existedVariable))
                 {
-                    if (!setValue.IsObject)
-                        throw new SystemException($"Variable ({node.Name}) cannot be assigned with {setValue}");
-                    if (!dataTypes.Value.Contains(setValue.TryObject?.ClassType))
-                        throw new SystemException($"Variable ({node.Name}) cannot be assigned with {setValue}");
+                    if (existedVariable.IsConstant)
+                        throw new SystemException($"Cannot reassigned constant variable {node.Names}");
                 }
-            }
 
-            setValue = setValue ?? new ScriptValue();
-
-            ScriptFns getFns = null;
-            ScriptFns setFns = null;
-
-            if (node.GetFn != null)
-            {
-                if (node.GetFn.Body.Count == 0)
+                if (setValue != null)
                 {
-                    getFns = new ScriptFns($"get_{node.Name}");
-                    getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, args => setValue, node.GetFn.IsStatic, node.GetFn.Level));
+                    if (dataTypes != null)
+                    {
+                        if (!setValue.IsObject)
+                            throw new SystemException($"Variable ({node.Names}) cannot be assigned with {setValue}");
+
+                        if (!dataTypes.Value.Contains(setValue.TryObject?.ClassType))
+                            throw new SystemException($"Variable ({node.Names}) cannot be assigned with {setValue}");
+                    }
+
+                    var variable = new ScriptVariable(node.Names[i], dataTypes?.Value, isMultiDefine ? setValues[i] : setValue, node.IsConstant, node.IsStatic, node.Level);
+                    scope.Variables[node.Names[i]] = variable;
                 }
                 else
                 {
-                    var fn = InterpretExpression(scope, node.GetFn).Ref;
-                    if (!fn.IsFunction)
-                        throw new SystemException("Getter must be a function");
-                    getFns = (ScriptFns)fn.Value;
-                }
-            }
-            if (node.SetFn != null)
-            {
-                if (node.GetFn.Body.Count == 0)
-                {
-                    setFns = new ScriptFns($"set_{node.Name}");
-                    if (scope.Type is ScriptObject)
-                        setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
-                            null, args => setValue = args[1], node.SetFn.IsStatic, node.SetFn.Level));
-                    else
-                        setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
-                            null, args => setValue = args[0], node.SetFn.IsStatic, node.SetFn.Level));
-                }
-                else
-                {
-                    var fn = InterpretExpression(scope, node.SetFn).Ref;
-                    if (!fn.IsFunction)
-                        throw new SystemException("Setter must be a function");
-                    setFns = (ScriptFns)fn.Value;
-                }
-            }
+                    setValue = setValue ?? new ScriptValue();
 
-            if (getFns != null || setFns != null)
-            {
-                var variable = new ScriptVariable(node.Name, dataTypes?.Value, getFns, setFns,
-                    node.IsConstant, node.IsStatic, node.Level);
-                scope.Variables[node.Name] = variable;
-                return new ValueReference(variable.Value);
-            }
-            else
-            {
-                var variable = new ScriptVariable(node.Name, dataTypes?.Value,
-                    setValue, node.IsConstant, node.IsStatic, node.Level);
-                scope.Variables[node.Name] = variable;
-                return new ValueReference(variable.Value);
+                    ScriptFns getFns = null;
+                    ScriptFns setFns = null;
+
+                    if (node.GetFn != null)
+                    {
+                        if (node.GetFn.Body.Count == 0)
+                        {
+                            getFns = new ScriptFns($"get_{node.Names}");
+                            getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, args => setValue, node.GetFn.IsStatic, node.GetFn.Level));
+                        }
+                        else
+                        {
+                            var fn = InterpretExpression(scope, node.GetFn).Ref;
+                            if (!fn.IsFunction)
+                                throw new SystemException("Getter must be a function");
+                            getFns = (ScriptFns)fn.Value;
+                        }
+                    }
+                    if (node.SetFn != null)
+                    {
+                        if (node.GetFn.Body.Count == 0)
+                        {
+                            setFns = new ScriptFns($"set_{node.Names}");
+                            if (scope.Type is ScriptObject)
+                                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
+                                    null, args => setValue = args[1], node.SetFn.IsStatic, node.SetFn.Level));
+                            else
+                                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
+                                    null, args => setValue = args[0], node.SetFn.IsStatic, node.SetFn.Level));
+                        }
+                        else
+                        {
+                            var fn = InterpretExpression(scope, node.SetFn).Ref;
+                            if (!fn.IsFunction)
+                                throw new SystemException("Setter must be a function");
+                            setFns = (ScriptFns)fn.Value;
+                        }
+                    }
+
+                    var variable = new ScriptVariable(node.Names[i], dataTypes?.Value, getFns, setFns,
+                        node.IsConstant, node.IsStatic, node.Level);
+                    scope.Variables[node.Names[i]] = variable;
+                }
             }
         }
 
         private static ValueReference VariableAssignment(VariableAssignmentNode node, ScriptScope scope)
         {
-            ValueReference left = InterpretExpression(scope, node.Name);
-            var assignValue = InterpretExpression(scope, node.Value);
-            left.Ref = assignValue.Ref;
-            return left;
+            var returnRef = InterpretExpression(scope, node.Value);
+            var assignValue = returnRef.Ref;
+            bool isCatchedExpresion = assignValue.IsCatchedExpresion;
+            bool isMultiAssign = isCatchedExpresion ? node.References.Count > 2 : node.References.Count > 1;
+
+            List<ScriptValue> assignValues = null;
+            int assignVarCount = node.References.Count;
+
+            if (isCatchedExpresion)
+            {
+                var catchedExpresion = ScriptCatchedExpression.AsCSharp(assignValue.TryObject);
+
+                if (node.References.Count == 1)
+                {
+                    ValueReference toAssign = InterpretExpression(scope, node.References[0]);
+                    var errorValue = catchedExpresion.Item2 == null ? new ScriptValue() : new ScriptValue(BasicTypes.Exception.Create(catchedExpresion.Item2));
+                    toAssign.Ref = errorValue;
+                    return toAssign;
+                }
+
+                if (catchedExpresion.Item2 == null)
+                {
+                    var _value = catchedExpresion.Item1 ?? new ScriptValue();
+                    if (isMultiAssign)
+                    {
+                        if (ScriptIterator.TryGetIterator(_value.TryObject, out var _assignValues))
+                        {
+                            if (_assignValues is List<ScriptValue>)
+                                assignValues = (List<ScriptValue>)_assignValues;
+                            else
+                                assignValues = _assignValues.ToList();
+
+                            if (assignValues.Count + 1 != node.References.Count)
+                            {
+                                var ex = new SystemException($"Expect {assignValues.Count + 1} variables to define, found {node.References.Count} variable(s)");
+                                ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
+                                toAssign.Ref = new ScriptValue(BasicTypes.Exception.Create(ex));
+                                assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
+
+                                var returnValue = assignValues.ToList();
+                                returnValue.Add(toAssign.Ref);
+                                returnRef = new ValueReference(new ScriptValue(returnValue));
+                            }
+                            else
+                            {
+                                ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
+                                toAssign.Ref = new ScriptValue();
+
+                                var returnValue = assignValues.ToList();
+                                returnValue.Add(toAssign.Ref);
+                                returnRef = new ValueReference(new ScriptValue(returnValue));
+                            }
+                            assignVarCount = node.References.Count - 1;
+                        }
+                        else
+                        {
+                            var ex = new SystemException($"{_value} is not a iterator");
+                            ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
+                            toAssign.Ref = new ScriptValue(BasicTypes.Exception.Create(ex));
+                            assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
+                            assignVarCount = node.References.Count - 1;
+
+                            var returnValue = assignValues.ToList();
+                            returnValue.Add(toAssign.Ref);
+                            returnRef = new ValueReference(new ScriptValue(returnValue));
+                        }
+                    }
+                    else
+                    {
+                        ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
+                        toAssign.Ref = new ScriptValue();
+                        assignValue = _value;
+
+                        assignVarCount = node.References.Count - 1;
+
+                        var returnValue = new List<ScriptValue>() { assignValue, toAssign.Ref };
+                        returnRef = new ValueReference(new ScriptValue(returnValue));
+                    }
+                }
+                else
+                {
+                    var ex = catchedExpresion.Item2;
+                    ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
+                    toAssign.Ref = new ScriptValue(BasicTypes.Exception.Create(ex));
+                    if (isMultiAssign)
+                    {
+                        assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
+
+                        var returnValue = assignValues.ToList();
+                        returnValue.Add(toAssign.Ref);
+                        returnRef = new ValueReference(new ScriptValue(returnValue));
+                    }
+                    else
+                    {
+                        assignValue = new ScriptValue();
+
+                        var returnValue = new List<ScriptValue>() { assignValue, toAssign.Ref };
+                        returnRef = new ValueReference(new ScriptValue(returnValue));
+                    }
+                    assignVarCount = node.References.Count - 1;
+                }
+            }
+
+            if (isMultiAssign && assignValues == null)
+            {
+                if (!ScriptIterator.TryGetIterator(assignValue.TryObject, out var _assignValues))
+                    throw new SystemException($"{assignValue} is not a iterator");
+
+                if (_assignValues is List<ScriptValue>)
+                    assignValues = (List<ScriptValue>)_assignValues;
+                else
+                    assignValues = _assignValues.ToList();
+
+                if (assignValues.Count != node.References.Count)
+                    throw new SystemException($"Expect {node.References.Count} variables to assign, found {assignValues.Count} value(s)");
+            }
+
+            for (int i = 0; i < assignVarCount; i++)
+            {
+                ValueReference left = InterpretExpression(scope, node.References[i]);
+                left.Ref = isMultiAssign ? assignValues[i] : assignValue;
+            }
+
+            return returnRef;
         }
 
         private static ValueReference FnReferenceCall(FnReferenceCallNode realNode, ScriptScope interpretScope)
@@ -1134,8 +1341,31 @@ namespace HanabiLang.Interprets
                 {
                     var scope = new ScriptScope(null, interpretScope);
 
-                    scope.Variables[realNode.Initializer] =
-                        new ScriptVariable(realNode.Initializer, null, item, false, true, AccessibilityLevel.Private);
+                    if (realNode.Initializers.Count == 1)
+                    {
+                        scope.Variables[realNode.Initializers[0]] =
+                            new ScriptVariable(realNode.Initializers[0], null, item, false, true, AccessibilityLevel.Private);
+                    }
+                    else
+                    {
+                        if (!ScriptIterator.TryGetIterator(item.TryObject, out var _initializerValues))
+                            new SystemException($"{item} is not a iterator");
+
+                        List<ScriptValue> initializerValues;
+                        if (_initializerValues is List<ScriptValue>)
+                            initializerValues = (List<ScriptValue>)_initializerValues;
+                        else
+                            initializerValues = _initializerValues.ToList();
+
+                        if (initializerValues.Count != realNode.Initializers.Count)
+                            throw new SystemException($"Expect {realNode.Initializers.Count} initializers in for loop, found {initializerValues.Count} initializers");
+
+                        for (int i = 0; i < initializerValues.Count; i++) 
+                        {
+                            scope.Variables[realNode.Initializers[i]] =
+                                new ScriptVariable(realNode.Initializers[i], null, initializerValues[i], false, true, AccessibilityLevel.Private);
+                        }
+                    }
 
                     foreach (var bodyNode in realNode.Body)
                     {
@@ -1716,6 +1946,28 @@ namespace HanabiLang.Interprets
                         throw new SystemException($"{scriptValue} is not a type");
                 }
                 return new ValueReference(new ScriptValue(new DefinedTypes(types)));
+            }
+            else if (node is CatchExpressionNode)
+            {
+                var realNode = (CatchExpressionNode)node;
+                ScriptValue result = null;
+                Exception catchedException = null;
+                try
+                {
+                    result = InterpretExpression(interpretScope, realNode.Expression).Ref;
+                }
+                catch (Exception _ex)
+                {
+                    catchedException = _ex;
+                }
+                if (realNode.DefaultValue != null)
+                {
+                    if (catchedException == null)
+                        return new ValueReference(result);
+                    else
+                        return InterpretExpression(interpretScope, realNode.DefaultValue);
+                }
+                return new ValueReference(new ScriptValue(BasicTypes.CatchedExpression.Create(result, catchedException)));
             }
             throw new SystemException("Unexcepted interpret expression: " + node.NodeName);
         }

@@ -541,12 +541,16 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public static bool TryGetIterator(ScriptObject obj, out IEnumerable<ScriptValue> result)
         {
+            result = null;
+
+            if (obj == null) 
+                return false;
+
             if (obj.ClassType == BasicTypes.Iterator)
             {
                 result = AsCSharp(obj);
                 return true;
             }
-            result = null;
             if (!obj.Scope.TryGetValue("Iter", out ScriptType iter)) 
                 return false;
 

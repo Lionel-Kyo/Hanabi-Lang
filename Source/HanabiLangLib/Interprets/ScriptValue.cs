@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using HanabiLang.Interprets.ScriptTypes;
 using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets
 {
@@ -204,6 +205,7 @@ namespace HanabiLang.Interprets
         public ScriptObject TryObject => this.value is ScriptObject ? (ScriptObject)this.value : null;
         public bool IsNull => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptNull;
         public bool IsUnzipable => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptUnzipable;
+        public bool IsCatchedExpresion => this.value is ScriptObject && ((ScriptObject)this.value).ClassType is ScriptCatchedExpression;
         public IEnumerable<ScriptValue> TryUnzipable => IsUnzipable ? ScriptUnzipable.AsCSharp(this.TryObject) : null;
         public bool IsBreak => this.value is BreakType;
         public bool IsContinue => this.value is ContinueType;

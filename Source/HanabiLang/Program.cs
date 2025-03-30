@@ -66,7 +66,7 @@ void Start()
         try
         {
             ast = parser.Parse();
-            //Console.WriteLine(string.Join("\n", ast.Nodes));
+            Console.WriteLine(string.Join("\n", ast.Nodes));
         }
         catch (ParseFormatNotCompleteException ex)
         {

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using HanabiLang.Interprets.Exceptions;
 using HanabiLang.Lexers;
 using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Parses.Nodes;
 
 namespace HanabiLang.Parses
 {
@@ -19,6 +20,9 @@ namespace HanabiLang.Parses
         private List<Token> tokens { get; set; }
         private int currentTokenIndex { get; set; }
         private List<AstNode> nodes { get; }
+
+        private bool HasToken => this.currentTokenIndex < this.tokens.Count;
+        private Token CurrentToken => this.tokens[this.currentTokenIndex];
 
         public Parser(IEnumerable<Token> tokens)
         {
@@ -42,10 +46,6 @@ namespace HanabiLang.Parses
 
             return ast;
         }
-
-        private bool HasNextToken => this.currentTokenIndex < this.tokens.Count;
-        private Token NextToken => this.tokens[this.currentTokenIndex];
-        private TokenType NextTokenType => this.tokens[this.currentTokenIndex].Type;
 
         public static string ExceptionToString(Exception ex)
         {
@@ -89,7 +89,7 @@ namespace HanabiLang.Parses
                     {
                         Parser parser = new Parser(tokens);
                         var interpolatedNode = parser.Expression();
-                        if (parser.HasNextToken)
+                        if (parser.HasToken)
                             throw new ParseException($"Cannot end with {parser.tokens[parser.currentTokenIndex].Raw} in a interpolated string",
                                 parser.tokens[parser.currentTokenIndex]);
                         interpolatedNodes.Enqueue(interpolatedNode);
@@ -156,14 +156,13 @@ namespace HanabiLang.Parses
 
                         this.Expect(TokenType.OPEN_SQURE_BRACKET);
 
-                        while (this.currentTokenIndex <= this.tokens.Count &&
-                               this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_SQURE_BRACKET)
+                        while (this.HasToken && this.CurrentToken.Type != TokenType.CLOSE_SQURE_BRACKET)
                         {
                             elements.Add(this.Expression());
 
-                            if (HasNextToken && NextTokenType == TokenType.CLOSE_SQURE_BRACKET)
+                            if (HasToken && CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET)
                                 break;
-                            else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                            else if (HasToken && CurrentToken.Type == TokenType.COMMA)
                                 Expect(TokenType.COMMA);
                             else
                                 throw new ParseFormatNotCompleteException("List expected ',' or ']'", this.tokens[this.currentTokenIndex - 1]);
@@ -181,16 +180,16 @@ namespace HanabiLang.Parses
 
                         this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                        while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                        while (this.HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                         {
                             AstNode key = this.Expression();
                             this.Expect(TokenType.COLON);
                             AstNode value = this.Expression();
                             keyValues.Add(Tuple.Create(key, value));
 
-                            if (HasNextToken && NextTokenType == TokenType.CLOSE_CURLY_BRACKET)
+                            if (this.HasToken && CurrentToken.Type == TokenType.CLOSE_CURLY_BRACKET)
                                 break;
-                            else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                            else if (this.HasToken && CurrentToken.Type == TokenType.COMMA)
                                 Expect(TokenType.COMMA);
                             else
                                 throw new ParseFormatNotCompleteException("Dict expected ',' or '}'", this.tokens[this.currentTokenIndex - 1]);
@@ -203,6 +202,8 @@ namespace HanabiLang.Parses
                 case TokenType.KEYWORD:
                     if (currentToken.Raw == "this" || currentToken.Raw == "super")
                         return this.Identifier(skipIndexers);
+                    else if (currentToken.Raw == "catch")
+                        return this.CatchExpression();
                     throw new ParseException($"Unexpected keyword: {currentToken.Raw}", currentToken);
                 default:
                     break;
@@ -214,28 +215,28 @@ namespace HanabiLang.Parses
         {
             var left = this.Factor(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextTokenType == TokenType.DOT || NextTokenType == TokenType.QUESTION_DOT ||
-                NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET ||
-                (!skipIndexers && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET))))
+            while (HasToken &&
+                (CurrentToken.Type == TokenType.DOT || CurrentToken.Type == TokenType.QUESTION_DOT ||
+                CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET ||
+                (!skipIndexers && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))))
             {
-                if (NextTokenType == TokenType.DOT)
+                if (CurrentToken.Type == TokenType.DOT)
                 {
                     this.Expect(TokenType.DOT);
                     left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), ".");
                 }
-                else if (NextTokenType == TokenType.QUESTION_DOT)
+                else if (CurrentToken.Type == TokenType.QUESTION_DOT)
                 {
                     this.Expect(TokenType.QUESTION_DOT);
                     left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), "?.");
                 }
                 // Function call
-                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET)
+                else if (CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
                     left = FunctionCall(left);
                 }
                 // Indexer
-                else if (!skipIndexers && (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET))
+                else if (!skipIndexers && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
                 {
                     left = this.CheckIndexersAccess(left);
                 }
@@ -248,10 +249,10 @@ namespace HanabiLang.Parses
         {
             var left = this.TermDot(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextToken.Raw == "*" || NextToken.Raw == "/" || NextToken.Raw == "%"))
+            while (HasToken &&
+                (CurrentToken.Raw == "*" || CurrentToken.Raw == "/" || CurrentToken.Raw == "%"))
             {
-                var currentToken = NextToken;
+                var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermDot(skipIndexers, skipArrowFn), currentToken.Raw);
             }
@@ -263,10 +264,10 @@ namespace HanabiLang.Parses
         {
             var left = this.TermArithmetic1(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextToken.Raw == "+" || NextToken.Raw == "-"))
+            while (HasToken &&
+                (CurrentToken.Raw == "+" || CurrentToken.Raw == "-"))
             {
-                var currentToken = NextToken;
+                var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermArithmetic1(skipIndexers, skipArrowFn), currentToken.Raw);
             }
@@ -278,10 +279,10 @@ namespace HanabiLang.Parses
         {
             var left = this.TermArithmetic2(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextToken.Raw == ">=" || NextToken.Raw == "<=" || NextToken.Raw == ">" || NextToken.Raw == "<"))
+            while (HasToken &&
+                (CurrentToken.Raw == ">=" || CurrentToken.Raw == "<=" || CurrentToken.Raw == ">" || CurrentToken.Raw == "<"))
             {
-                var currentToken = NextToken;
+                var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermArithmetic2(skipIndexers, skipArrowFn), currentToken.Raw);
             }
@@ -293,12 +294,12 @@ namespace HanabiLang.Parses
         {
             var left = this.TermComparative(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextToken.Raw == "==" || NextToken.Raw == "!="))
+            while (HasToken &&
+                (CurrentToken.Raw == "==" || CurrentToken.Raw == "!="))
             {
-                if (NextToken.Raw == "==" || NextToken.Raw == "!=")
+                if (CurrentToken.Raw == "==" || CurrentToken.Raw == "!=")
                 {
-                    var currentToken = NextToken;
+                    var currentToken = CurrentToken;
                     this.Expect(TokenType.OPERATOR);
                     left = new ExpressionNode(left, this.TermComparative(skipIndexers, skipArrowFn), currentToken.Raw);
                 }
@@ -311,10 +312,10 @@ namespace HanabiLang.Parses
         {
             var left = this.TermEqual(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextToken.Raw == "&&"))
+            while (HasToken &&
+                (CurrentToken.Raw == "&&"))
             {
-                var currentToken = NextToken;
+                var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermEqual(skipIndexers, skipArrowFn), currentToken.Raw);
             }
@@ -326,10 +327,10 @@ namespace HanabiLang.Parses
         {
             var left = this.TermAnd(skipIndexers, skipArrowFn);
 
-            while (HasNextToken &&
-                (NextToken.Raw == "||"))
+            while (HasToken &&
+                (CurrentToken.Raw == "||"))
             {
-                var currentToken = NextToken;
+                var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermAnd(skipIndexers, skipArrowFn), currentToken.Raw);
             }
@@ -339,18 +340,18 @@ namespace HanabiLang.Parses
 
         private AstNode Expression(bool skipIndexers = false, bool skipEquals = false, bool skipArrowFn = false)
         {
-            if (!HasNextToken)
+            if (!HasToken)
                 throw new ParseFormatNotCompleteException("Format is not complete", this.tokens[this.currentTokenIndex - 1]);
 
             var left = this.TermOr(skipIndexers, skipArrowFn);
 
-            if (!HasNextToken)
+            if (!HasToken)
                 return left;
 
             Token currentToken = this.tokens[this.currentTokenIndex];
             string currentRaw = currentToken.Raw;
 
-            if (this.currentTokenIndex < this.tokens.Count &&
+            if (this.HasToken &&
                 currentToken.Type == TokenType.QUESTION_MARK)
             {
                 var condition = left;
@@ -361,21 +362,19 @@ namespace HanabiLang.Parses
                 left = new TernaryNode(condition, consequent, alternative);
             }
 
-            if (this.currentTokenIndex < this.tokens.Count &&
-                currentToken.Type == TokenType.DOUBLE_QUESTION_MARK)
+            if (this.HasToken && currentToken.Type == TokenType.DOUBLE_QUESTION_MARK)
             {
                 this.Expect(TokenType.DOUBLE_QUESTION_MARK);
                 var consequent = this.Expression();
                 left = new NullCoalescingNode(left, consequent);
             }
 
-            if (this.currentTokenIndex < this.tokens.Count &&
-            (currentRaw == "++" || currentRaw == "--"))
+            if (this.HasToken && (currentRaw == "++" || currentRaw == "--"))
             {
                 this.Expect(TokenType.OPERATOR);
                 return new VariableAssignmentNode(left, new ExpressionNode(left, new IntNode(1), currentRaw[0].ToString()));
             }
-            if (this.currentTokenIndex < this.tokens.Count &&
+            if (this.HasToken &&
                 (currentRaw == "+=" || currentRaw == "-=" || currentRaw == "*=" || currentRaw == "/=" || currentRaw == "%="))
             {
                 this.Expect(TokenType.OPERATOR);
@@ -386,7 +385,10 @@ namespace HanabiLang.Parses
             if (!skipEquals && currentToken.Type == TokenType.EQUALS)
             {
                 this.Expect(TokenType.EQUALS);
-                return new VariableAssignmentNode(left, this.Expression());
+                if (left is ListNode)
+                    return new VariableAssignmentNode(((ListNode)left).Elements, this.Expression());
+                else
+                    return new VariableAssignmentNode(left, this.Expression());
             }
 
             if (currentToken.Type == TokenType.SEMI_COLON)
@@ -401,17 +403,17 @@ namespace HanabiLang.Parses
         private AstNode ParseTypes()
         {
             List<AstNode> types = new List<AstNode> { TermDot(true, true) };
-            if (HasNextToken && (this.tokens[this.currentTokenIndex].Type == TokenType.QUESTION_MARK))
+            if (HasToken && (this.CurrentToken.Type == TokenType.QUESTION_MARK))
             {
                 this.Expect(TokenType.QUESTION_MARK);
                 types.Add(new NullNode());
             }
 
-            while (HasNextToken && (this.tokens[this.currentTokenIndex].Raw == "|"))
+            while (HasToken && (this.CurrentToken.Raw == "|"))
             {
                 this.Expect(TokenType.OPERATOR);
                 types.Add(TermDot(true, true));
-                if (HasNextToken && (this.tokens[this.currentTokenIndex].Type == TokenType.QUESTION_MARK))
+                if (HasToken && (this.CurrentToken.Type == TokenType.QUESTION_MARK))
                 {
                     this.Expect(TokenType.QUESTION_MARK);
                     types.Add(new NullNode());
@@ -425,32 +427,56 @@ namespace HanabiLang.Parses
         {
             Token keywordToken = this.Expect(TokenType.KEYWORD);
 
-            var variableName = this.tokens[this.currentTokenIndex].Raw;
-            this.Expect(TokenType.IDENTIFIER);
+            List<string> variableNames = new List<string>();
+
+            while (this.HasToken && this.CurrentToken.Type == TokenType.IDENTIFIER)
+            {
+                variableNames.Add(this.CurrentToken.Raw);
+                this.Expect(TokenType.IDENTIFIER);
+                if (this.HasToken && this.CurrentToken.Type != TokenType.COMMA)
+                    break;
+                this.Expect(TokenType.COMMA);
+            }
 
             // Check if datatype defined
             AstNode dataType = null;
-            if (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type == TokenType.COLON)
+            if (this.HasToken &&
+                this.CurrentToken.Type == TokenType.COLON)
             {
                 this.Expect(TokenType.COLON);
                 //dataType = this.Expression(true, true, true);
                 dataType = this.ParseTypes();
+                if (this.HasToken && this.CurrentToken.Type == TokenType.COMMA)
+                {
+                    throw new ParseException("Variable can only define one type each time", this.tokens[this.currentTokenIndex - 1]);
+                }
             }
 
             // check if it is get set variable
             AccessibilityLevel? lastLevel = null;
             FnDefineNode getFn = null;
             FnDefineNode setFn = null;
-            if (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type == TokenType.OPEN_CURLY_BRACKET)
+            if (this.HasToken && this.CurrentToken.Type == TokenType.EQUALS)
+            {
+                this.Expect(TokenType.EQUALS);
+
+                List<AstNode> values = new List<AstNode>();
+
+                var valueNode = new VariableDefinitionNode(variableNames, this.Expression(), dataType, null, null, constant, isStatic, level);
+                if (this.currentTokenIndex >= this.tokens.Count)
+                    valueNode.Line = this.tokens[this.tokens.Count - 1].Line;
+                else
+                    valueNode.Line = this.CurrentToken.Line;
+                return valueNode;
+            }
+            else if (this.HasToken && this.CurrentToken.Type == TokenType.OPEN_CURLY_BRACKET)
             {
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
-                while (this.currentTokenIndex < this.tokens.Count &&
-                    this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER ||
-                    this.tokens[this.currentTokenIndex].Type == TokenType.KEYWORD)
+                while (this.HasToken &&
+                    this.CurrentToken.Type == TokenType.IDENTIFIER ||
+                    this.CurrentToken.Type == TokenType.KEYWORD)
                 {
-                    var keyword = this.tokens[this.currentTokenIndex].Raw;
+                    var keyword = this.CurrentToken.Raw;
                     this.Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
 
                     // Body.Count = 0 : Auto Implemented
@@ -470,7 +496,7 @@ namespace HanabiLang.Parses
                         if (!isGet && setFn != null)
                             throw new ParseException($"Cannot redefine set function", this.tokens[this.currentTokenIndex - 1]);
 
-                        if (HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+                        if (HasToken && CurrentToken.Type == TokenType.DOUBLE_ARROW)
                         {
                             this.Expect(TokenType.DOUBLE_ARROW);
                             var fnBody = this.ParseChild();
@@ -480,11 +506,11 @@ namespace HanabiLang.Parses
                             else
                                 body.Add(fnBody);
                         }
-                        else if (HasNextToken && NextTokenType == TokenType.OPEN_CURLY_BRACKET)
+                        else if (HasToken && CurrentToken.Type == TokenType.OPEN_CURLY_BRACKET)
                         {
                             this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                            while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                             {
                                 AstNode child = this.ParseChild();
                                 if (child != null)
@@ -506,12 +532,12 @@ namespace HanabiLang.Parses
 
                         if (isGet)
                         {
-                            getFn = new FnDefineStatementNode($"get_{variableName}", new List<FnDefineParameter>() { },
+                            getFn = new FnDefineStatementNode($"get_{string.Join("_", variableNames)}", new List<FnDefineParameter>() { },
                                 dataType, body, isStatic, lastLevel ?? level);
                         }
                         else
                         {
-                            setFn = new FnDefineStatementNode($"set_{variableName}",
+                            setFn = new FnDefineStatementNode($"set_{string.Join("_", variableNames)}",
                                 new List<FnDefineParameter>()
                                 {
                                     new FnDefineParameter("value", dataType)
@@ -526,13 +552,12 @@ namespace HanabiLang.Parses
                 }
                 this.Expect(TokenType.CLOSE_CURLY_BRACKET);
             }
-            else if (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Type == TokenType.DOUBLE_ARROW)
+            else if (this.HasToken && this.CurrentToken.Type == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 var fnBody = new ReturnNode(this.ParseChild());
 
-                getFn = new FnDefineStatementNode($"get_{variableName}", 
+                getFn = new FnDefineStatementNode($"get_{string.Join("_", variableNames)}", 
                     new List<FnDefineParameter>() { }, dataType, new List<AstNode>() { fnBody }, isStatic, level);
             }
 
@@ -547,36 +572,21 @@ namespace HanabiLang.Parses
                     throw new ParseException("Constant cannot have Setter", this.tokens[this.currentTokenIndex - 1]);
             }
 
+            // Disable assign default value to auto-implemented getter
+            /*if (getFn != null && setFn == null)
+                throw new ParseException("Cannot assign value to a read only variable");*/
+            if (setFn != null && setFn.Body.Count > 0)
+                throw new ParseException("Only auto-implemented variable can have initializers", this.tokens[this.currentTokenIndex - 1]);
 
-            if (HasNextToken && NextTokenType == TokenType.EQUALS)
-            {
-                this.Expect(TokenType.EQUALS);
-
-                // Disable assign default value to auto-implemented getter
-                /*if (getFn != null && setFn == null)
-                    throw new ParseException("Cannot assign value to a read only variable");*/
-                if (setFn != null && setFn.Body.Count > 0)
-                    throw new ParseException("Only auto-implemented variable can have initializers", this.tokens[this.currentTokenIndex - 1]);
-
-                var node = new VariableDefinitionNode(variableName, this.Expression(), dataType, getFn, setFn, constant, isStatic, level);
-                if (this.currentTokenIndex >= this.tokens.Count)
-                    node.Line = this.tokens[this.tokens.Count - 1].Line;
-                else
-                    node.Line = this.tokens[this.currentTokenIndex].Line;
-                return node;
-            }
-            else
-            {
-                if (getFn == null && setFn == null)
+            if (getFn == null && setFn == null)
                     throw new ParseException("Normal variable must define a initial value", this.tokens[this.currentTokenIndex - 1]);
 
-                var node = new VariableDefinitionNode(variableName, null, dataType, getFn, setFn, constant, isStatic, level);
-                if (this.currentTokenIndex >= this.tokens.Count)
-                    node.Line = this.tokens[this.tokens.Count - 1].Line;
-                else
-                    node.Line = this.tokens[this.currentTokenIndex].Line;
-                return node;
-            }
+            var node = new VariableDefinitionNode(variableNames, null, dataType, getFn, setFn, constant, isStatic, level);
+            if (this.currentTokenIndex >= this.tokens.Count)
+                node.Line = this.tokens[this.tokens.Count - 1].Line;
+            else
+                node.Line = this.CurrentToken.Line;
+            return node;
         }
 
         private AstNode IfStatement()
@@ -587,7 +597,7 @@ namespace HanabiLang.Parses
             List<AstNode> thenBody = new List<AstNode>();
             List<AstNode> elseBody = new List<AstNode>();
 
-            if (!DISABLE_ARROW_IF && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            if (!DISABLE_ARROW_IF && HasToken && CurrentToken.Type == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
@@ -599,7 +609,7 @@ namespace HanabiLang.Parses
 
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                 {
                     AstNode child = this.ParseChild();
                     if (child != null)
@@ -609,17 +619,17 @@ namespace HanabiLang.Parses
                 this.Expect(true, TokenType.CLOSE_CURLY_BRACKET);
             }
 
-            if (HasNextToken && this.tokens[this.currentTokenIndex].Raw == "else")
+            if (HasToken && this.CurrentToken.Raw == "else")
             {
                 this.currentTokenIndex++;
 
-                if (HasNextToken && this.tokens[this.currentTokenIndex].Raw == "if")
+                if (HasToken && this.CurrentToken.Raw == "if")
                 {
                     elseBody.Add(this.IfStatement());
                 }
                 else
                 {
-                    if (!DISABLE_ARROW_IF && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+                    if (!DISABLE_ARROW_IF && HasToken && CurrentToken.Type == TokenType.DOUBLE_ARROW)
                     {
                         this.Expect(TokenType.DOUBLE_ARROW);
                         AstNode child = this.ParseChild();
@@ -630,7 +640,7 @@ namespace HanabiLang.Parses
                     {
                         this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                        while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                        while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                         {
                             AstNode child = this.ParseChild();
                             if (child != null)
@@ -648,7 +658,7 @@ namespace HanabiLang.Parses
         {
             this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+            while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
             {
                 AstNode child = this.ParseChild();
                 if (child != null)
@@ -666,29 +676,29 @@ namespace HanabiLang.Parses
 
             OutTryCatchBody(tryBody);
 
-            while (HasNextToken && NextToken.Raw.Equals("catch"))
+            while (HasToken && CurrentToken.Raw.Equals("catch"))
             {
                 this.Expect(TokenType.KEYWORD);
-                if (HasNextToken && NextToken.Type == TokenType.OPEN_ROUND_BRACKET)
+                if (HasToken && CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET)
                     this.Expect(TokenType.OPEN_ROUND_BRACKET);
 
                 string paramName = "";
                 AstNode paramType = null;
 
-                bool hasParam = HasNextToken && NextToken.Type == TokenType.IDENTIFIER;
+                bool hasParam = HasToken && CurrentToken.Type == TokenType.IDENTIFIER;
                 if (hasParam)
                 {
-                    paramName = NextToken.Raw;
+                    paramName = CurrentToken.Raw;
                     this.Expect(TokenType.IDENTIFIER);
 
-                    if (HasNextToken && NextToken.Type == TokenType.COLON)
+                    if (HasToken && CurrentToken.Type == TokenType.COLON)
                     {
                         this.Expect(TokenType.COLON);
                         paramType = this.ParseTypes();
                     }
                 }
 
-                if (HasNextToken && NextToken.Type == TokenType.CLOSE_ROUND_BRACKET)
+                if (HasToken && CurrentToken.Type == TokenType.CLOSE_ROUND_BRACKET)
                     this.Expect(TokenType.CLOSE_ROUND_BRACKET);
 
                 var catchBody = new List<AstNode>();
@@ -700,7 +710,7 @@ namespace HanabiLang.Parses
                 catchNodes.Add(new CatchNode(paramName, paramType, catchBody));
             }
 
-            if (HasNextToken && NextToken.Raw.Equals("finally"))
+            if (HasToken && CurrentToken.Raw.Equals("finally"))
             {
                 this.Expect(TokenType.KEYWORD);
                 finallyBody = new List<AstNode>();
@@ -723,7 +733,7 @@ namespace HanabiLang.Parses
             var condition = this.Expression();
             List<AstNode> thenStatements = new List<AstNode>();
 
-            if (!DISABLE_ARROW_LOOP && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            if (!DISABLE_ARROW_LOOP && HasToken && CurrentToken.Type == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
@@ -734,8 +744,8 @@ namespace HanabiLang.Parses
             {
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                while (this.currentTokenIndex < this.tokens.Count &&
-                       this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+                while (this.HasToken &&
+                       this.CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                 {
                     AstNode child = this.ParseChild();
                     if (child != null)
@@ -750,18 +760,24 @@ namespace HanabiLang.Parses
         {
             Token keywordToken = this.Expect(TokenType.KEYWORD);
 
-            bool haveBracket = false;
-            if (HasNextToken && NextTokenType == TokenType.OPEN_ROUND_BRACKET)
+            bool hasBracket = false;
+            if (HasToken && CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET)
             {
-                haveBracket = true;
+                hasBracket = true;
                 this.Expect(TokenType.OPEN_ROUND_BRACKET);
             }
 
-            this.Expect(TokenType.IDENTIFIER);
+            List<string> initializer = new List<string>();
+            while (this.HasToken && this.CurrentToken.Type == TokenType.IDENTIFIER)
+            {
+                initializer.Add(this.CurrentToken.Raw);
+                this.Expect(TokenType.IDENTIFIER);
+                if (this.HasToken && this.CurrentToken.Type != TokenType.COMMA)
+                    break;
+                this.Expect(TokenType.COMMA);
+            }
 
-            var initializer = this.tokens[this.currentTokenIndex - 1].Raw;
-
-            if (HasNextToken && this.tokens[this.currentTokenIndex].Raw != "in")
+            if (HasToken && this.CurrentToken.Raw != "in")
             {
                 throw new ParseException("Keyword 'in' is essential in for loop", this.tokens[this.currentTokenIndex - 1]);
             }
@@ -770,12 +786,12 @@ namespace HanabiLang.Parses
 
             var iterator = this.Expression();
 
-            if (haveBracket)
+            if (hasBracket)
                 Expect(true, TokenType.CLOSE_ROUND_BRACKET);
 
             List<AstNode> thenStatements = new List<AstNode>();
 
-            if (!DISABLE_ARROW_LOOP && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+            if (!DISABLE_ARROW_LOOP && HasToken && CurrentToken.Type == TokenType.DOUBLE_ARROW)
             {
                 this.Expect(TokenType.DOUBLE_ARROW);
                 AstNode child = this.ParseChild();
@@ -786,7 +802,7 @@ namespace HanabiLang.Parses
             {
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                 {
                     AstNode child = this.ParseChild();
                     if (child != null)
@@ -843,29 +859,47 @@ namespace HanabiLang.Parses
             expression.Line = currentToken.Line;
             return new ThrowNode(expression);
         }
+
+        private AstNode CatchExpression()
+        {
+            AstNode defaultValue = null;
+            Token keywordToken = this.Expect(TokenType.KEYWORD);
+            this.Expect(TokenType.OPEN_ROUND_BRACKET);
+            var currentToken = this.tokens[this.currentTokenIndex];
+            var expression = this.Expression();
+            if (this.HasToken && this.CurrentToken.Type == TokenType.COMMA)
+            {
+                this.Expect(TokenType.COMMA);
+                defaultValue = this.Expression();
+            }
+            this.Expect(TokenType.CLOSE_ROUND_BRACKET);
+            expression.Line = currentToken.Line;
+            return new CatchExpressionNode(expression, defaultValue);
+        }
+
         private AstNode ImportStatement()
         {
             Token keywordToken = this.Expect(TokenType.KEYWORD);
 
             List<string> imports = null;
             bool isImportAll = false;
-            if (this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER ||
-                this.tokens[this.currentTokenIndex].Raw == "*")
+            if (this.CurrentToken.Type == TokenType.IDENTIFIER ||
+                this.CurrentToken.Raw == "*")
             {
                 imports = new List<string>();
-                while (this.currentTokenIndex < this.tokens.Count &&
-                    (this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER ||
-                    this.tokens[this.currentTokenIndex].Raw == "*"))
+                while (this.HasToken &&
+                    (this.CurrentToken.Type == TokenType.IDENTIFIER ||
+                    this.CurrentToken.Raw == "*"))
                 {
-                    imports.Add(this.tokens[this.currentTokenIndex].Raw);
-                    if (this.tokens[this.currentTokenIndex].Raw == "*")
+                    imports.Add(this.CurrentToken.Raw);
+                    if (this.CurrentToken.Raw == "*")
                         isImportAll = true;
                     this.Expect(TokenType.IDENTIFIER, TokenType.OPERATOR);
-                    if (this.currentTokenIndex < this.tokens.Count &&
-                        this.tokens[this.currentTokenIndex].Type == TokenType.COMMA)
+                    if (this.HasToken &&
+                        this.CurrentToken.Type == TokenType.COMMA)
                         this.Expect(TokenType.COMMA);
                 }
-                if (this.tokens[this.currentTokenIndex].Raw != "from")
+                if (this.CurrentToken.Raw != "from")
                     throw new ParseException("The correct format is import ... from \"\";", this.tokens[this.currentTokenIndex]);
                 this.Expect(TokenType.KEYWORD);
             }
@@ -873,17 +907,17 @@ namespace HanabiLang.Parses
             if (isImportAll)
                 imports = new List<string>();
 
-            var importPath = this.tokens[this.currentTokenIndex].Raw;
+            var importPath = this.CurrentToken.Raw;
             this.Expect(TokenType.STRING);
 
             string asName = "";
-            if (this.currentTokenIndex < this.tokens.Count &&
-                this.tokens[this.currentTokenIndex].Raw == "as")
+            if (this.HasToken &&
+                this.CurrentToken.Raw == "as")
             {
                 this.Expect(TokenType.KEYWORD);
                 if (imports != null)
                     throw new ParseException("Format: import ... from \"\"; cannot use as keyword", this.tokens[this.currentTokenIndex - 1]);
-                asName = this.tokens[this.currentTokenIndex].Raw;
+                asName = this.CurrentToken.Raw;
                 this.Expect(TokenType.IDENTIFIER);
             }
 
@@ -900,7 +934,7 @@ namespace HanabiLang.Parses
             string functionName = "";
             if (!isLambdaFn)
             {
-                functionName = this.tokens[this.currentTokenIndex].Raw;
+                functionName = this.CurrentToken.Raw;
                 this.currentTokenIndex++;
             }
 
@@ -912,8 +946,8 @@ namespace HanabiLang.Parses
             {
                 this.Expect(TokenType.OPEN_ROUND_BRACKET);
 
-                while (this.currentTokenIndex < this.tokens.Count &&
-                        this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
+                while (this.HasToken &&
+                        this.CurrentToken.Type != TokenType.CLOSE_ROUND_BRACKET)
                 {
                     if (multiArgsToken != null)
                         throw new ParseException($"Cannot have parameter after multiple-arguments", multiArgsToken);
@@ -941,16 +975,16 @@ namespace HanabiLang.Parses
                     AstNode paramType = null;
                     AstNode paramDefaultValue = null;
                     this.currentTokenIndex++;
-                    if (this.currentTokenIndex < this.tokens.Count && 
-                        this.tokens[this.currentTokenIndex].Type == TokenType.COLON)
+                    if (this.HasToken && 
+                        this.CurrentToken.Type == TokenType.COLON)
                     {
                         this.Expect(TokenType.COLON);
                         //paramType = Expression(true, true, true);
                         paramType = this.ParseTypes();
                     }
 
-                    if (this.currentTokenIndex < this.tokens.Count && 
-                        this.tokens[this.currentTokenIndex].Type == TokenType.EQUALS)
+                    if (this.HasToken && 
+                        this.CurrentToken.Type == TokenType.EQUALS)
                     {
                         this.Expect(TokenType.EQUALS);
                         paramDefaultValue = Expression();
@@ -968,8 +1002,8 @@ namespace HanabiLang.Parses
 
                     if (this.currentTokenIndex != this.tokens.Count)
                     {
-                        if (this.currentTokenIndex < this.tokens.Count && 
-                            this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_ROUND_BRACKET)
+                        if (this.HasToken && 
+                            this.CurrentToken.Type != TokenType.CLOSE_ROUND_BRACKET)
                         {
                             this.Expect(TokenType.COMMA);
                         }
@@ -980,25 +1014,25 @@ namespace HanabiLang.Parses
             }
             else
             {
-                if (this.currentTokenIndex < this.tokens.Count && 
-                    this.tokens[this.currentTokenIndex].Type != TokenType.IDENTIFIER)
+                if (this.HasToken && 
+                    this.CurrentToken.Type != TokenType.IDENTIFIER)
                 {
                     throw new ParseException("Expected identifier" , this.tokens[this.currentTokenIndex]);
                 }
 
-                string paramName = this.tokens[this.currentTokenIndex].Raw;
+                string paramName = this.CurrentToken.Raw;
                 AstNode paramType = null;
                 AstNode paramValue = null;
                 this.currentTokenIndex++;
-                if (this.currentTokenIndex < this.tokens.Count && 
-                    this.tokens[this.currentTokenIndex].Type == TokenType.COLON)
+                if (this.HasToken && 
+                    this.CurrentToken.Type == TokenType.COLON)
                 {
                     this.Expect(TokenType.COLON);
                     paramType = Expression();
                 }
 
-                if (this.currentTokenIndex < this.tokens.Count && 
-                    this.tokens[this.currentTokenIndex].Type == TokenType.EQUALS)
+                if (this.HasToken && 
+                    this.CurrentToken.Type == TokenType.EQUALS)
                 {
                     this.Expect(TokenType.EQUALS);
                     paramValue = Expression();
@@ -1009,8 +1043,8 @@ namespace HanabiLang.Parses
             }
 
             AstNode returnType = null;
-            if (this.currentTokenIndex < this.tokens.Count && 
-                this.tokens[this.currentTokenIndex].Type == TokenType.SINGLE_ARROW)
+            if (this.HasToken && 
+                this.CurrentToken.Type == TokenType.SINGLE_ARROW)
             {
                 this.Expect(TokenType.SINGLE_ARROW);
                 returnType = this.ParseTypes();
@@ -1019,8 +1053,8 @@ namespace HanabiLang.Parses
 
             bool haveArrow = false;
             bool haveBracket = true;
-            if (this.currentTokenIndex < this.tokens.Count && 
-                this.tokens[this.currentTokenIndex].Type == TokenType.DOUBLE_ARROW)
+            if (this.HasToken && 
+                this.CurrentToken.Type == TokenType.DOUBLE_ARROW)
             {
                 this.currentTokenIndex++;
                 haveArrow = true;
@@ -1031,16 +1065,16 @@ namespace HanabiLang.Parses
                 throw new ParseException("Lambda function must define return type or use double arrow", this.tokens[this.currentTokenIndex - 1]);
             }
 
-            if (this.currentTokenIndex < this.tokens.Count && 
-                this.tokens[this.currentTokenIndex].Type != TokenType.OPEN_CURLY_BRACKET)
+            if (this.HasToken && 
+                this.CurrentToken.Type != TokenType.OPEN_CURLY_BRACKET)
                 haveBracket = false;
 
             if (haveBracket)
             {
                 this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                while (this.currentTokenIndex < this.tokens.Count &&
-                        this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+                while (this.HasToken &&
+                        this.CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                 {
                     AstNode child = this.ParseChild();
                     if (child != null)
@@ -1075,15 +1109,15 @@ namespace HanabiLang.Parses
             List<SwitchCaseNode> cases = new List<SwitchCaseNode>();
             SwitchCaseNode defaultCase = null;
 
-            while (this.currentTokenIndex < this.tokens.Count && 
-                this.tokens[this.currentTokenIndex].Type != TokenType.CLOSE_CURLY_BRACKET)
+            while (this.HasToken && 
+                this.CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
             {
                 var token = this.tokens[this.currentTokenIndex];
                 bool isDefaultCase = false;
                 List<AstNode> caseExpressions = new List<AstNode>();
 
                 // Every cases with same body
-                while (HasNextToken && NextTokenType == TokenType.KEYWORD)
+                while (HasToken && CurrentToken.Type == TokenType.KEYWORD)
                 {
                     if (token.Raw != "case" && token.Raw != "default")
                         throw new ParseException($"switch only accept case or default as keyword",
@@ -1109,7 +1143,7 @@ namespace HanabiLang.Parses
                 }
 
                 var statements = new List<AstNode>();
-                if (!DISABLE_ARROW_SWITCH && HasNextToken && NextTokenType == TokenType.DOUBLE_ARROW)
+                if (!DISABLE_ARROW_SWITCH && HasToken && CurrentToken.Type == TokenType.DOUBLE_ARROW)
                 {
                     this.Expect(TokenType.DOUBLE_ARROW);
                     AstNode child = this.ParseChild();
@@ -1121,7 +1155,7 @@ namespace HanabiLang.Parses
                 {
                     this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
-                    while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+                    while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                     {
                         AstNode child = this.ParseChild();
                         if (child != null)
@@ -1148,19 +1182,19 @@ namespace HanabiLang.Parses
         {
             Token keywordToken = this.Expect(TokenType.KEYWORD);
 
-            var name = this.tokens[this.currentTokenIndex].Raw;
+            var name = this.CurrentToken.Raw;
 
             this.Expect(TokenType.IDENTIFIER);
             List<AstNode> superClasses = new List<AstNode>();
 
-            if (HasNextToken && NextTokenType == TokenType.COLON)
+            if (HasToken && CurrentToken.Type == TokenType.COLON)
             {
                 bool end = false;
                 this.Expect(TokenType.COLON);
                 while (!end)
                 {
                     superClasses.Add(this.Expression(true, true, true));
-                    if (HasNextToken && NextTokenType == TokenType.COMMA)
+                    if (HasToken && CurrentToken.Type == TokenType.COMMA)
                         this.Expect(TokenType.COMMA);
                     else
                         end = true;
@@ -1193,7 +1227,7 @@ namespace HanabiLang.Parses
 
             var members = new List<AstNode>();
 
-            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+            while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
             {
                 AstNode child = this.ParseChild();
                 if (child != null)
@@ -1208,6 +1242,11 @@ namespace HanabiLang.Parses
                 throw new ParseException("Class can only contains definition but not implement", keywordToken);
             }
 
+            if (members.Where(x => x is VariableDefinitionNode && ((VariableDefinitionNode)x).Names.Count > 1).Count() > 0) 
+            {
+                throw new ParseException("Class cannot define multiple variables in same statment", keywordToken);
+            }
+
             foreach (var fn in members.Where(x => x is FnDefineStatementNode).Select(x => (FnDefineStatementNode)x).Where(fn => fn.Name.Equals(name)))
             {
                 fn.ChangeToConstructorName(name);
@@ -1220,18 +1259,18 @@ namespace HanabiLang.Parses
         {
             Token keywordToken = this.Expect(TokenType.KEYWORD);
 
-            var name = this.tokens[this.currentTokenIndex].Raw;
+            var name = this.CurrentToken.Raw;
 
             this.Expect(TokenType.IDENTIFIER);
             this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
             var members = new Dictionary<string, AstNode>();
             int count = 0;
-            while (HasNextToken && NextTokenType != TokenType.CLOSE_CURLY_BRACKET)
+            while (HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
             {
-                var key = this.tokens[this.currentTokenIndex].Raw;
+                var key = this.CurrentToken.Raw;
                 this.Expect(TokenType.IDENTIFIER);
-                if (HasNextToken && NextTokenType == TokenType.EQUALS)
+                if (HasToken && CurrentToken.Type == TokenType.EQUALS)
                 {
                     this.Expect(TokenType.EQUALS);
                     AstNode value = this.Expression();
@@ -1243,9 +1282,9 @@ namespace HanabiLang.Parses
                     count++;
                 }
 
-                if (HasNextToken && NextTokenType == TokenType.CLOSE_CURLY_BRACKET)
+                if (HasToken && CurrentToken.Type == TokenType.CLOSE_CURLY_BRACKET)
                     break;
-                else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                else if (HasToken && CurrentToken.Type == TokenType.COMMA)
                     Expect(TokenType.COMMA);
                 else
                     throw new ParseFormatNotCompleteException("enum expected ',' or '}'", this.tokens[this.currentTokenIndex - 1]);
@@ -1262,13 +1301,13 @@ namespace HanabiLang.Parses
             var arguments = new List<AstNode>();
             var keyArguments = new Dictionary<string, AstNode>();
             bool isLastWithName = false;
-            while (HasNextToken && NextTokenType != TokenType.CLOSE_ROUND_BRACKET)
+            while (HasToken && CurrentToken.Type != TokenType.CLOSE_ROUND_BRACKET)
             {
                 if (this.currentTokenIndex + 1 < this.tokens.Count &&
-                    this.tokens[this.currentTokenIndex].Type == TokenType.IDENTIFIER &&
+                    this.CurrentToken.Type == TokenType.IDENTIFIER &&
                     this.tokens[this.currentTokenIndex + 1].Type == TokenType.COLON)
                 {
-                    string argName = this.tokens[this.currentTokenIndex].Raw;
+                    string argName = this.CurrentToken.Raw;
                     this.Expect(TokenType.IDENTIFIER);
                     this.Expect(TokenType.COLON);
                     keyArguments[argName] = this.Expression(false, true, false);
@@ -1283,16 +1322,16 @@ namespace HanabiLang.Parses
                     arguments.Add(this.Expression());
                 }
 
-                if (HasNextToken && NextTokenType == TokenType.CLOSE_ROUND_BRACKET)
+                if (HasToken && CurrentToken.Type == TokenType.CLOSE_ROUND_BRACKET)
                     break;
-                else if (HasNextToken && NextTokenType == TokenType.COMMA)
+                else if (HasToken && CurrentToken.Type == TokenType.COMMA)
                     Expect(TokenType.COMMA);
                 else
                     throw new ParseException("Function call expected ',' or ')'", 
                         this.tokens[this.currentTokenIndex - 1]);
             }
 
-            if (HasNextToken && NextTokenType != TokenType.CLOSE_ROUND_BRACKET)
+            if (HasToken && CurrentToken.Type != TokenType.CLOSE_ROUND_BRACKET)
             {
                 throw new ParseException("Function call expected ')'",
                     this.tokens[this.currentTokenIndex - 1]);
@@ -1301,17 +1340,17 @@ namespace HanabiLang.Parses
             Expect(true, TokenType.CLOSE_ROUND_BRACKET);
 
             AstNode result = new FnReferenceCallNode(node, arguments, keyArguments, bracketToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET);
-            while (HasNextToken && 
-                (NextTokenType == TokenType.OPEN_SQURE_BRACKET || 
-                NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET || 
-                NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
-                NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET))
+            while (HasToken && 
+                (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || 
+                CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET || 
+                CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET ||
+                CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET))
             {
-                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET)
+                if (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET)
                 {
                     result = CheckIndexersAccess(result);
                 }
-                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET)
+                else if (CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
                     result = FunctionCall(result);
                 }
@@ -1322,7 +1361,6 @@ namespace HanabiLang.Parses
         private AstNode Identifier(bool skipIndexers)
         {
             var currentToken = Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
-
             AstNode result = new VariableReferenceNode(currentToken.Raw);
             result.Line = currentToken.Line;
             return result;
@@ -1330,10 +1368,10 @@ namespace HanabiLang.Parses
 
         private AstNode CheckIndexersAccess(AstNode child)
         {
-            if (!HasNextToken)
+            if (!HasToken)
                 return child;
 
-            var token = this.NextToken;
+            var token = this.CurrentToken;
 
             if (!(token.Type == TokenType.OPEN_SQURE_BRACKET || token.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
                 return child;
@@ -1347,17 +1385,17 @@ namespace HanabiLang.Parses
 
             AstNode result = new IndexersNode(child, expression, token.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
-            while (HasNextToken &&
-                (NextTokenType == TokenType.OPEN_SQURE_BRACKET ||
-                NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET ||
-                NextTokenType == TokenType.OPEN_ROUND_BRACKET ||
-                NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET))
+            while (HasToken &&
+                (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET ||
+                CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET ||
+                CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET ||
+                CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET))
             {
-                if (NextTokenType == TokenType.OPEN_SQURE_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_SQURE_BRACKET)
+                if (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET)
                 {
                     result = CheckIndexersAccess(result);
                 }
-                else if (NextTokenType == TokenType.OPEN_ROUND_BRACKET || NextTokenType == TokenType.QUESTION_OPEN_ROUND_BRACKET)
+                else if (CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
                     result = FunctionCall(result);
                 }
@@ -1368,7 +1406,7 @@ namespace HanabiLang.Parses
 
         private Token Expect(bool isFormatNotComplete, params TokenType[] types)
         {
-            if (!HasNextToken)
+            if (!HasToken)
             {
                 if (isFormatNotComplete)
                     throw new ParseFormatNotCompleteException("Format is not complete", this.tokens[this.currentTokenIndex - 1]);
@@ -1432,9 +1470,9 @@ namespace HanabiLang.Parses
             bool isStatic = level.Equals("static");
             AccessibilityLevel accessibilityLevel = ToAccessibilityLevel(level);
 
-            while (HasNextToken && NextTokenType == TokenType.KEYWORD)
+            while (HasToken && CurrentToken.Type == TokenType.KEYWORD)
             {
-                string keyword = this.tokens[this.currentTokenIndex].Raw;
+                string keyword = this.CurrentToken.Raw;
                 if (keyword.Equals("static"))
                 {
                     this.Expect(TokenType.KEYWORD);
@@ -1467,11 +1505,32 @@ namespace HanabiLang.Parses
 
         private AstNode ParseChild()
         {
-            var token = this.tokens[this.currentTokenIndex];
+            var token = this.CurrentToken;
 
             switch (token.Type)
             {
                 case TokenType.IDENTIFIER:
+                    {
+                        // for directly assign without []
+                        // a, b = [b, a]
+                        List<AstNode> references = new List<AstNode>() { this.Expression(skipEquals: true) };
+                        int lastTokenIndex = this.currentTokenIndex;
+                        while (this.HasToken && this.CurrentToken.Type == TokenType.COMMA)
+                        {
+                            this.Expect(TokenType.COMMA);
+                            references.Add(this.Expression(skipEquals: true));
+                        }
+                        if (this.HasToken && this.CurrentToken.Type == TokenType.EQUALS)
+                        {
+                            this.Expect(TokenType.EQUALS);
+                            return new VariableAssignmentNode(references, this.Expression());
+                        }
+                        else
+                        {
+                            this.currentTokenIndex = lastTokenIndex;
+                            return references[0];
+                        }
+                    }
                 case TokenType.INTERPOLATED_STRING:
                 case TokenType.STRING:
                 case TokenType.OPEN_ROUND_BRACKET:
@@ -1518,7 +1577,7 @@ namespace HanabiLang.Parses
                             this.currentTokenIndex++;
                             result = new ContinueNode();
                         }
-                        else if (token.Raw.Equals("this") || token.Raw.Equals("super"))
+                        else if (token.Raw.Equals("this") || token.Raw.Equals("super") || token.Raw.Equals("catch"))
                         {
                             var expression = this.Expression();
                             expression.Line = token.Line;
@@ -1529,7 +1588,7 @@ namespace HanabiLang.Parses
                             throw new ParseException("Keyword is not implemented: " + token.Raw, token);
                         }
 
-                        while (HasNextToken && NextTokenType == TokenType.SEMI_COLON)
+                        while (HasToken && CurrentToken.Type == TokenType.SEMI_COLON)
                         {
                             Expect(TokenType.SEMI_COLON);
                         }

@@ -8,7 +8,7 @@ namespace HanabiLang.Parses.Nodes
 {
     class VariableDefinitionNode : AstNode, IStatementNode
     {
-        public string Name { get; private set; }
+        public List<string> Names { get; private set; }
         public AstNode Value { get; private set; }
         public AstNode DataType { get; private set; }
         public FnDefineNode GetFn { get; private set; }
@@ -17,10 +17,10 @@ namespace HanabiLang.Parses.Nodes
         public bool IsStatic { get; private set; }
         public AccessibilityLevel Level { get; private set; }
 
-        public VariableDefinitionNode(string name, AstNode value, AstNode dataType,
+        public VariableDefinitionNode(List<string> name, AstNode value, AstNode dataType,
             FnDefineNode getFn, FnDefineNode setFn, bool isConstant, bool isStatic, AccessibilityLevel level)
         {
-            this.Name = name;
+            this.Names = name;
             this.Value = value;
             this.GetFn = getFn;
             this.SetFn = setFn;
@@ -33,7 +33,7 @@ namespace HanabiLang.Parses.Nodes
         public override string ToString()
         {
             StringBuilder result = new StringBuilder();
-            result.Append($"{this.NodeName}({Name} {Value} Type: {DataType} const: {IsConstant})");
+            result.Append($"{this.NodeName}({string.Join(", ", Names)} {Value} Type: {DataType} const: {IsConstant})");
             //result.AppendLine("  ");
             return result.ToString();
         }

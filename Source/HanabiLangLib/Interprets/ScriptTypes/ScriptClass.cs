@@ -123,7 +123,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             if (from.Body != null)
             {
-                Func<object, string> getBodyName = x => (x is VariableDefinitionNode ? ((VariableDefinitionNode)x).Name : ((ScriptVariable)x).Name);
+                Func<object, string> getBodyName = x => (x is VariableDefinitionNode ? ((VariableDefinitionNode)x).Names[0] : ((ScriptVariable)x).Name);
                 foreach (object instanceVariable in from.Body)
                 {
                     int varNameIndex = to.Body.FindIndex(x => getBodyName(x).Equals(getBodyName(instanceVariable)));
