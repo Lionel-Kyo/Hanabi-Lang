@@ -429,6 +429,12 @@ namespace HanabiLang.Parses
 
             List<string> variableNames = new List<string>();
 
+            bool hasSquareBracket = false;
+            if (this.HasToken && this.CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET)
+            {
+                this.Expect(TokenType.OPEN_SQURE_BRACKET);
+                hasSquareBracket = true;
+            }
             while (this.HasToken && this.CurrentToken.Type == TokenType.IDENTIFIER)
             {
                 variableNames.Add(this.CurrentToken.Raw);
@@ -436,6 +442,10 @@ namespace HanabiLang.Parses
                 if (this.HasToken && this.CurrentToken.Type != TokenType.COMMA)
                     break;
                 this.Expect(TokenType.COMMA);
+            }
+            if (hasSquareBracket)
+            {
+                this.Expect(TokenType.CLOSE_SQURE_BRACKET);
             }
 
             // Check if datatype defined
