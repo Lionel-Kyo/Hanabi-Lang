@@ -7,9 +7,15 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses
 {
-    public class ParseException : SystemException
+    public class ParseException : Exception
     {
         public ParseException(string message, Token token) : base($"{message}\nLine: {token.Line}")
+        { }
+    }
+
+    public class NotLambdaParseException : Exception
+    {
+        public NotLambdaParseException(string message, Token token) : base($"{message}\nLine: {token.Line}")
         { }
     }
 

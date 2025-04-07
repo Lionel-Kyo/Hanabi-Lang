@@ -421,9 +421,9 @@ namespace HanabiLang.Interprets
             if (this.IsObject)
             {
                 ScriptObject _this = this.TryObject;
-                if (_this.ClassType.TryGetValue("CompareTo", out ScriptType fns) && fns is ScriptFns)
+                if (_this.ClassType.TryGetValue("CompareTo", out ScriptVariable fns) && fns.Value.IsFunction)
                 {
-                    var _fns = (ScriptFns)fns;
+                    var _fns = fns.Value.TryFunction;
                     return Convert.ToInt32(_fns.Call(_this, other).TryObject.BuildInObject);
                 }
             }

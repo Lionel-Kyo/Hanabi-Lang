@@ -42,7 +42,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }
 
                 return jsonValue.Ref;
-            });
+            }, true, AccessibilityLevel.Public);
 
             this.AddFunction("Serialize", new List<FnParameter>()
             {
@@ -65,7 +65,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             ScriptObject result = targetType.Call(null, new List<Parses.Nodes.AstNode>(), new Dictionary<string, Parses.Nodes.AstNode>()).TryObject;
             foreach (var kv in (Dictionary<ScriptValue, ScriptValue>)jsonDict.BuildInObject)
             {
-                if (result.TryGetValue(kv.Key.TryObject.ToString(), out ScriptType member))
+                if (result.TryGetValue(kv.Key.TryObject.ToString(), out ScriptVariable member))
                 {
                     if (!(member is ScriptVariable))
                         continue;

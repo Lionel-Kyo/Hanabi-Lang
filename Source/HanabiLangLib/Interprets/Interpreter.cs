@@ -12,7 +12,6 @@ using System.Threading;
 using System.Xml.Linq;
 using System.Reflection;
 using HanabiLangLib.Parses.Nodes;
-using static System.Runtime.CompilerServices.RuntimeHelpers;
 using HanabiLangLib.Interprets.ScriptTypes;
 
 namespace HanabiLang.Interprets
@@ -36,22 +35,22 @@ namespace HanabiLang.Interprets
             {
                 this.CurrentScope = new ScriptScope(null, this);
                 this.Path = path.Replace("\\", "/");
-                this.CurrentScope.Classes["Script"] = new ScriptScript(isMain, Arguments);
-                this.CurrentScope.Classes.Add("object", BasicTypes.ObjectClass);
-                this.CurrentScope.Classes.Add("Type", BasicTypes.TypeClass);
-                this.CurrentScope.Classes.Add("Function", BasicTypes.FunctionClass);
-                this.CurrentScope.Classes.Add("str", BasicTypes.Str);
-                this.CurrentScope.Classes.Add("int", BasicTypes.Int);
-                this.CurrentScope.Classes.Add("float", BasicTypes.Float);
-                this.CurrentScope.Classes.Add("decimal", BasicTypes.Decimal);
-                this.CurrentScope.Classes.Add("bool", BasicTypes.Bool);
-                this.CurrentScope.Classes.Add("range", BasicTypes.Range);
-                this.CurrentScope.Classes.Add("List", BasicTypes.List);
-                this.CurrentScope.Classes.Add("Dict", BasicTypes.Dict);
-                this.CurrentScope.Classes.Add("Iterator", BasicTypes.Iterator);
-                this.CurrentScope.Classes.Add("Exception", BasicTypes.Exception);
-                this.CurrentScope.Classes.Add("FnEvent", BasicTypes.FnEvent);
-                this.CurrentScope.Classes.Add("Json", BasicTypes.Json);
+                this.CurrentScope.Variables["Script"] = new ScriptVariable("Script", new ScriptScript(isMain, Arguments));
+                this.CurrentScope.Variables.Add("object", new ScriptVariable(BasicTypes.ObjectClass.Name, BasicTypes.ObjectClass));
+                this.CurrentScope.Variables.Add("Type", new ScriptVariable(BasicTypes.TypeClass.Name, BasicTypes.TypeClass));
+                this.CurrentScope.Variables.Add("Function", new ScriptVariable(BasicTypes.FunctionClass.Name, BasicTypes.FunctionClass));
+                this.CurrentScope.Variables.Add("str", new ScriptVariable(BasicTypes.Str.Name, BasicTypes.Str));
+                this.CurrentScope.Variables.Add("int", new ScriptVariable(BasicTypes.Int.Name, BasicTypes.Int));
+                this.CurrentScope.Variables.Add("float", new ScriptVariable(BasicTypes.Float.Name, BasicTypes.Float));
+                this.CurrentScope.Variables.Add("decimal", new ScriptVariable(BasicTypes.Decimal.Name, BasicTypes.Decimal));
+                this.CurrentScope.Variables.Add("bool", new ScriptVariable(BasicTypes.Bool.Name, BasicTypes.Bool));
+                this.CurrentScope.Variables.Add("range", new ScriptVariable(BasicTypes.Range.Name, BasicTypes.Range));
+                this.CurrentScope.Variables.Add("List", new ScriptVariable(BasicTypes.List.Name, BasicTypes.List));
+                this.CurrentScope.Variables.Add("Dict", new ScriptVariable(BasicTypes.Dict.Name, BasicTypes.Dict));
+                this.CurrentScope.Variables.Add("Iterator", new ScriptVariable(BasicTypes.Iterator.Name, BasicTypes.Iterator));
+                this.CurrentScope.Variables.Add("Exception", new ScriptVariable(BasicTypes.Exception.Name, BasicTypes.Exception));
+                this.CurrentScope.Variables.Add("FnEvent", new ScriptVariable(BasicTypes.FnEvent.Name, BasicTypes.FnEvent));
+                this.CurrentScope.Variables.Add("Json", new ScriptVariable(BasicTypes.Json.Name, BasicTypes.Json));
                 BasicFns.AddBasicFunctions(this.CurrentScope);
             }
             else
@@ -66,14 +65,6 @@ namespace HanabiLang.Interprets
             {
                 if (this.PredefinedScope != null)
                 {
-                    foreach (var kv in this.PredefinedScope.Classes)
-                    {
-                        this.CurrentScope.Classes[kv.Key] = kv.Value;
-                    }
-                    foreach (var kv in this.PredefinedScope.Functions)
-                    {
-                        this.CurrentScope.Functions[kv.Key] = kv.Value;
-                    }
                     foreach (var kv in this.PredefinedScope.Variables)
                     {
                         this.CurrentScope.Variables[kv.Key] = kv.Value;
@@ -132,14 +123,7 @@ namespace HanabiLang.Interprets
                         Assembly assembly = Assembly.LoadFrom(dlls[index]);
                         string[] splitedManifestModuleName = assembly.ManifestModule.Name.Split('.');
                         string assemblyName = string.Join(".", splitedManifestModuleName.Take(splitedManifestModuleName.Length - 1));
-                        if (assemblyName.Equals(typeName))
-                        {
-                            return assembly;
-                        }
-                        else
-                        {
-                            return assembly.GetType(typeName);
-                        }
+                        return ((object)assembly.GetType(typeName)) ?? assembly;
                     }
                     catch { }
                 }
@@ -191,7 +175,7 @@ namespace HanabiLang.Interprets
                                     subScriptClass = BuildInClasses.CSharpClassToScriptClass(csType, csType.Name);
                                     ImportedItems.Types[csType] = subScriptClass;
                                 }
-                                scriptClass.Scope.Classes[subScriptClass.Name] = subScriptClass;
+                                scriptClass.Scope.Variables[subScriptClass.Name] = new ScriptVariable(subScriptClass.Name, subScriptClass);
                             }
                             catch { continue; }
                         }
@@ -203,27 +187,16 @@ namespace HanabiLang.Interprets
                     throw new SystemException($"Fail to load {realNode.Path}");
 
                 ScriptScope scriptScope = scriptClass.Scope;
-                string className = string.IsNullOrEmpty(realNode.AsName) ? scriptClass.Name : realNode.AsName;
+                string className = realNode.AsName ?? scriptClass.Name;
 
                 // Import as variable
                 if (realNode.Imports == null)
                 {
-                    interpretScope.Classes[className] = scriptClass;
+                    interpretScope.Variables[className] = new ScriptVariable(className, scriptClass);
                 }
                 // Import all
                 else if (realNode.Imports.Count <= 0)
                 {
-                    foreach (var kv in scriptScope.Classes)
-                    {
-                        if (kv.Value.Level != AccessibilityLevel.Public)
-                            continue;
-
-                        interpretScope.Classes[kv.Key] = kv.Value;
-                    }
-                    foreach (var kv in scriptScope.Functions)
-                    {
-                        interpretScope.Functions[kv.Key] = kv.Value;
-                    }
                     foreach (var kv in scriptScope.Variables)
                     {
                         if (kv.Value.Level != AccessibilityLevel.Public)
@@ -234,33 +207,21 @@ namespace HanabiLang.Interprets
                 // Import some
                 else
                 {
-                    foreach (string item in realNode.Imports)
+                    foreach (var item in realNode.Imports)
                     {
-                        if (scriptScope.TryGetValue(item, out ScriptType scriptType))
+                        if (interpretScope.TryGetValue(item.Item1, out _))
+                            throw new SystemException($"Import failed, {item.Item1} exists");
+
+                        if (scriptScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
                         {
-                            if (scriptType is ScriptClass)
-                            {
-                                if (((ScriptClass)scriptType).Level != AccessibilityLevel.Public)
-                                    continue;
-                                interpretScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
-                            }
-                            if (scriptType is ScriptFns)
-                            {
-                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
-                            }
-                            else if (scriptType is ScriptVariable)
-                            {
-                                if (((ScriptVariable)scriptType).Level != AccessibilityLevel.Public)
-                                    continue;
-                                interpretScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
-                            }
-                            else
-                            {
-                                throw new SystemException($"Unexpected script type");
-                            }
+                            if (scriptType.Level != AccessibilityLevel.Public)
+                                throw new SystemException($"Import failed, {item.Item1} is not public");
+                            interpretScope.Variables[item.Item2 ?? scriptType.Name] = (ScriptVariable)scriptType;
                         }
                         else
-                            throw new SystemException($"{item} is not defined in realNode.Path");
+                        {
+                            throw new SystemException($"{item.Item1} is not defined in {realNode.Path}");
+                        }
                     }
                 }
                 return;
@@ -284,10 +245,7 @@ namespace HanabiLang.Interprets
 
                 var jsonValue = InterpretJson(ast.Nodes.First());
 
-                if (string.IsNullOrEmpty(realNode.AsName))
-                    interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(fileNameWithoutExtension, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
-                else
-                    interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
+                interpretScope.Variables[realNode.AsName ?? fileNameWithoutExtension] = new ScriptVariable(realNode.AsName ?? fileNameWithoutExtension, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
             }
             else
             {
@@ -312,27 +270,21 @@ namespace HanabiLang.Interprets
                 if (realNode.Imports == null)
                 {
                     if (string.IsNullOrEmpty(realNode.AsName))
-                        interpretScope.Classes[fileNameWithoutExtension] = new
-                            ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
-                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
+                        interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(
+                            fileNameWithoutExtension,
+                            new ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
+                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
+                        );
                     else
-                        interpretScope.Classes[realNode.AsName] = new
-                            ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
-                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true);
+                        interpretScope.Variables[realNode.AsName] = new ScriptVariable(
+                            realNode.AsName,
+                            new ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
+                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
+                        );
                 }
                 // Import all
                 else if (realNode.Imports.Count <= 0)
                 {
-                    foreach (var kv in newInterpreter.CurrentScope.Classes)
-                    {
-                        if (kv.Value.Level != AccessibilityLevel.Public)
-                            continue;
-                        interpretScope.Classes[kv.Key] = kv.Value;
-                    }
-                    foreach (var kv in newInterpreter.CurrentScope.Functions)
-                    {
-                        interpretScope.Functions[kv.Key] = kv.Value;
-                    }
                     foreach (var kv in newInterpreter.CurrentScope.Variables)
                     {
                         if (kv.Value.Level != AccessibilityLevel.Public)
@@ -343,70 +295,60 @@ namespace HanabiLang.Interprets
                 // Import some
                 else
                 {
-                    foreach (string item in realNode.Imports)
+                    foreach (var item in realNode.Imports)
                     {
-                        if (interpretScope.TryGetValue(item, out _))
-                            throw new SystemException($"Import failed, value {item} exists");
+                        if (interpretScope.TryGetValue(item.Item1, out _))
+                            throw new SystemException($"Import failed, {item.Item1} exists");
 
-                        if (newInterpreter.CurrentScope.TryGetValue(item, out ScriptType scriptType))
+                        if (newInterpreter.CurrentScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
                         {
-                            if (scriptType is ScriptClass)
-                            {
-                                if (((ScriptClass)scriptType).Level != AccessibilityLevel.Public)
-                                    continue;
-                                interpretScope.Classes[((ScriptClass)scriptType).Name] = (ScriptClass)scriptType;
-                            }
-                            if (scriptType is ScriptFns)
-                            {
-                                interpretScope.Functions[((ScriptFns)scriptType).Name] = (ScriptFns)scriptType;
-                            }
-                            else if (scriptType is ScriptVariable)
-                            {
-                                if (((ScriptVariable)scriptType).Level != AccessibilityLevel.Public)
-                                    continue;
-                                interpretScope.Variables[((ScriptVariable)scriptType).Name] = (ScriptVariable)scriptType;
-                            }
-                            else
-                            {
-                                throw new SystemException($"Unexpected script type");
-                            }
+                            if (scriptType.Level != AccessibilityLevel.Public)
+                                throw new SystemException($"Import failed, {item.Item1} is not public");
+                            interpretScope.Variables[item.Item2 ?? scriptType.Name] = (ScriptVariable)scriptType;
                         }
                         else
-                            throw new SystemException($"{item} is not defined in realNode.Path");
+                        {
+                            throw new SystemException($"{item.Item1} is not defined in {realNode.Path}");
+                        }
                     }
                 }
             }
         }
 
+        private static bool TryGetValueAllScope(ScriptScope interpretScope, string name, out ScriptVariable result)
+        {
+            for (var scope = interpretScope; scope != null; scope = scope.Parent)
+            {
+                if (scope.TryGetValue(name, out result))
+                {
+                    return true;
+                }
+            }
+            result = null;
+            return false;
+        }
+
         private static ValueReference VariableReference(VariableReferenceNode node, ScriptValue left,
             ScriptScope leftScope, AccessibilityLevel accessLevel, bool isStaticAccess)
         {
-            if (leftScope.TryGetValue(node.Name, out ScriptType scriptType))
+            if (leftScope.TryGetValue(node.Name, out ScriptVariable variable))
             {
-                if (scriptType is ScriptFns)
+                var fns = variable.Value?.TryFunction;
+                if (fns != null && !fns.IsLambda && !(fns is ScriptBoundFns))
                 {
-                    var fns = (ScriptFns)scriptType;
-                    if (left.Value is ScriptObject)
-                        return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)left.Value)));
-                    return new ValueReference(new ScriptValue((ScriptFns)scriptType));
-                }
-                else if (scriptType is ScriptClass)
-                {
-                    var _class = (ScriptClass)scriptType;
-                    if ((int)accessLevel < (int)_class.Level)
-                        throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                    return new ValueReference(new ScriptValue((ScriptClass)scriptType));
-                }
-                else if (scriptType is ScriptVariable)
-                {
-                    var variable = (ScriptVariable)scriptType;
-                    if ((int)accessLevel < (int)variable.Level)
-                        throw new SystemException($"Cannot access {variable.Level} {variable.Name}");
+                    if (left.IsObject)
+                        return new ValueReference(new ScriptValue(new ScriptBoundFns(fns, left.TryObject, accessLevel)));
 
-                    return variable.GetValueReference(isStaticAccess ? null : (ScriptObject)left.Value, accessLevel);
+                    else if (left.IsClass)
+                        return new ValueReference(new ScriptValue(new ScriptBoundFns(fns, null, accessLevel)));
+
+                    return new ValueReference(new ScriptValue(fns));
                 }
-                else
-                    throw new SystemException($"Unexcepted reference to variable");
+
+                if (accessLevel < variable.Level)
+                    throw new SystemException($"Cannot access {variable.Level} {variable.Name}");
+
+                return variable.GetValueReference(isStaticAccess ? null : (ScriptObject)left.Value, accessLevel);
             }
             else
             {
@@ -416,59 +358,39 @@ namespace HanabiLang.Interprets
 
         private static ValueReference VariableReference(VariableReferenceNode node, ScriptScope interpretScope)
         {
-            if (node.Name.Equals("this"))
+            if (node.Name.Equals("super"))
             {
-                ScriptObject _thisObject = FindThisFromScope(interpretScope);
-                if (_thisObject == null)
-                    throw new SystemException("Unexpected keyword this");
-                return new ValueReference(new ScriptValue(_thisObject));
-            }
-            else if (node.Name.Equals("super"))
-            {
+                ScriptObject _object = null;
+                if (!TryGetValueAllScope(interpretScope, "this", out ScriptVariable scriptVariable) || (_object = scriptVariable.Value.TryObject) == null)
+                    throw new SystemException($"Unexpected super access");
+
                 ScriptClass _superClass = FindSuperClassFromScope(interpretScope);
+
                 if (_superClass == null)
-                    throw new SystemException("Unexpected keyword suprr");
+                    throw new SystemException("Unexpected super access");
+
+                _superClass = new ScriptBoundSuperClass(_superClass, _object);
+
                 return new ValueReference(new ScriptValue(_superClass));
             }
 
             // Checking if the variable is defined in any scope above the current one
-            for (var scope = interpretScope; scope != null; scope = scope.Parent)
+            if (TryGetValueAllScope(interpretScope, node.Name, out var ScriptVariable))
             {
-                if (scope.TryGetValue(node.Name, out ScriptType scriptType))
-                {
-                    if (scriptType is ScriptVariable)
-                    {
-                        var variable = (ScriptVariable)scriptType;
-                        return variable.GetValueReference(null, AccessibilityLevel.Public);
-                    }
-                    else if (scriptType is ScriptObject)
-                    {
-                        var _object = (ScriptObject)scriptType;
-                        return new ValueReference(new ScriptValue(_object));
-                    }
-                    else if (scriptType is ScriptFns)
-                    {
-                        var fn = (ScriptFns)scriptType;
-                        if (scope.Type is ScriptObject)
-                            return new ValueReference(new ScriptValue(new ScriptBindedFns((ScriptFns)scriptType, (ScriptObject)scope.Type)));
-                        return new ValueReference(new ScriptValue(fn));
-                    }
-                    else if (scriptType is ScriptClass)
-                    {
-                        var _class = (ScriptClass)scriptType;
-                        return new ValueReference(new ScriptValue(_class));
-                    }
-                }
+                return ScriptVariable.GetValueReference(null, AccessibilityLevel.Public);
             }
 
             throw new SystemException($"{node.Name} is not defined");
         }
 
-        private static void VariableDefinition(VariableDefinitionNode node, ScriptScope scope)
+        internal static void VariableDefinition(VariableDefinitionNode node, ScriptScope scope, ScriptScope InterpretExpressionScope = null)
         {
+            if (InterpretExpressionScope == null)
+                InterpretExpressionScope = scope;
+
             bool isMultiDefine = node.Names.Count > 1;
 
-            ScriptValue setValue = node.Value == null ? null : InterpretExpression(scope, node.Value).Ref;
+            ScriptValue setValue = node.Value == null ? null : InterpretExpression(InterpretExpressionScope, node.Value).Ref;
             List<ScriptValue> setValues = null;
             int setVarCount = node.Names.Count;
 
@@ -498,7 +420,7 @@ namespace HanabiLang.Interprets
 
                             if (setValues.Count + 1 != node.Names.Count)
                             {
-                                var ex = new SystemException($"Expect {setValues.Count + 1} variables to define, found {node.Names.Count} variable(s)");
+                                var ex = new SystemException($"Expect {setValues.Count + 1} variables to define, found {node.Names.Count} variable{(node.Names.Count > 1 ? "s" : "")}");
                                 var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(BasicTypes.Exception.Create(ex)), node.IsConstant, node.IsStatic, node.Level);
                                 scope.Variables[node.Names[node.Names.Count - 1]] = variable;
                                 setValues = Enumerable.Range(0, node.Names.Count - 1).Select(i => new ScriptValue()).ToList();
@@ -552,13 +474,13 @@ namespace HanabiLang.Interprets
                     setValues = _setValues.ToList();
 
                 if (setValues.Count != node.Names.Count)
-                    throw new SystemException($"Expect {node.Names.Count} variables to define, found {setValues.Count} value(s)");
+                    throw new SystemException($"Expect {node.Names.Count} variables to define, found {setValues.Count} value{(setValues.Count > 1 ? "s" : "")}");
             }
 
             DefinedTypes dataTypes = null;
             if (node.DataType != null)
             {
-                ScriptValue type = InterpretExpression(scope, node.DataType).Ref;
+                ScriptValue type = InterpretExpression(InterpretExpressionScope, node.DataType).Ref;
                 if (!type.IsDefinedTypes)
                     throw new SystemException($"Unexpected error: {node.Names}");
                 dataTypes = (DefinedTypes)type.Value;
@@ -597,12 +519,15 @@ namespace HanabiLang.Interprets
                     {
                         if (node.GetFn.Body.Count == 0)
                         {
-                            getFns = new ScriptFns($"get_{node.Names}");
-                            getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, args => setValue, node.GetFn.IsStatic, node.GetFn.Level));
+                            getFns = new ScriptFns($"get_{string.Join("_", node.Names)}");
+                            if (node.GetFn.IsStatic)
+                                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, args => setValue, node.GetFn.IsStatic, node.GetFn.Level));
+                            else
+                                getFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("this") }, null, args => setValue, node.GetFn.IsStatic, node.GetFn.Level));
                         }
                         else
                         {
-                            var fn = InterpretExpression(scope, node.GetFn).Ref;
+                            var fn = InterpretExpression(InterpretExpressionScope, node.GetFn).Ref;
                             if (!fn.IsFunction)
                                 throw new SystemException("Getter must be a function");
                             getFns = (ScriptFns)fn.Value;
@@ -612,17 +537,17 @@ namespace HanabiLang.Interprets
                     {
                         if (node.GetFn.Body.Count == 0)
                         {
-                            setFns = new ScriptFns($"set_{node.Names}");
-                            if (scope.Type is ScriptObject)
-                                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
-                                    null, args => setValue = args[1], node.SetFn.IsStatic, node.SetFn.Level));
-                            else
+                            setFns = new ScriptFns($"set_{string.Join("_", node.Names)}");
+                            if (node.SetFn.IsStatic)
                                 setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value") },
                                     null, args => setValue = args[0], node.SetFn.IsStatic, node.SetFn.Level));
+                            else
+                                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("this"), new FnParameter("value") },
+                                    null, args => setValue = args[1], node.SetFn.IsStatic, node.SetFn.Level));
                         }
                         else
                         {
-                            var fn = InterpretExpression(scope, node.SetFn).Ref;
+                            var fn = InterpretExpression(InterpretExpressionScope, node.SetFn).Ref;
                             if (!fn.IsFunction)
                                 throw new SystemException("Setter must be a function");
                             setFns = (ScriptFns)fn.Value;
@@ -677,18 +602,26 @@ namespace HanabiLang.Interprets
                                 toAssign.Ref = new ScriptValue(BasicTypes.Exception.Create(ex));
                                 assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
 
-                                var returnValue = assignValues.ToList();
-                                returnValue.Add(toAssign.Ref);
-                                returnRef = new ValueReference(new ScriptValue(returnValue));
+                                // If there is no reading, the value will not be executed.
+                                returnRef = new ValueReference(() =>
+                                {
+                                    var returnValue = assignValues.ToList();
+                                    returnValue.Add(toAssign.Ref);
+                                    return new ScriptValue(returnValue);
+                                }, ___ => throw new SystemException("Multiple assigned value cannot be written"));
                             }
                             else
                             {
                                 ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
                                 toAssign.Ref = new ScriptValue();
 
-                                var returnValue = assignValues.ToList();
-                                returnValue.Add(toAssign.Ref);
-                                returnRef = new ValueReference(new ScriptValue(returnValue));
+                                // If there is no reading, the value will not be executed.
+                                returnRef = new ValueReference(() =>
+                                {
+                                    var returnValue = assignValues.ToList();
+                                    returnValue.Add(toAssign.Ref);
+                                    return new ScriptValue(returnValue);
+                                }, ___ => throw new SystemException("Multiple assigned value cannot be written"));
                             }
                             assignVarCount = node.References.Count - 1;
                         }
@@ -700,9 +633,13 @@ namespace HanabiLang.Interprets
                             assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
                             assignVarCount = node.References.Count - 1;
 
-                            var returnValue = assignValues.ToList();
-                            returnValue.Add(toAssign.Ref);
-                            returnRef = new ValueReference(new ScriptValue(returnValue));
+                            // If there is no reading, the value will not be executed.
+                            returnRef = new ValueReference(() =>
+                            {
+                                var returnValue = assignValues.ToList();
+                                returnValue.Add(toAssign.Ref);
+                                return new ScriptValue(returnValue);
+                            }, ___ => throw new SystemException("Multiple assigned value cannot be written"));
                         }
                     }
                     else
@@ -713,8 +650,12 @@ namespace HanabiLang.Interprets
 
                         assignVarCount = node.References.Count - 1;
 
-                        var returnValue = new List<ScriptValue>() { assignValue, toAssign.Ref };
-                        returnRef = new ValueReference(new ScriptValue(returnValue));
+                        // If there is no reading, the value will not be executed.
+                        returnRef = new ValueReference(() =>
+                        {
+                            var returnValue = new List<ScriptValue>() { assignValue, toAssign.Ref };
+                            return new ScriptValue(returnValue);
+                        }, ___ => throw new SystemException("Multiple assigned value cannot be written"));
                     }
                 }
                 else
@@ -726,16 +667,24 @@ namespace HanabiLang.Interprets
                     {
                         assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
 
-                        var returnValue = assignValues.ToList();
-                        returnValue.Add(toAssign.Ref);
-                        returnRef = new ValueReference(new ScriptValue(returnValue));
+                        // If there is no reading, the value will not be executed.
+                        returnRef = new ValueReference(() =>
+                        {
+                            var returnValue = assignValues.ToList();
+                            returnValue.Add(toAssign.Ref);
+                            return new ScriptValue(returnValue);
+                        }, ___ => throw new SystemException("Multiple assigned value cannot be written"));
                     }
                     else
                     {
                         assignValue = new ScriptValue();
 
-                        var returnValue = new List<ScriptValue>() { assignValue, toAssign.Ref };
-                        returnRef = new ValueReference(new ScriptValue(returnValue));
+                        // If there is no reading, the value will not be executed.
+                        returnRef = new ValueReference(() =>
+                        {
+                            var returnValue = new List<ScriptValue>() { assignValue, toAssign.Ref };
+                            return new ScriptValue(returnValue);
+                        }, ___ => throw new SystemException("Multiple assigned value cannot be written"));
                     }
                     assignVarCount = node.References.Count - 1;
                 }
@@ -766,156 +715,38 @@ namespace HanabiLang.Interprets
 
         private static ValueReference FnReferenceCall(FnReferenceCallNode realNode, ScriptScope interpretScope)
         {
-            string specialAccess = "";
-            if (realNode.Reference is VariableReferenceNode)
-            {
-                string rawRef = ((VariableReferenceNode)realNode.Reference).Name;
-                if (rawRef.Equals("this") || rawRef.Equals("super"))
-                    specialAccess = rawRef;
-            }
+            ValueReference valueReference = InterpretExpression(interpretScope, realNode.Reference);
+            ScriptValue scriptValue = valueReference.Ref;
 
-            ScriptValue fnRef = specialAccess.Length <= 0 ? InterpretExpression(interpretScope, realNode.Reference).Ref : null;
-
-            if (fnRef == null)
+            if (scriptValue.IsFunction)
             {
-                // InterpretScope Type is ScriptFn not ScriptFns
-                if (!(interpretScope.Type is ScriptFn))
-                    throw new SystemException("Cannot call this/super function out of function");
-                if (!(interpretScope.Parent.Type is ScriptObject))
-                    throw new SystemException("Cannot call this/super function out of object");
-
-                var scriptObject = (ScriptObject)interpretScope.Parent.Type;
-                if (specialAccess.Equals("this") &&
-                    scriptObject.ClassType.Scope.TryGetValue(scriptObject.ClassType.ConstructorName, out ScriptType thisFns))
-                {
-                    var fn = (ScriptFns)thisFns;
-                    var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
-                    return new ValueReference(fn.Call(scriptObject, callableInfo));
-                }
-                else if (specialAccess.Equals("super") &&
-                    scriptObject.ClassType.SuperClass.Scope.TryGetValue(scriptObject.ClassType.SuperClass.ConstructorName, out ScriptType superFns))
-                {
-                    var fn = (ScriptFns)superFns;
-                    var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
-                    return new ValueReference(fn.Call(scriptObject, callableInfo));
-                }
-                else
-                {
-                    throw new SystemException($"Unexpected {specialAccess}");
-                }
+                var fn = scriptValue.TryFunction;
+                //ScriptObject _object = valueReference.Left == null ? null : valueReference.Left.Ref.TryObject;
+                var callableInfo = fn.FindCallableInfo(interpretScope, null, realNode.Args, realNode.KeyArgs);
+                return new ValueReference(fn.Call(callableInfo));
             }
-            else if (fnRef.IsFunction)
+            else if (scriptValue.IsClass)
             {
-                var fn = (ScriptFns)fnRef.Value;
-                var callableInfo = fn.FindCallableInfo(interpretScope, realNode.Args, realNode.KeyArgs);
-                return new ValueReference(fn.Call(null, callableInfo));
-            }
-            else if (fnRef.IsClass)
-            {
-                var _class = (ScriptClass)fnRef.Value;
+                if (scriptValue.Value is ScriptBoundSuperClass)
+                {
+                    var _superClass = (ScriptBoundSuperClass)scriptValue.Value;
+                    ScriptFns _superFns = null;
+                    if (!_superClass.TryGetValue(_superClass.ConstructorName, out ScriptVariable superFns) || (_superFns = superFns.Value.TryFunction) == null)
+                        throw new SystemException($"Unexpected super access");
+
+                    var callableInfo = _superFns.FindCallableInfo(interpretScope, _superClass.BoundObject, realNode.Args, realNode.KeyArgs);
+                    return new ValueReference(_superFns.Call(callableInfo));
+                }
+                var _class = scriptValue.TryClass;
                 return new ValueReference(_class.Call(interpretScope, realNode.Args, realNode.KeyArgs));
             }
             // Null-Conditional
-            else if (fnRef.IsNull && (realNode.IsNullConditional || (realNode.Reference is ExpressionNode && ((ExpressionNode)realNode.Reference).Operator == "?.")))
+            else if (scriptValue.IsNull && (realNode.IsNullConditional || (realNode.Reference is ExpressionNode && ((ExpressionNode)realNode.Reference).Operator == "?.")))
             {
-                return new ValueReference(fnRef);
+                return new ValueReference(scriptValue);
             }
 
             throw new SystemException($"{realNode.Reference.NodeName} is not a class or a function");
-        }
-
-        /// <summary>
-        /// Obsolete
-        /// </summary>
-        private static ValueReference FnReferenceCall(FnReferenceCallNode fnCall,
-            ScriptScope interpretScope, ScriptValue left, ScriptScope leftScope,
-            AccessibilityLevel accessLevel, bool isStaticAccess)
-        {
-            if (fnCall.Reference is FnReferenceCallNode)
-            {
-                ScriptValue referenceCallResult = FnReferenceCall((FnReferenceCallNode)fnCall.Reference, interpretScope, left,
-                    leftScope, accessLevel, isStaticAccess).Ref;
-                if (referenceCallResult.IsFunction)
-                {
-                    var fn = (ScriptFns)referenceCallResult.Value;
-                    var callableInfo = fn.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
-                    return new ValueReference(fn.Call(null, callableInfo));
-                }
-                else if (referenceCallResult.IsClass)
-                {
-                    var _class = (ScriptClass)referenceCallResult.Value;
-                    return new ValueReference(_class.Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
-                }
-                else if (referenceCallResult.IsNull && fnCall.IsNullConditional)
-                {
-                    return new ValueReference(referenceCallResult);
-                }
-
-                throw new SystemException($"Unexpected function call");
-            }
-
-            if (!(fnCall.Reference is VariableReferenceNode))
-                throw new SystemException($"Unexpected function call");
-
-            string fnName = ((VariableReferenceNode)fnCall.Reference).Name;
-
-            if (leftScope.TryGetValue(fnName, out ScriptType scriptType))
-            {
-                if (scriptType is ScriptFns)
-                {
-                    var fn = ((ScriptFns)scriptType);
-                    var callableInfo = fn.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
-                    if ((int)accessLevel < (int)callableInfo.Item1.Level)
-                        throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Name}");
-
-                    return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, callableInfo));
-                }
-                else if (scriptType is ScriptClass)
-                {
-                    var _class = ((ScriptClass)scriptType);
-                    if ((int)accessLevel < (int)_class.Level)
-                        throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                    return new ValueReference(((ScriptClass)scriptType).Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
-                }
-                else if (scriptType is ScriptVariable)
-                {
-                    if (!(fnCall.Reference is VariableReferenceNode))
-                        throw new SystemException($"{fnName} is not callable");
-
-                    ScriptValue value = VariableReference((VariableReferenceNode)fnCall.Reference,
-                        left, leftScope, accessLevel, isStaticAccess).Ref;
-
-                    if (value.IsFunction)
-                    {
-                        var fn = (ScriptFns)value.Value;
-                        var callableInfo = fn.FindCallableInfo(interpretScope, fnCall.Args, fnCall.KeyArgs);
-                        if ((int)accessLevel < (int)callableInfo.Item1.Level)
-                            throw new SystemException($"Cannot access {callableInfo.Item1.Level} {fn.Name}");
-
-                        return new ValueReference(fn.Call(isStaticAccess ? null : (ScriptObject)left.Value, callableInfo));
-                    }
-                    else if (value.IsClass)
-                    {
-                        var _class = (ScriptClass)value.Value;
-                        if ((int)accessLevel < (int)_class.Level)
-                            throw new SystemException($"Cannot access {_class.Level} {_class.Name}");
-                        return new ValueReference(_class.Call(interpretScope, fnCall.Args, fnCall.KeyArgs));
-                    }
-                    else if (value.IsNull && fnCall.IsNullConditional)
-                    {
-                        return new ValueReference(value);
-                    }
-                    throw new SystemException($"{fnName} is not callable");
-                }
-                else
-                {
-                    throw new SystemException($"{fnName} is not callable");
-                }
-            }
-            else
-            {
-                throw new SystemException($"{left} does not contains {fnName}");
-            }
         }
 
         public static bool IsStatementNode(AstNode node)
@@ -1452,10 +1283,24 @@ namespace HanabiLang.Interprets
                 // Normal Function
                 var realNode = (FnDefineNode)node;
 
-                if (!interpretScope.Functions.TryGetValue(realNode.Name, out ScriptFns scriptFns))
+                ScriptFns scriptFns = null;
+                if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
+                {
+                    if (scriptVar.Value.IsFunction)
+                    {
+                        scriptFns = scriptVar.Value.TryFunction;
+                    }
+                    else
+                    {
+                        if (scriptVar.IsConstant)
+                            throw new SystemException($"Cannot define fn {realNode.Name} to constant variable.");
+                    }
+                }
+                if (scriptFns == null)
                 {
                     scriptFns = new ScriptFns(realNode.Name);
-                    interpretScope.Functions[realNode.Name] = scriptFns;
+                    scriptVar = new ScriptVariable(realNode.Name, scriptFns, AccessibilityLevel.Public);
+                    interpretScope.Variables[realNode.Name] = scriptVar;
                 }
 
                 List<FnParameter> fnParameters = new List<FnParameter>();
@@ -1492,8 +1337,16 @@ namespace HanabiLang.Interprets
                     superClasses.Add((ScriptClass)superClass.Ref.Value);
                 }
 
-                interpretScope.Classes[realNode.Name] = new ScriptClass(realNode.Name, realNode.Body,
-                    interpretScope, superClasses, realNode.IsStatic, realNode.Level);
+                if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
+                {
+                    if (scriptVar.IsConstant && !scriptVar.Value.IsClass)
+                        throw new SystemException($"Cannot define class {realNode.Name} to constant variable.");
+                }
+
+                ScriptClass scriptClass = new ScriptClass(realNode.Name, realNode.Body, interpretScope, superClasses, realNode.IsStatic, realNode.Level);
+                scriptVar = new ScriptVariable(realNode.Name, scriptClass);
+                interpretScope.Variables[realNode.Name] = scriptVar;
+
                 return ValueReference.Empty;
             }
             else if (node is EnumDefineNode)
@@ -1503,7 +1356,14 @@ namespace HanabiLang.Interprets
                 var enumClass = new ScriptClass(realNode.Name, new List<AstNode>(),
                     null, new List<ScriptClass> { BasicTypes.Enum }, false, realNode.Level);
 
-                interpretScope.Classes[realNode.Name] = enumClass;
+                if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
+                {
+                    if (scriptVar.IsConstant && !scriptVar.Value.IsClass)
+                        throw new SystemException($"Cannot define class {realNode.Name} to constant variable.");
+                }
+
+                scriptVar = new ScriptVariable(realNode.Name, enumClass);
+                interpretScope.Variables[realNode.Name] = scriptVar;
 
                 foreach (var kv in realNode.Members)
                 {
@@ -1642,34 +1502,9 @@ namespace HanabiLang.Interprets
                 var realNode = (ExpressionNode)node;
 
                 var _operater = realNode.Operator;
-                string specialAccess = "";
-                if (realNode.Left is VariableReferenceNode)
-                {
-                    string rawRef = ((VariableReferenceNode)realNode.Left).Name;
-                    if (rawRef.Equals("this") || rawRef.Equals("super"))
-                        specialAccess = rawRef;
-                }
 
-                ScriptValue left = null;
-                if (specialAccess.Length <= 0)
-                {
-                    left = InterpretExpression(interpretScope, realNode.Left).Ref;
-                }
-                else if (specialAccess.Equals("this") || specialAccess.Equals("super"))
-                {
-                    ScriptObject _thisObject = FindThisFromScope(interpretScope);
-                    if (_thisObject == null && specialAccess.Equals("super"))
-                        left = new ScriptValue(FindSuperClassFromScope(interpretScope));
-                    else
-                        left = new ScriptValue(_thisObject);
-                }
-                else
-                {
-                    throw new SystemException($"Unexpected {specialAccess}");
-                }
-
-                if (left == null)
-                    throw new SystemException($"Cannot use {specialAccess} out of object");
+                ValueReference leftRef = InterpretExpression(interpretScope, realNode.Left);
+                ScriptValue left = leftRef.Ref;
 
                 if (_operater == "." || _operater == "?.")
                 {
@@ -1680,35 +1515,41 @@ namespace HanabiLang.Interprets
                     bool isStaticAccess = left.Value is ScriptClass;
 
                     ScriptScope leftScope = null;
-                    if (specialAccess.Equals("this"))
-                        leftScope = ((ScriptObject)left.Value).Scope;
-                    else if (specialAccess.Equals("super"))
+                    AccessibilityLevel accessLevel = AccessibilityLevel.Public;
+                    if (left.Value is ScriptBoundSuperClass)
                     {
-                        if (left.IsClass)
-                            leftScope = ((ScriptClass)left.Value).Scope;
-                        else
-                            leftScope = FindSuperClassFromScope(interpretScope).Scope;
+                        leftScope = ((ScriptBoundSuperClass)left.Value).Scope;
+                        left = new ScriptValue(((ScriptBoundSuperClass)left.Value).BoundObject);
+                        if (interpretScope.ContainsScope(((ScriptObject)left.Value).ClassType.Scope))
+                            accessLevel = AccessibilityLevel.Protected;
                     }
                     else if (left.Value is ScriptObject)
-                        leftScope = ((ScriptObject)left.Value).Scope;
-                    else if (left.Value is ScriptClass)
-                        leftScope = ((ScriptClass)left.Value).Scope;
-                    else/* if (left.Value is ScriptFns)*/
-                        throw new SystemException("Function cannot use operator '.'");
-
-                    bool isPrivateAccess = interpretScope.ContainsScope(leftScope);
-                    AccessibilityLevel accessLevel = isPrivateAccess ? AccessibilityLevel.Private : AccessibilityLevel.Public;
-
-                    if (realNode.Right is FnReferenceCallNode)
                     {
-                        // Obsolete
-                        return FnReferenceCall((FnReferenceCallNode)realNode.Right, interpretScope, left,
-                            leftScope, accessLevel, isStaticAccess);
+                        leftScope = ((ScriptObject)left.Value).Scope;
+                        if (interpretScope.ContainsScope(((ScriptObject)left.Value).ClassType.Scope))
+                            accessLevel = AccessibilityLevel.Private;
                     }
-                    else if (realNode.Right is VariableReferenceNode)
+                    else if (left.Value is ScriptClass)
+                    {
+                        leftScope = ((ScriptClass)left.Value).Scope;
+                        if (interpretScope.ContainsScope(leftScope))
+                            accessLevel = AccessibilityLevel.Private;
+                        //if (((ScriptClass)left.Value).SuperClasses
+                    }
+                    else/* if (left.Value is ScriptFns)*/
+                    {
+                        throw new SystemException("Function cannot use operator '.'");
+                    }
+
+                    if (realNode.Right is VariableReferenceNode)
                     {
                         return VariableReference((VariableReferenceNode)realNode.Right, left,
                             leftScope, accessLevel, isStaticAccess);
+                    }
+                    else if (realNode.Right is FnReferenceCallNode)
+                    {
+                        // Obsolete
+                        throw new SystemException($"Unexcepted obsolete operation {left}'{_operater}'");
                     }
                     throw new SystemException($"Unexcepted operation {left}'{_operater}'");
                 }
@@ -1854,11 +1695,12 @@ namespace HanabiLang.Interprets
 
                 var index = InterpretExpression(interpretScope, realNode.Index);
 
-                obj.ClassType.Scope.Functions.TryGetValue("get_[]", out ScriptFns get_fn);
-                obj.ClassType.Scope.Functions.TryGetValue("set_[]", out ScriptFns set_fn);
-                if (get_fn != null || set_fn != null)
+                obj.ClassType.Scope.Variables.TryGetValue("get_[]", out ScriptVariable get_fn);
+                obj.ClassType.Scope.Variables.TryGetValue("set_[]", out ScriptVariable set_fn);
+
+                if ((get_fn != null && get_fn.Value.IsFunction) || (set_fn != null && set_fn.Value.IsFunction))
                 {
-                    return new ValueReference(() => get_fn.Call(obj, index.Ref), x => set_fn.Call(obj, index.Ref, x));
+                    return new ValueReference(() => get_fn.Value.TryFunction.Call(obj, index.Ref), x => set_fn.Value.TryFunction.Call(obj, index.Ref, x));
                 }
                 else
                 {

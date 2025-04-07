@@ -26,6 +26,23 @@ namespace HanabiLang.Interprets.ScriptTypes
         public AccessibilityLevel Level { get; private set; }
         public bool IsBuildIn { get; private set; }
 
+        /// <summary>
+        /// For subclass copy only 
+        /// </summary>
+        protected ScriptClass(string name, List<object> body, ScriptScope scope, List<ScriptClass> superClasses, ScriptClass SuperClass,
+            ScriptFns buildInConstructor, bool isStatic, AccessibilityLevel level, bool IsBuildIn)
+        {
+            this.Name = name;
+            this.Body = body;
+            this.Scope = scope;
+            this.SuperClasses = superClasses;
+            this.SuperClass = SuperClass;
+            this.BuildInConstructor = buildInConstructor;
+            this.IsStatic = isStatic;
+            this.Level = level;
+            this.IsBuildIn = IsBuildIn;
+        }
+
         internal ScriptClass(string name, List<AstNode> body, ScriptScope currentScope, List<ScriptClass> definedSuperClasses,
             bool isStatic, AccessibilityLevel level, bool isImported = false)
         {
@@ -53,9 +70,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                         throw new SystemException("Inherit from C# class is not supported");
 
                     if (_class.SuperClass != null)
-                        CopyClassMember(_class.SuperClass, this.SuperClass, true);
+                        CopyClassMember(_class.SuperClass, this.SuperClass, AccessibilityLevel.Protected, true);
 
-                    CopyClassMember(_class, this.SuperClass, true);
+                    CopyClassMember(_class, this.SuperClass, AccessibilityLevel.Protected, true);
                 }
                 this.SuperClasses = GetAllSuperClassesFromDefinedSuperClasses(definedSuperClasses).ToList();
             }
@@ -90,34 +107,47 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.Body = new List<object>();
 
             if (this.SuperClass != null)
-                CopyClassMember(this.SuperClass, this, false);
+                CopyClassMember(this.SuperClass, this, AccessibilityLevel.Protected, false);
         }
 
-        private static void CopyClassMember(ScriptClass from, ScriptClass to, bool replaceMember)
+        private static void CopyClassMember(ScriptClass from, ScriptClass to, AccessibilityLevel minLevel, bool replaceMember)
         {
-            foreach (var fns in from.Scope.Functions)
-            {
-                // Change constructor name
-                string fnName = fns.Key.Equals(from.ConstructorName) ? to.ConstructorName : fns.Key;
-                //string fnName = fns.Key;
-                if (!to.Scope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
-                {
-                    scriptFns = new ScriptFns(fnName);
-                    to.Scope.Functions[fnName] = scriptFns;
-                }
-                scriptFns.AddFns(fns.Value.Fns, replaceMember);
-            }
-
             foreach (var variable in from.Scope.Variables)
             {
-                if (to.Scope.Variables.ContainsKey(variable.Key))
+                if (variable.Value.Value.IsFunction)
                 {
-                    if (replaceMember)
-                        to.Scope.Variables[variable.Key] = variable.Value;
+                    var fns = variable.Value.Value.TryFunction;
+                    // Change constructor name
+                    string fnName = variable.Key.Equals(from.ConstructorName) ? to.ConstructorName : variable.Key;
+
+                    ScriptFns scriptFns = null;
+                    if (to.Scope.Variables.TryGetValue(fnName, out ScriptVariable scriptVar))
+                    {
+                        scriptFns = scriptVar.Value.TryFunction;
+                    }
+                    if (scriptFns == null)
+                    {
+                        scriptFns = new ScriptFns(fnName);
+                        scriptVar = new ScriptVariable(fnName, scriptFns, AccessibilityLevel.Public);
+                        to.Scope.Variables[fnName] = scriptVar;
+                    }
+                    scriptFns.AddFns(fns.Fns, minLevel, replaceMember);
+                }
+                else if (variable.Value.Value.IsClass)
+                {
+                    // skip
                 }
                 else
                 {
-                    to.Scope.Variables[variable.Key] = variable.Value;
+                    if (to.Scope.Variables.ContainsKey(variable.Key))
+                    {
+                        if (replaceMember)
+                            to.Scope.Variables[variable.Key] = variable.Value;
+                    }
+                    else
+                    {
+                        to.Scope.Variables[variable.Key] = variable.Value;
+                    }
                 }
             }
 
@@ -170,7 +200,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             this(name, null, null, null, isStatic, level, false)
         { }
 
-        public bool TryGetValue(string name, out ScriptType value)
+        public bool TryGetValue(string name, out ScriptVariable value)
         {
             if (this.Scope.TryGetValue(name, out value))
                 return true;
@@ -180,11 +210,26 @@ namespace HanabiLang.Interprets.ScriptTypes
         protected void AddFunction(string name, List<FnParameter> parameters, BasicFns.ScriptFnType fn,
             bool isStatic = false, AccessibilityLevel level = AccessibilityLevel.Public)
         {
-            if (!this.Scope.Functions.TryGetValue(name, out ScriptFns scriptFns))
+            ScriptFns scriptFns = null;
+            if (this.Scope.Variables.TryGetValue(name, out ScriptVariable scriptVar))
+            {
+                if (scriptVar.Value.IsFunction)
+                {
+                    scriptFns = scriptVar.Value.TryFunction;
+                }
+                else
+                {
+                    if (scriptVar.IsConstant)
+                        throw new SystemException($"Cannot define fn {name} to constant variable.");
+                }
+            }
+            if (scriptFns == null)
             {
                 scriptFns = new ScriptFns(name);
-                this.Scope.Functions[name] = scriptFns;
+                scriptVar = new ScriptVariable(name, scriptFns, AccessibilityLevel.Public);
+                this.Scope.Variables[name] = scriptVar;
             }
+
             //scriptFns.Fns.Add(new ScriptFn(parameters, this.Scope, fn, isStatic, level));
             // override function
             scriptFns.AddFn(new ScriptFn(parameters, this.Scope, fn, isStatic, level), true);
@@ -217,13 +262,19 @@ namespace HanabiLang.Interprets.ScriptTypes
             if (getFn != null)
             {
                 getFns = new ScriptFns($"get_{name}");
-                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, isStatic, AccessibilityLevel.Public));
+                var parameters = new List<FnParameter>();
+                if (!isStatic)
+                    parameters.Add(new FnParameter("this"));
+                getFns.Fns.Add(new ScriptFn(parameters, null, getFn, isStatic, AccessibilityLevel.Public));
             }
 
             if (setFn != null)
             {
                 setFns = new ScriptFns($"set_{name}");
-                setFns.Fns.Add(new ScriptFn(new List<FnParameter>() { new FnParameter("value", dataTypes) }, null, setFn, isStatic, AccessibilityLevel.Public));
+                var parameters = new List<FnParameter>() { new FnParameter("value", dataTypes) };
+                if (!isStatic)
+                    parameters.Insert(0, new FnParameter("this"));
+                setFns.Fns.Add(new ScriptFn(parameters, null, setFn, isStatic, AccessibilityLevel.Public));
             }
 
             var variable = new ScriptVariable(name, null, getFns, setFns, false, isStatic, AccessibilityLevel.Public);
@@ -245,92 +296,92 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public virtual ScriptObject Not(ScriptObject left)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("!", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("!", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left).Value;
             throw new SystemException("Operator ! is not implemented");
         }
         public virtual ScriptObject Positive(ScriptObject left)
         {
-            if (left.Scope.Functions.TryGetValue("^+", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left).Value;
-            throw new SystemException("Operator ! is not implemented");
+            if (left.ClassType.Scope.Variables.TryGetValue("^+", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left).Value;
+            throw new SystemException("Operator + is not implemented");
         }
         public virtual ScriptObject Negative(ScriptObject left)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("^-", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, fn.FindCallableInfo()).Value;
-            throw new SystemException("Operator ! is not implemented");
+            if (left.ClassType.Scope.Variables.TryGetValue("^-", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left).Value;
+            throw new SystemException("Operator - is not implemented");
         }
         public virtual ScriptObject Add(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("+", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("+", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator + is not implemented");
         }
         public virtual ScriptObject Minus(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("-", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("-", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator - is not implemented");
         }
         public virtual ScriptObject Multiply(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("*", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("*", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator * is not implemented");
         }
         public virtual ScriptObject Divide(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("/", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("/", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator / is not implemented");
         }
         public virtual ScriptObject Modulo(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("%", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("%", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator ! is not implemented");
         }
         public virtual ScriptObject Larger(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue(">", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue(">", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator > is not implemented");
         }
         public virtual ScriptObject LargerEquals(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue(">=", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue(">=", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator >= is not implemented");
         }
         public virtual ScriptObject Less(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("<", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("<", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator < is not implemented");
         }
         public virtual ScriptObject LessEquals(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("<=", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("<=", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator <= is not implemented");
         }
         public virtual ScriptObject And(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("&&", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("&&", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator && is not implemented");
         }
         public virtual ScriptObject Or(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("||", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("||", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             throw new SystemException("Operator || is not implemented");
         }
         public virtual ScriptObject Equals(ScriptObject left, ScriptObject right)
         {
-            if (left.ClassType.Scope.Functions.TryGetValue("==", out ScriptFns fn))
-                return (ScriptObject)fn.Call(left, new ScriptValue(right)).Value;
+            if (left.ClassType.Scope.Variables.TryGetValue("==", out var fn) && fn.Value.IsFunction)
+                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
             return BasicTypes.Bool.Create(base.Equals(right));
         }
 
@@ -415,16 +466,16 @@ namespace HanabiLang.Interprets.ScriptTypes
             // C# class
             if (this.BuildInConstructor.Fns.Count != 0)
             {
-                var fnInfo = this.BuildInConstructor.FindCallableInfo(currentScope, args, keyArgs);
-                return this.BuildInConstructor.Call(null, fnInfo);
+                var fnInfo = this.BuildInConstructor.FindCallableInfo(currentScope, null, args, keyArgs);
+                return this.BuildInConstructor.Call(fnInfo);
             }
 
             ScriptObject _object = Create();
 
-            if (this.Scope.Functions.TryGetValue(ConstructorName, out ScriptFns currentConstructor))
+            if (this.Scope.Variables.TryGetValue(ConstructorName, out ScriptVariable currentConstructor) && currentConstructor.Value.IsFunction)
             {
-                var fnInfo = currentConstructor.FindCallableInfo(currentScope, args, keyArgs);
-                currentConstructor.Call(_object, fnInfo);
+                var fnInfo = currentConstructor.Value.TryFunction.FindCallableInfo(currentScope, _object, args, keyArgs);
+                currentConstructor.Value.TryFunction.Call(fnInfo);
             }
             else
             {
@@ -443,5 +494,21 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             return $"Class: {Name}";
         }*/
+    }
+
+    public class ScriptBoundSuperClass : ScriptClass
+    {
+        public ScriptObject BoundObject { get; private set; }
+        public ScriptBoundSuperClass(ScriptClass scriptClass, ScriptObject scriptObject) : 
+            base(scriptClass.Name, scriptClass.Body, scriptClass.Scope, scriptClass.SuperClasses, scriptClass.SuperClass,
+                scriptClass.BuildInConstructor, scriptClass.IsStatic, scriptClass.Level, scriptClass.IsBuildIn)
+        {
+            this.BoundObject = scriptObject;
+        }
+
+        public override string ToString()
+        {
+            return $"<class: {this.Name} (object: {BoundObject.ClassType.Name})>";
+        }
     }
 }

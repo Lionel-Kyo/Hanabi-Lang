@@ -110,16 +110,18 @@ namespace HanabiLang.Interprets.ScriptTypes
 
     public class ScriptFns : ScriptType
     {
+        public static readonly string LambdaFnName = "Lambda";
         public string Name { get; private set; }
         public List<ScriptFn> Fns { get; private set; }
+
+        public bool IsLambda => this.Name == LambdaFnName;
 
         public ScriptFns(string name, IEnumerable<ScriptFn> fns)
         {
             this.Name = name;
             if (string.IsNullOrEmpty(this.Name))
-                this.Name = "Lambda";
-            this.Fns = new List<ScriptFn>();
-            this.Fns.AddRange(fns);
+                this.Name = LambdaFnName;
+            this.Fns = fns.ToList();
         }
 
         public ScriptFns(string name, params ScriptFn[] fns)
@@ -159,18 +161,21 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
-        public void AddFns(IEnumerable<ScriptFn> fns, bool addOverridable)
+        public void AddFns(IEnumerable<ScriptFn> fns, AccessibilityLevel minLevel, bool addOverridable)
         {
             foreach (var fn in fns)
             {
-                AddFn(fn, addOverridable);
+                if (minLevel >= fn.Level)
+                    AddFn(fn, addOverridable);
             }
         }
 
-        private static Tuple<List<ScriptValue>, Dictionary<string, ScriptValue>> InterpretArgs(ScriptScope currentScope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
+        private static Tuple<List<ScriptValue>, Dictionary<string, ScriptValue>> InterpretArgs(ScriptScope currentScope, ScriptObject _this, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
             List<ScriptValue> resultArgs = new List<ScriptValue>();
             Dictionary<string, ScriptValue> resultKeyArgs = new Dictionary<string, ScriptValue>();
+            if (_this != null)
+                resultArgs.Add(new ScriptValue(_this));
             foreach (var arg in args)
             {
                 ScriptValue value = Interpreter.InterpretExpression(currentScope, arg).Ref;
@@ -317,15 +322,17 @@ namespace HanabiLang.Interprets.ScriptTypes
             return Tuple.Create(scriptfn.Item1, scriptfn.Item2.Select(x => new ScriptVariable(x.Key, null, x.Value.Value, false, false, AccessibilityLevel.Private)).ToList());
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptScope scope, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
+        internal virtual Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptScope scope, ScriptObject _this, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
-            var kv = InterpretArgs(scope, args, keyArgs);
+            var kv = InterpretArgs(scope, _this, args, keyArgs);
             return FindCallableFnParams(kv.Item1, kv.Item2);
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
+        internal virtual Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptObject _this, List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
         {
             List<ScriptValue> resultArgs = new List<ScriptValue>();
+            if (_this != null)
+                resultArgs.Add(new ScriptValue(_this));
             foreach (var value in args)
             {
                 if (value.IsUnzipable)
@@ -340,9 +347,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             return FindCallableFnParams(resultArgs, keyArgs);
         }
 
-        internal Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(params ScriptValue[] values)
+        internal virtual Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptObject _this, params ScriptValue[] values)
         {
             List<ScriptValue> resultArgs = new List<ScriptValue>();
+            if (_this != null)
+                resultArgs.Add(new ScriptValue(_this));
             foreach (var value in values)
             {
                 if (value.IsUnzipable)
@@ -357,38 +366,29 @@ namespace HanabiLang.Interprets.ScriptTypes
             return FindCallableFnParams(resultArgs, null);
         }
 
-        internal virtual ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
+        internal ScriptValue Call(Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
         {
-            return Call(callableInfo.Item1, _this, callableInfo.Item2);
+            return Call(callableInfo.Item1, callableInfo.Item2);
         }
 
         public virtual ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
         {
-            var fnInfo = FindCallableInfo(value);
-            return Call(fnInfo.Item1, _this, fnInfo.Item2);
+            var fnInfo = FindCallableInfo(_this, value);
+            return Call(fnInfo.Item1, fnInfo.Item2);
         }
 
-        private ScriptValue Call(ScriptFn fn, ScriptObject _this, List<ScriptVariable> args)
+        private ScriptValue Call(ScriptFn fn, List<ScriptVariable> args)
         {
             if (fn.IsBuildIn)
             {
-                List<ScriptValue> valueArgs = new List<ScriptValue>();
-
-                if (!fn.IsStatic && _this != null)
-                {
-                    valueArgs.Add(new ScriptValue(_this));
-                }
-
-                foreach (var arg in args)
-                {
-                    valueArgs.Add(arg.Value);
-                }
+                List<ScriptValue> valueArgs = args.Select(arg => arg.Value).ToList();
                 return fn.BuildInFn(valueArgs);
             }
 
             // if it is a object call, set the scope to object
             // else if it is a static class call or it is a normal scope call, set the scope to the class scope / normal scope
-            ScriptScope parentScope = _this == null ? fn.Scope : _this.Scope;
+            // ScriptScope parentScope = _this == null ? fn.Scope : _this.Scope;
+            ScriptScope parentScope = fn.Scope;
             /*ScriptScope parentScope = fn.Scope;
             if (_this != null)
             {
@@ -439,28 +439,42 @@ namespace HanabiLang.Interprets.ScriptTypes
         }
     }
 
-    public class ScriptBindedFns : ScriptFns
+    public class ScriptBoundFns : ScriptFns
     {
-        public ScriptObject Object { get; private set; }
+        public ScriptObject BoundObject { get; private set; }
+        public AccessibilityLevel AccessLevel { get; private set; }
 
-        public ScriptBindedFns(ScriptFns scriptFns, ScriptObject scriptObject): base(scriptFns.Name, scriptFns.Fns)
+        public ScriptBoundFns(ScriptFns scriptFns, ScriptObject scriptObject, AccessibilityLevel accessLevel) : base(scriptFns.Name, scriptFns.Fns.Where(fn => accessLevel >= fn.Level))
         {
-            this.Object = scriptObject;
+            this.BoundObject = scriptObject;
+            this.AccessLevel = accessLevel;
+            if (this.Fns.Count <= 0)
+                throw new SystemException($"No suitable function for {AccessLevel} access");
         }
 
-        internal override ScriptValue Call(ScriptObject _this, Tuple<ScriptFn, List<ScriptVariable>> callableInfo)
+        internal override Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptScope scope, ScriptObject _this, List<AstNode> args, Dictionary<string, AstNode> keyArgs)
         {
-            return base.Call(this.Object ?? _this, callableInfo);
+            return base.FindCallableInfo(scope, this.BoundObject, args, keyArgs);
+        }
+
+        internal override Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptObject _this, List<ScriptValue> args, Dictionary<string, ScriptValue> keyArgs)
+        {
+            return base.FindCallableInfo(this.BoundObject, args, keyArgs);
+        }
+
+        internal override Tuple<ScriptFn, List<ScriptVariable>> FindCallableInfo(ScriptObject _this, params ScriptValue[] values)
+        {
+            return base.FindCallableInfo(this.BoundObject, values);
         }
 
         public override ScriptValue Call(ScriptObject _this, params ScriptValue[] value)
         {
-            return base.Call(this.Object ?? _this, value);
+            return base.Call(this.BoundObject, value);
         }
 
         public override string ToString()
         {
-            return $"<function: {this.Name} (object: {Object.ClassType.Name})>";
+            return $"<function: {this.Name} (object: {(BoundObject?.ClassType?.Name ?? "null")})>";
         }
     }
 }

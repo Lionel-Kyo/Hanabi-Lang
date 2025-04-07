@@ -15,6 +15,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("iter", BasicTypes.Iterator),
             }, args =>
             {
@@ -27,6 +28,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("currentFn"),
                 new FnParameter("moveNextFn"),
                 new FnParameter("resetFn")
@@ -56,7 +58,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("All", new List<FnParameter>()
             {
-                 new FnParameter("predicate")
+                new FnParameter("this"),
+                new FnParameter("predicate")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -71,7 +74,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Any", new List<FnParameter>()
             {
-                 new FnParameter("predicate")
+                new FnParameter("this"),
+                new FnParameter("predicate")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -86,7 +90,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Average", new List<FnParameter>()
             {
-                 new FnParameter("selector", (ScriptClass)null, new ScriptValue(), false)
+                new FnParameter("this"),
+                new FnParameter("selector", (ScriptClass)null, new ScriptValue(), false)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -134,7 +139,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Concat", new List<FnParameter>()
             {
-                 new FnParameter("second", BasicTypes.Iterator)
+                new FnParameter("this"),
+                new FnParameter("second", BasicTypes.Iterator)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter1);
@@ -145,7 +151,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Contains", new List<FnParameter>()
             {
-                 new FnParameter("value")
+                new FnParameter("this"),
+                new FnParameter("value")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -155,6 +162,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Count", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -164,6 +172,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Distinct", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -173,6 +182,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ElementAt", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("index", BasicTypes.Int)
             }, args =>
             {
@@ -183,7 +193,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Except", new List<FnParameter>()
             {
-                 new FnParameter("second", BasicTypes.Iterator)
+                new FnParameter("this"),
+                new FnParameter("second", BasicTypes.Iterator)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter1);
@@ -194,6 +205,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("First", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -203,6 +215,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             //this.AddFunction("GroupBy", new List<FnParameter>()
             //{
+            //     new FnParameter("this"),
             //     new FnParameter("predicate")
             //}, args =>
             //{
@@ -218,6 +231,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             //this.AddFunction("GroupJoin", new List<FnParameter>()
             //{
+            //     new FnParameter("this"),
             //     new FnParameter("predicate")
             //}, args =>
             //{
@@ -233,7 +247,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Intersect", new List<FnParameter>()
             {
-                 new FnParameter("second", BasicTypes.Iterator)
+                new FnParameter("this"),
+                new FnParameter("second", BasicTypes.Iterator)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter1);
@@ -244,6 +259,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             //this.AddFunction("Join", new List<FnParameter>()
             //{
+            //     new FnParameter("this"),
             //     new FnParameter("predicate")
             //}, args =>
             //{
@@ -259,6 +275,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Last", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -268,6 +285,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Max", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -277,6 +295,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Min", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -286,7 +305,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("OrderBy", new List<FnParameter>()
             {
-                 new FnParameter("keySelector")
+                new FnParameter("this"),
+                new FnParameter("keySelector")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -301,7 +321,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("OrderByDescending", new List<FnParameter>()
             {
-                 new FnParameter("keySelector")
+                new FnParameter("this"),
+                new FnParameter("keySelector")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -316,6 +337,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Reverse", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -325,7 +347,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Select", new List<FnParameter>()
             {
-                 new FnParameter("selector")
+                new FnParameter("this"),
+                new FnParameter("selector")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -341,7 +364,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("SelectWithIndex", new List<FnParameter>()
             {
-                 new FnParameter("selector")
+                new FnParameter("this"),
+                new FnParameter("selector")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -357,7 +381,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("SelectMany", new List<FnParameter>()
             {
-                 new FnParameter("selector")
+                new FnParameter("this"),
+                new FnParameter("selector")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -372,7 +397,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("SelectManyWithIndex", new List<FnParameter>()
             {
-                 new FnParameter("selector")
+                new FnParameter("this"),
+                new FnParameter("selector")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -387,7 +413,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("SequenceEqual", new List<FnParameter>()
             {
-                 new FnParameter("second", BasicTypes.Iterator)
+                new FnParameter("this"),
+                new FnParameter("second", BasicTypes.Iterator)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter1);
@@ -398,6 +425,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Single", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -407,6 +435,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Skip", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("count", BasicTypes.Int)
             }, args =>
             {
@@ -417,7 +446,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Sum", new List<FnParameter>()
             {
-                 new FnParameter("selector", (ScriptClass)null, new ScriptValue(), false)
+                new FnParameter("this"),
+                new FnParameter("selector", (ScriptClass)null, new ScriptValue(), false)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -462,6 +492,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Take", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("count", BasicTypes.Int)
             }, args =>
             {
@@ -472,6 +503,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ToDict", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("keySelector"),
                 new FnParameter("elementSelector")
             }, args =>
@@ -485,6 +517,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ToList", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -494,7 +527,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Union", new List<FnParameter>()
             {
-                 new FnParameter("second", BasicTypes.Iterator)
+                new FnParameter("this"),
+                new FnParameter("second", BasicTypes.Iterator)
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter1);
@@ -505,7 +539,8 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Where", new List<FnParameter>()
             {
-                 new FnParameter("predicate")
+                new FnParameter("this"),
+                new FnParameter("predicate")
             }, args =>
             {
                 TryGetIterator(args[0].TryObject, out var iter);
@@ -520,6 +555,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Zip", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("second", BasicTypes.Iterator),
                 new FnParameter("resultSelector")
             }, args =>
@@ -551,16 +587,13 @@ namespace HanabiLang.Interprets.ScriptTypes
                 result = AsCSharp(obj);
                 return true;
             }
-            if (!obj.Scope.TryGetValue("Iter", out ScriptType iter)) 
-                return false;
-
-            if (!(iter is ScriptVariable))
+            if (!obj.Scope.TryGetValue("Iter", out ScriptVariable iter)) 
                 return false;
 
             ScriptObject iterObj;
-            var getFns = ((ScriptVariable)iter).Get;
+            var getFns = (iter).Get;
             if (getFns == null)
-                iterObj = ((ScriptVariable)iter).Value.TryObject;
+                iterObj = (iter).Value.TryObject;
             else
                 iterObj = getFns.Call(obj).TryObject;
 
@@ -599,22 +632,22 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.resetFn = (ScriptFns)reset.Value;
             }
 
-            public object Current => currentFn.Call(null);
+            public object Current => currentFn.Call((ScriptObject)null);
 
-            ScriptValue IEnumerator<ScriptValue>.Current => currentFn.Call(null);
+            ScriptValue IEnumerator<ScriptValue>.Current => currentFn.Call((ScriptObject)null);
 
-            public void Dispose() => resetFn.Call(null);
+            public void Dispose() => resetFn.Call((ScriptObject)null);
 
             public bool MoveNext()
             {
-                var result = moveNextFn.Call(null);
+                var result = moveNextFn.Call((ScriptObject)null);
                 var resultObj = result.TryObject;
                 if (resultObj == null || !(resultObj.ClassType is ScriptBool))
                     throw new SystemException("bool return is required in move next function");
                 return ScriptBool.AsCSharp(resultObj);
             }
 
-            public void Reset() => resetFn.Call(null);
+            public void Reset() => resetFn.Call((ScriptObject)null);
 
             public IEnumerator<ScriptValue> GetEnumerator() => this;
             IEnumerator IEnumerable.GetEnumerator() => this;

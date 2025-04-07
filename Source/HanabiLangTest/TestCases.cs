@@ -17,7 +17,7 @@ namespace HanabiLangTest
         private static string GetExceptionMsg(Exception ex)
         {
             StringBuilder result = new StringBuilder();
-            for (Exception exception = ex; exception != null; exception = exception.InnerException)
+            for (Exception? exception = ex; exception != null; exception = exception.InnerException)
             {
                 result.Append(exception.Message);
                 result.Append(", ");
@@ -26,6 +26,7 @@ namespace HanabiLangTest
                 result.Remove(result.Length - 2, 2);
             return result.ToString();
         }
+
         public static void Run()
         {
             var methods = typeof(TestCases).GetMethods(BindingFlags.Public | BindingFlags.Static).Where(method => method.Name != "Run").ToArray();
@@ -47,10 +48,17 @@ namespace HanabiLangTest
 
             Console.WriteLine($"\nPassed Test: {passed}/{methods.Length}\n");
         }
+
         private static void CheckEquals(ScriptValue a, ScriptValue b)
         {
             if (!a.Equals(b))
                 throw new SystemException($"{a} != {b}");
+        }
+
+        private static void CheckNotEquals(ScriptValue a, ScriptValue b)
+        {
+            if (a.Equals(b))
+                throw new SystemException($"{a} == {b}");
         }
 
         private static Dictionary<string, ScriptValue> Interpret(string code, out Interpreter interpreter, params string[] values)
@@ -97,16 +105,14 @@ finally {
         public static void TryCatch2()
         {
             string sourceCode = @"
-class MyException1 : Exception
-{
-    fn MyException1() {
+class MyException1 : Exception {
+    fn MyException1(this) {
         super(""My Message1"");
     }
 }
 
-class MyException2 : Exception
-{
-    fn MyException2() {
+class MyException2 : Exception {
+    fn MyException2(this) {
         super(""My Message2"");
     }
 }
@@ -124,7 +130,7 @@ try {
 ";
 
             var values = Interpret(sourceCode, out var interpreter, "ex1", "ex2");
-            CheckEquals(new ScriptValue(values["ex1"].TryObject.ClassType), new ScriptValue(interpreter.CurrentScope.Classes["MyException2"]));
+            CheckEquals(new ScriptValue(values["ex1"].TryObject.ClassType), interpreter.CurrentScope.Variables["MyException2"].Value);
             CheckEquals(values["ex2"], new ScriptValue());
         }
 
@@ -134,17 +140,17 @@ try {
 const Test = () => {
 	const lists = [""good"", 3.14, """", 123, ""string"", 0.002, ""testing""]
 	var count = 0
-	var haveBreak = false
+	var hasBreak = false
 	for item in lists {
 		count = count + 1
 		if item == ""testing"" {
-            haveBreak = true
+            hasBreak = true
 			break
 		}
-        haveBreak = !haveBreak
+        hasBreak = !hasBreak
 	}
-	if haveBreak {
-		return ""Have Break""
+	if hasBreak {
+		return ""Has Break""
 	} else {
 		return ""No Break""
 	}
@@ -154,7 +160,7 @@ var result = Test();
 ";
 
             var values = Interpret(sourceCode, out var interpreter, "result");
-            CheckEquals(values["result"], new ScriptValue("Have Break"));
+            CheckEquals(values["result"], new ScriptValue("Has Break"));
         }
 
         public static void BubbleSortTest()
@@ -206,16 +212,15 @@ const result = factorial(12);
         public static void ClassTest1()
         {
             string sourceCode = @"
-class TestClass
-{
+class TestClass {
 	var value = null;
 
-	fn TestClass(value) {
+	fn TestClass(this, value) {
 		this.value = value;
 	}
 
-	fn ToStr() {
-		return ""I'm testing: "" + value;
+	fn ToStr(this) {
+		return ""I'm testing: "" + this.value;
 	}
 }
 
@@ -233,36 +238,36 @@ const result2 = test.ToStr();
         {
             string sourceCode = @"
 class Super1 {
-	fn ToStr() => ""Super1"";
+	fn ToStr(this) => ""Super1"";
 }
 
 class Super2 { 
-	fn ToStr() => ""Super2"";
+	fn ToStr(this) => ""Super2"";
 }
 
 class Super3 { }
 
 class Middle1: Super1 {
-	fn ToStr() => super.ToStr() + "" Middle1"";
+	fn ToStr(this) => super.ToStr() + "" Middle1"";
 }
 
 class Middle2: Super2 {
-	fn ToStr() => super.ToStr() + "" Middle2"";
+	fn ToStr(this) => super.ToStr() + "" Middle2"";
 }
 
 class Middle3: Super3 {
-	fn ToStr() => ""Middle3"";
+	fn ToStr(this) => ""Middle3"";
 
-	fn GetText() => this.Name + "" is Middle3"";
+	fn GetText(this) => this.Name + "" is Middle3"";
 }
 
 class TestClass: Middle1, Middle3, Middle2 {
 	var Name: str { get; private set; }
-	fn TestClass(name: str) {
+	fn TestClass(this, name: str) {
 		this.Name = name;
 	}
 
-	fn GetText() {
+	fn GetText(this) {
 		return super.GetText();
 	}
 }
@@ -281,7 +286,7 @@ const result2 = TestClass(""Hello"").ToStr();
 class Test1 {
     var a = 3.14; 
     var b = str(this.a); 
-    fn GetA() {
+    fn GetA(this) {
         return () => () => this.a; 
     }
 }
@@ -301,16 +306,16 @@ const result2 = b()();
         {
             string sourceCode = @"
 class Super1 {
-    fn A() => ""Super1""; 
+    fn A(this) => ""Super1""; 
 }
 
 class Middle1 : Super1 {
-    fn A() => super.A() + "" "" + ""Middle1""; 
+    fn A(this) => super.A() + "" "" + ""Middle1""; 
 }
 
 class Test1 : Middle1 {
-    fn A() => super.A() + "" "" + ""Test1""; 
-    fn B() => () => () => () => () => super.A();
+    fn A(this) => super.A() + "" "" + ""Test1""; 
+    fn B(this) => () => () => () => () => super.A();
 }
 
 const a = Test1().A;
@@ -328,11 +333,11 @@ const result2 = b()()()()();
         {
             string sourceCode = @"
 class Super1 {
-    fn A() => ""Super1""; 
+    fn A(this) => ""Super1""; 
 }
 
 class Middle1 : Super1 {
-    fn A() => super.A() + "" "" + ""Middle1""; 
+    fn A(this) => super.A() + "" "" + ""Middle1""; 
 }
 
 class Test1 : Middle1 { 
@@ -367,10 +372,10 @@ class Test1 {
         return ""A"";
     }
 
-    public fn SetB(value) => this.B = value;
-    public fn GetC() => this.C;
-    public fn GetD() => this.D;
-    public fn SetD(value) => this.D = value;
+    public fn SetB(this, value) => this.B = value;
+    public fn GetC(this) => this.C;
+    public fn GetD(this) => this.D;
+    public fn SetD(this, value) => this.D = value;
 }
 const a = Test1.A;
 const result1 = a();
@@ -392,6 +397,39 @@ const result5 = test1.GetD();
             CheckEquals(values["result3"], new ScriptValue("Hello, World"));
             CheckEquals(values["result4"], new ScriptValue(3.14));
             CheckEquals(values["result5"], new ScriptValue(0.1));
+        }
+
+        public static void ClassTest7()
+        {
+            string sourceCode = @"
+class Test {
+    fn Test(this) { }
+    const a = () => ""Hello a""
+    let b = () => ""Hello b""
+    const c => () => ""Hello c""
+    let d => () => ""Hello d""
+}
+
+const result1 = catch(Test.a())
+const result2 = catch(Test.b())
+const result3 = catch(Test.c())
+const result4 = catch(Test.d())
+const test = Test()
+const result5 = catch(test.a())
+const result6 = catch(test.b())
+const result7 = catch(test.c())
+const result8 = catch(test.d())
+";
+
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2", "result3", "result4", "result5", "result6", "result7", "result8");
+            CheckEquals(values["result1"], new ScriptValue()); // No Error
+            CheckNotEquals(values["result2"], new ScriptValue()); // Error
+            CheckEquals(values["result3"], new ScriptValue()); // No Error
+            CheckNotEquals(values["result4"], new ScriptValue()); // Error
+            CheckEquals(values["result5"], new ScriptValue()); // No Error
+            CheckEquals(values["result6"], new ScriptValue()); // No Error
+            CheckEquals(values["result7"], new ScriptValue()); // No Error
+            CheckEquals(values["result8"], new ScriptValue()); // No Error
         }
 
         public static void ForloopTest()
@@ -499,23 +537,23 @@ class Test: Iterator {
     private let values = null;
     public let Iter => TestIterator.Create(this.values);
 
-    public fn Test(values: Iterator) {
-        this.values = values
+    public fn Test(this, values: Iterator) {
+        this.values = values;
     }
 
     private class TestIterator {
         private let values = null;
         private let index = -1;
 
-        public fn TestIterator(values) {
+        public fn TestIterator(this, values) {
             this.values = values;
         }
 
-        private fn GetCurrent() {
+        private fn GetCurrent(this) {
             return this.values[this.index];
         }
 
-        private fn MoveNext() {
+        private fn MoveNext(this) {
             if this.index + 1 >= this.values.Length {
                 return false;
             }
@@ -523,7 +561,7 @@ class Test: Iterator {
             return true;
         }
 
-        private fn Reset() {
+        private fn Reset(this) {
             this.index = -1;
         }
 
@@ -581,6 +619,43 @@ const result2 = a?.Where(x => x > 5)?.ToList() ?? [];
             var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
             CheckEquals(values["result1"], new ScriptValue(Enumerable.Range(6, 4).Select(i => new ScriptValue(i)).ToList()));
             CheckEquals(values["result2"], new ScriptValue(new List<ScriptValue>()));
+        }
+
+        public static void CatchExpressionTest()
+        {
+            string sourceCode = @"
+const d = { ""A"": 1234, ""B"": [1, 2, 3, 4, 5] }
+const result1, result1Err = catch(d[""A""])
+const result2, result2Err = catch(d[12345])
+const result3a, result3b, result3c, result3d, result3e, result3Err = catch(d[""B""])
+const result4a, result4b, result4c, result4Err = catch(d[""B""])
+const result5a, result5b, result5c, result5d, result5e, result5f, result5Err = catch(d[""B""])
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result1Err", "result2", "result2Err",
+                "result3a", "result3b", "result3c", "result3d", "result3e", "result3Err",
+                "result4a", "result4b", "result4c", "result4Err",
+                "result5a", "result5b", "result5c", "result5d", "result5e", "result5f", "result5Err");
+            CheckEquals(values["result1"], new ScriptValue(1234));
+            CheckEquals(values["result1Err"], new ScriptValue());
+            CheckEquals(values["result2"], new ScriptValue());
+            CheckNotEquals(values["result2Err"], new ScriptValue());
+            CheckEquals(values["result3a"], new ScriptValue(1));
+            CheckEquals(values["result3b"], new ScriptValue(2));
+            CheckEquals(values["result3c"], new ScriptValue(3));
+            CheckEquals(values["result3d"], new ScriptValue(4));
+            CheckEquals(values["result3e"], new ScriptValue(5));
+            CheckEquals(values["result3Err"], new ScriptValue());
+            CheckEquals(values["result4a"], new ScriptValue());
+            CheckEquals(values["result4b"], new ScriptValue());
+            CheckEquals(values["result4c"], new ScriptValue());
+            CheckNotEquals(values["result4Err"], new ScriptValue());
+            CheckEquals(values["result5a"], new ScriptValue());
+            CheckEquals(values["result5b"], new ScriptValue());
+            CheckEquals(values["result5c"], new ScriptValue());
+            CheckEquals(values["result5d"], new ScriptValue());
+            CheckEquals(values["result5e"], new ScriptValue());
+            CheckEquals(values["result5f"], new ScriptValue());
+            CheckNotEquals(values["result5Err"], new ScriptValue());
         }
     }
 }

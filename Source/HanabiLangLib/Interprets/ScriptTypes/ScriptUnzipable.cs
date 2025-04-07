@@ -13,6 +13,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value")
             }, args =>
             {

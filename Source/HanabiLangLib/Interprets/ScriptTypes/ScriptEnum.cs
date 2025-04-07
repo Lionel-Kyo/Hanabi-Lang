@@ -24,6 +24,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ToStr", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 return new ScriptValue(this.ToStr(args[0].TryObject));
@@ -31,6 +32,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("==", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("right")
             }, args =>
             {

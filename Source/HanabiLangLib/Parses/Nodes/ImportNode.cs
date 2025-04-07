@@ -12,14 +12,14 @@ namespace HanabiLang.Parses.Nodes
         /// <summary>
         /// null = import as a variable, Length 0 = import all, Length > 0 = import some
         /// </summary>
-        public List<string> Imports { get; private set; }
+        public List<Tuple<string, string>> Imports { get; private set; }
         public string AsName { get; private set; }
 
-        public ImportNode(string path, List<string> imports, string asName)
+        public ImportNode(string path, List<Tuple<string, string>> imports, string asName)
         {
             this.Path = path;
             this.Imports = imports;
-            this.AsName = asName ?? "";
+            this.AsName = asName;
         }
 
         public override string ToString()
@@ -29,7 +29,11 @@ namespace HanabiLang.Parses.Nodes
             result.Append('(');
             result.Append(this.Path);
             result.Append(' ');
-            result.Append(this.AsName);
+            if (this.AsName != null)
+            {
+                result.Append("as ");
+                result.Append(this.AsName);
+            }
             result.Append(')');
             //result.AppendLine("  ");
             return result.ToString();

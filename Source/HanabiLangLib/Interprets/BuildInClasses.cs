@@ -631,17 +631,38 @@ namespace HanabiLang.Interprets
                 if (fn.IsSpecialName)
                     continue;
                 string fnName = renameMember?.Invoke(fn) ?? fn.Name;
-                if (!classScope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
+
+                ScriptFns scriptFns = null;
+                if (classScope.Variables.TryGetValue(fnName, out ScriptVariable scriptVar))
                 {
-                    scriptFns = new ScriptFns(fnName);
-                    classScope.Functions[fnName] = scriptFns;
+                    if (scriptVar.Value.IsFunction)
+                    {
+                        scriptFns = scriptVar.Value.TryFunction;
+                    }
+                    else
+                    {
+                        if (scriptVar.IsConstant)
+                            throw new NotImplementedException($"Cannot define fn {fnName} to constant variable.");
+                    }
                 }
+
+                Tuple<List<FnParameter>, BasicFns.ScriptFnType> scriptFn = null;
                 try
                 {
-                    var scriptFn = ToScriptFn(fn, null);
-                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevel.Public));
+                    scriptFn = ToScriptFn(fn, null);
                 }
                 catch (NotImplementedException) { }
+
+                if (scriptFn != null)
+                {
+                    if (scriptFns == null)
+                    {
+                        scriptFns = new ScriptFns(fnName);
+                        scriptVar = new ScriptVariable(fnName, scriptFns, AccessibilityLevel.Public);
+                        classScope.Variables[fnName] = scriptVar;
+                    }
+                    scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, isStatic, AccessibilityLevel.Public));
+                }
             }
 
             foreach (var field in fields)
@@ -669,8 +690,11 @@ namespace HanabiLang.Interprets
                 AccessibilityLevel level = field.IsPublic ? AccessibilityLevel.Public : AccessibilityLevel.Private;
                 if (level != AccessibilityLevel.Public)
                     continue;
+
+                bool isGetFnStatic = createdObject != null ? true : field.IsStatic;
+
                 var getFns = new ScriptFns(fieldName);
-                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, field.IsStatic, level));
+                getFns.Fns.Add(new ScriptFn(isGetFnStatic ? new List<FnParameter>() : new List<FnParameter>() { new FnParameter("this") }, null, getFn, isGetFnStatic, level));
 
                 BasicFns.ScriptFnType setFn = args =>
                 {
@@ -693,14 +717,14 @@ namespace HanabiLang.Interprets
                     return ScriptValue.Null;
                 };
 
+                bool isSetFnStatic = createdObject != null ? true : field.IsStatic;
 
                 var setFns = new ScriptFns(fieldName);
-                setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
-                    {
-                        new FnParameter("value")
-                    }, null, setFn, createdObject != null ? true : field.IsStatic, level));
+                setFns.Fns.Add(new ScriptFn(
+                    isSetFnStatic ? new List<FnParameter>() { new FnParameter("value") } : new List<FnParameter>() { new FnParameter("this"), new FnParameter("value") },
+                    null, setFn, createdObject != null ? true : field.IsStatic, level));
 
-                classScope.Variables[fieldName] = new ScriptVariable(fieldName, null, getFns, setFns, false, field.IsStatic, level);
+                classScope.Variables[fieldName] = new ScriptVariable(fieldName, null, getFns, setFns, false, isSetFnStatic, level);
             }
 
             foreach (var property in properties)
@@ -743,7 +767,7 @@ namespace HanabiLang.Interprets
                     isGetFnStatic = property.GetMethod.IsStatic;
 
                 getFns = new ScriptFns(propertyName);
-                getFns.Fns.Add(new ScriptFn(new List<FnParameter>(), null, getFn, isGetFnStatic, getLevel));
+                getFns.Fns.Add(new ScriptFn(isGetFnStatic ? new List<FnParameter>() : new List<FnParameter>() { new FnParameter("this") }, null, getFn, isGetFnStatic, getLevel));
 
                 if (property.CanWrite)
                 {
@@ -792,10 +816,9 @@ namespace HanabiLang.Interprets
                     overAllIsStatic = property.SetMethod.IsStatic;
 
                 setFns = new ScriptFns(propertyName);
-                setFns.Fns.Add(new ScriptFn(new List<FnParameter>()
-                {
-                    new FnParameter("value")
-                }, null, setFn, isSetFnStatic, setLevel));
+                setFns.Fns.Add(new ScriptFn(
+                    isSetFnStatic ? new List<FnParameter>(){ new FnParameter("value") } : new List<FnParameter>() { new FnParameter("this"), new FnParameter("value") },
+                    null, setFn, isSetFnStatic, setLevel));
 
                 classScope.Variables[propertyName] = new ScriptVariable(propertyName, null, getFns, setFns, false, overAllIsStatic, overAllLevel);
             }
@@ -810,17 +833,42 @@ namespace HanabiLang.Interprets
                     if (fn.IsSpecialName)
                         continue;
                     string fnName = renameMember?.Invoke(fn) ?? fn.Name;
-                    if (!classScope.Functions.TryGetValue(fnName, out ScriptFns scriptFns))
+
+                    ScriptFns scriptFns = null;
+                    if (classScope.Variables.TryGetValue(fnName, out ScriptVariable scriptVar))
                     {
-                        scriptFns = new ScriptFns(fnName);
-                        classScope.Functions[fnName] = scriptFns;
+                        if (scriptVar.Value.IsFunction)
+                        {
+                            scriptFns = scriptVar.Value.TryFunction;
+                        }
+                        else
+                        {
+                            if (scriptVar.IsConstant)
+                                throw new NotImplementedException($"Cannot define fn {fnName} to constant variable.");
+                        }
                     }
+
+                    Tuple<List<FnParameter>, BasicFns.ScriptFnType> scriptFn = null;
                     try
                     {
-                        var scriptFn = ToScriptFn(fn, createdObject);
-                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, createdObject != null ? true : isStatic, AccessibilityLevel.Public));
+                        scriptFn = ToScriptFn(fn, createdObject);
                     }
                     catch (NotImplementedException) { }
+
+                    if (scriptFn != null)
+                    {
+                        if (scriptFns == null)
+                        {
+                            scriptFns = new ScriptFns(fnName);
+                            scriptVar = new ScriptVariable(fnName, scriptFns, AccessibilityLevel.Public);
+                            classScope.Variables[fnName] = scriptVar;
+                        }
+                        if (createdObject == null && !isStatic)
+                        {
+                            scriptFn.Item1.Insert(0, new FnParameter("this"));
+                        }
+                        scriptFns.Fns.Add(new ScriptFn(scriptFn.Item1, classScope, scriptFn.Item2, createdObject != null ? true : isStatic, AccessibilityLevel.Public));
+                    }
                 }
 
                 foreach (var constructor in constructors)

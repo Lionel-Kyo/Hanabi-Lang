@@ -16,6 +16,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         {
             this.AddFunction(ConstructorName, new List<FnParameter>() 
             {
+                new FnParameter("this"),
                 new FnParameter("value")
             }, args =>
             {
@@ -43,6 +44,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("SubStr", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("startIndex", BasicTypes.Int)
             }, args =>
             {
@@ -53,6 +55,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("SubStr", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("startIndex", BasicTypes.Int),
                 new FnParameter("length", BasicTypes.Int)
             }, args =>
@@ -65,6 +68,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Contains", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value", BasicTypes.Str),
             }, args =>
             {
@@ -75,6 +79,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("IndexOf", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value", BasicTypes.Str),
                 new FnParameter("startIndex", BasicTypes.Int, new ScriptValue(0)),
                 new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
@@ -93,6 +98,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("LastIndexOf", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value", BasicTypes.Str),
                 new FnParameter("startIndex", BasicTypes.Int, new ScriptValue(0)),
                 new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
@@ -111,6 +117,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Remove", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("startIndex", BasicTypes.Int),
                 new FnParameter("count", BasicTypes.Int, ScriptValue.Null),
             }, args =>
@@ -127,6 +134,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Replace", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("oldValue", BasicTypes.Str),
                 new FnParameter("newValue", BasicTypes.Str),
             }, args =>
@@ -139,6 +147,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Split", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("separator", BasicTypes.Str, null, true),
             }, args =>
             {
@@ -151,6 +160,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("StartsWith", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value", BasicTypes.Str),
             }, args =>
             {
@@ -161,6 +171,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("EndsWith", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value", BasicTypes.Str),
             }, args =>
             {
@@ -169,14 +180,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).EndsWith(value));
             });
 
-            this.AddFunction("ToUpper", new List<FnParameter>()
+            this.AddFunction("ToUpper", new List<FnParameter>() { new FnParameter("this"), }
             , args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 return new ScriptValue(AsCSharp(_this).ToUpper());
             });
 
-            this.AddFunction("ToLower", new List<FnParameter>()
+            this.AddFunction("ToLower", new List<FnParameter>() { new FnParameter("this"), }
             , args =>
             {
                 ScriptObject _this = args[0].TryObject;
@@ -185,6 +196,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Trim", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("chars", BasicTypes.Str, null, true),
             }, args =>
             {
@@ -197,6 +209,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("TrimStart", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("chars", BasicTypes.Str, null, true),
             }, args =>
             {
@@ -209,6 +222,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("TrimEnd", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("chars", BasicTypes.Str, null, true),
             }, args =>
             {
@@ -221,6 +235,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("PadLeft", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("totalLength", BasicTypes.Int),
                 new FnParameter("paddingChar", BasicTypes.Str, new ScriptValue()),
             }, args =>
@@ -235,6 +250,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("PadRight", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("totalLength", BasicTypes.Int),
                 new FnParameter("paddingChar", BasicTypes.Str, new ScriptValue()),
             }, args =>
@@ -249,6 +265,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("FromChar", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("character", BasicTypes.Int, null, false),
             }, args =>
             {
@@ -258,6 +275,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ToChar", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
@@ -280,6 +298,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("CompareTo", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value"),
             }, args =>
             {
@@ -292,7 +311,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(0);
             });
 
-            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("index", BasicTypes.Int) }, args =>
+            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 long index = ScriptInt.AsCSharp(args[1].TryObject);

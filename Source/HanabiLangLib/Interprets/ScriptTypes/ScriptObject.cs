@@ -22,12 +22,14 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Scope = new ScriptScope(this, objectClass.Scope);
             this.BuildInObject = buildInObject;
 
-            if (objectClass.Body != null)
+            if (objectClass.Body != null && objectClass.Body.Count > 0)
             {
+                ScriptScope initalizeVariablesScope = new ScriptScope(new ScriptFn(new List<FnParameter>() { new FnParameter("this") }, new List<AstNode>(), this.Scope, true, AccessibilityLevel.Private), this.Scope);
+                initalizeVariablesScope.Variables["this"] = new ScriptVariable("this", null, new ScriptValue(this), true, true, AccessibilityLevel.Private);
                 foreach (object item in objectClass.Body)
                 {
                     if (item is VariableDefinitionNode)
-                        Interpreter.InterpretChild(this.Scope, (VariableDefinitionNode)item, false);
+                        Interpreter.VariableDefinition((VariableDefinitionNode)item, this.Scope, initalizeVariablesScope);
                     else if (item is ScriptVariable)
                         this.Scope.Variables[((ScriptVariable)item).Name] = (ScriptVariable)item;
                 }
@@ -36,7 +38,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         private ScriptObject() { }
 
-        public bool TryGetValue(string name, out ScriptType value)
+        public bool TryGetValue(string name, out ScriptVariable value)
         {
             if (this.Scope.TryGetValue(name, out value))
                 return true;
@@ -50,9 +52,9 @@ namespace HanabiLang.Interprets.ScriptTypes
 
         public override string ToString()
         {
-            if (this.ClassType.TryGetValue("ToStr", out ScriptType fns) && fns is ScriptFns)
+            if (this.ClassType.TryGetValue("ToStr", out ScriptVariable fns) && fns.Value.IsFunction)
             {
-                var _fns  = (ScriptFns)fns;
+                var _fns  = fns.Value.TryFunction;
                 return ScriptStr.AsCSharp((ScriptObject)_fns.Call(this).Value);
             }
             return ScriptStr.AsCSharp(ClassType.ToStr(this));

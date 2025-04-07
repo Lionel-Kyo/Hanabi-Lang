@@ -1,4 +1,5 @@
-﻿using HanabiLang.Parses;
+﻿using HanabiLang.Lexers;
+using HanabiLang.Parses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,8 +43,31 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.Level = level;
         }
 
+        public ScriptVariable(string name, ScriptClass _class)
+        {
+            this.Name = name;
+            this.DataTypes = null;
+            this.Value = new ScriptValue(_class);
+            this.IsConstant = true;
+            this.IsStatic = _class.IsStatic;
+            this.Level = _class.Level;
+        }
+
+        public ScriptVariable(string name, ScriptFns _fns, AccessibilityLevel level)
+        {
+            this.Name = name;
+            this.DataTypes = null;
+            this.Value = new ScriptValue(_fns);
+            this.IsConstant = true;
+            this.IsStatic = true;
+            this.Level = level;
+        }
+
         public ValueReference GetValueReference(ScriptObject _this, AccessibilityLevel accessLevel)
         {
+            if (this.IsStatic)
+                _this = null;
+
             if (this.Value == null)
             {
                 return new ValueReference(
@@ -51,10 +75,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                     {
                         if (this.Get == null)
                             throw new SystemException($"{this.Name} cannot be read");
-                        var fnInfo = this.Get.FindCallableInfo();
+                        var fnInfo = this.Get.FindCallableInfo(_this);
                         if ((int)accessLevel < (int)fnInfo.Item1.Level)
                             throw new SystemException($"{this.Name} cannot be read");
-                        return this.Get.Call(_this, fnInfo);
+                        return this.Get.Call(fnInfo);
                     },
                     x =>
                     {
@@ -68,11 +92,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                             if (!this.DataTypes.Contains(x.TryObject?.ClassType))
                                 throw new SystemException($"{this.Name} cannot be written by value: {x}, due to wrong data type");
                         }
-
-                        var fnInfo = this.Set.FindCallableInfo(x);
+                        var fnInfo = this.Set.FindCallableInfo(_this, x);
                         if ((int)accessLevel < (int)fnInfo.Item1.Level)
                             throw new SystemException($"{this.Name} cannot be written");
-                        this.Set.Call(_this, fnInfo);
+                        this.Set.Call(fnInfo);
                     }
                 );
             }

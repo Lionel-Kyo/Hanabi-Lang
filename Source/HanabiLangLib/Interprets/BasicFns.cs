@@ -49,17 +49,20 @@ namespace HanabiLang.Interprets
 
         internal static void AddBasicFunctions(ScriptScope scope)
         {
-            scope.Functions["print"] = new ScriptFns("print");
-            scope.Functions["print"].Fns.Add(new ScriptFn(
+            var print = new ScriptFns("print");
+            print.Fns.Add(new ScriptFn(
                 new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, Print, true, AccessibilityLevel.Public));
+            scope.Variables["print"] = new ScriptVariable("print", print, AccessibilityLevel.Public);
 
-            scope.Functions["println"] = new ScriptFns("println");
-            scope.Functions["println"].Fns.Add(new ScriptFn(
+            var println = new ScriptFns("println");
+            println.Fns.Add(new ScriptFn(
                 new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, Println, true, AccessibilityLevel.Public));
+            scope.Variables["println"] = new ScriptVariable("println", println, AccessibilityLevel.Public);
 
-            scope.Functions["input"] = new ScriptFns("input");
-            scope.Functions["input"].Fns.Add(new ScriptFn(
+            var input = new ScriptFns("input");
+            input.Fns.Add(new ScriptFn(
                 new List<FnParameter>() { new FnParameter("args", multipleArguments: true) }, null, Input, true, AccessibilityLevel.Public));
+            scope.Variables["input"] = new ScriptVariable("input", input, AccessibilityLevel.Public);
         }
 
         public static List<FnParameter> GetBuildInFnParams(ScriptFnType fn)

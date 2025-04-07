@@ -14,6 +14,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         {
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("args", (ScriptClass)null, null, true),
             }, args =>
             {
@@ -40,6 +41,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
             this.AddFunction("Add", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("fn", (ScriptClass)null, null, false),
             }, args =>
             {
@@ -53,6 +55,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
             this.AddFunction("Remove", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("fn", (ScriptClass)null, null, false),
             }, args =>
             {
@@ -76,6 +79,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
             this.AddFunction("Call", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("args", (ScriptClass)null, null, true),
             }, args =>
             {

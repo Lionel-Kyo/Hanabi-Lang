@@ -40,7 +40,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).Values.ToList());
             }, null, false, null);
 
-            this.AddFunction("Clear", new List<FnParameter>(), args =>
+            this.AddFunction("Clear", new List<FnParameter>() { new FnParameter("this") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 AsCSharp(_this).Clear();
@@ -49,6 +49,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ContainsKey", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("key")
             }, args =>
             {
@@ -59,6 +60,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ContainsValue", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("value")
             }, args =>
             {
@@ -69,6 +71,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Remove", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("key")
             }, args =>
             {
@@ -79,6 +82,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("GetValue", new List<FnParameter>()
             {
+                new FnParameter("this"),
                 new FnParameter("key")
             }, args =>
             {
@@ -92,6 +96,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("ToObject", new List<FnParameter>()
             {
+                new FnParameter("this"),
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
@@ -107,14 +112,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(obj);
             });
 
-            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("key") }, args =>
+            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("key") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];
 
                 return AsCSharp(_this)[key];
             });
-            this.AddFunction("set_[]", new List<FnParameter> { new FnParameter("key"), new FnParameter("value") }, args =>
+            this.AddFunction("set_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("key"), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];
