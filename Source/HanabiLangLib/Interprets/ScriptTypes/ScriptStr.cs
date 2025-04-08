@@ -265,7 +265,6 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("FromChar", new List<FnParameter>()
             {
-                new FnParameter("this"),
                 new FnParameter("character", BasicTypes.Int, null, false),
             }, args =>
             {
@@ -287,14 +286,14 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             this.AddFunction("Join", new List<FnParameter>()
             {
-                new FnParameter("seperator", BasicTypes.Str, null, false),
+                new FnParameter("this", BasicTypes.Str, null, false),
                 new FnParameter("values", BasicTypes.Iterator, null, false),
             }, args =>
             {
                 string seperator = AsCSharp(args[0].TryObject);
                 ScriptIterator.TryGetIterator(args[1].TryObject, out var values);
                 return new ScriptValue(string.Join(seperator, values));
-            }, true);
+            }, false);
 
             this.AddFunction("CompareTo", new List<FnParameter>()
             {

@@ -42,7 +42,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             this.AddFunction("Add", new List<FnParameter>()
             {
                 new FnParameter("this"),
-                new FnParameter("fn", (ScriptClass)null, null, false),
+                new FnParameter("function", (ScriptClass)null, null, false),
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
@@ -56,7 +56,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             this.AddFunction("Remove", new List<FnParameter>()
             {
                 new FnParameter("this"),
-                new FnParameter("fn", (ScriptClass)null, null, false),
+                new FnParameter("function", (ScriptClass)null, null, false),
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;

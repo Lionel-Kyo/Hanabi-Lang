@@ -207,10 +207,19 @@ namespace HanabiLang.Interprets.ScriptTypes
             return false;
         }
 
+        /// <summary>
+        /// Internal add function only, script interpretation won't use
+        /// </summary>
         protected void AddFunction(string name, List<FnParameter> parameters, BasicFns.ScriptFnType fn,
             bool isStatic = false, AccessibilityLevel level = AccessibilityLevel.Public)
         {
             ScriptFns scriptFns = null;
+            if (!isStatic && (parameters.Count <= 0 || parameters[0].Name != "this"))
+                throw new SystemException($"Non static fn require this as first parameter");
+
+            if (isStatic && parameters.FindIndex(p => p.Name == "this") >= 0)
+                throw new SystemException($"static fn cannot define this as parameter");
+
             if (this.Scope.Variables.TryGetValue(name, out ScriptVariable scriptVar))
             {
                 if (scriptVar.Value.IsFunction)

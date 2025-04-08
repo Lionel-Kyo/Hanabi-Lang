@@ -14,7 +14,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptEnum() :
             base("Enum", isStatic: false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>(), args => throw new NotSupportedException("Enum class can not be called"));
+            this.AddFunction(ConstructorName, new List<FnParameter>() { new FnParameter("this"), }, args => throw new NotSupportedException("Enum class can not be called"));
 
             AddVariable("Value", args =>
             {

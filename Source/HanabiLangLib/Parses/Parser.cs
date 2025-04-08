@@ -1202,7 +1202,7 @@ namespace HanabiLang.Parses
                 this.parseScopes.Pop();
             }
 
-            if (isClassMember && !isStatic && (parameters.Count == 0 || (parameters.Count > 0 && parameters[0].Name != "this")))
+            if (isClassMember && !isStatic && (parameters.Count <= 0 || parameters[0].Name != "this"))
                 throw new ParseException("Non-static class fn without this parameter", this.LastToken);
 
             if (isLambdaFn)

@@ -14,7 +14,15 @@ namespace HanabiLang.Interprets.ScriptTypes
         public ScriptList() :
             base("List", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>(), args => ScriptValue.Null);
+            this.AddFunction(ConstructorName, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                _this.BuildInObject = new List<ScriptValue>();
+                return ScriptValue.Null;
+            });
 
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
@@ -25,10 +33,18 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 ScriptObject value = (ScriptObject)args[1].Value;
 
-                if (!ScriptIterator.TryGetIterator(value, out var iter))
-                    throw new SystemException("Create List failed, variable is not enumerable");
+                if (value.ClassType == BasicTypes.Int)
+                {
+                    int size = (int)ScriptInt.AsCSharp(value);
+                    _this.BuildInObject = Enumerable.Repeat(new ScriptValue(), size).ToList();
+                }
+                else
+                {
+                    if (!ScriptIterator.TryGetIterator(value, out var iter))
+                        throw new SystemException("Create List failed, variable is not enumerable");
 
-                _this.BuildInObject = iter.ToList();
+                    _this.BuildInObject = iter.ToList();
+                }
                 return ScriptValue.Null;
             });
 
@@ -420,14 +436,20 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            this.AddFunction("Reverse", new List<FnParameter>(), args =>
+            this.AddFunction("Reverse", new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 AsCSharp(_this).Reverse();
                 return ScriptValue.Null;
             });
 
-            this.AddFunction("TrimExcess", new List<FnParameter>(), args =>
+            this.AddFunction("TrimExcess", new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 AsCSharp(_this).TrimExcess();

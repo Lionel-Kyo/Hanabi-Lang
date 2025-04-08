@@ -37,10 +37,6 @@ void ExecuteFile(string[] args)
 
 void Start()
 {
-    //var v1 = new ScriptValue(3.14);
-    //var v1Ref = new ValueReference(v1);
-    //v1Ref.Ref = new ScriptValue("Hello");
-
     Interpreter interpreter = new Interpreter(ast: null, existedScope: null, predefinedScope: null, path: "", isMain: true);
     List<string> lines = new List<string>();
     while (true)
@@ -70,7 +66,7 @@ void Start()
         try
         {
             ast = parser.Parse();
-            Console.WriteLine(string.Join("\n", ast.Nodes));
+            //Console.WriteLine(string.Join("\n", ast.Nodes));
         }
         catch (ParseFormatNotCompleteException ex)
         {
