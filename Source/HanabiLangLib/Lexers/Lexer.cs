@@ -78,8 +78,15 @@ namespace HanabiLang.Lexers
                 {
                     if (line[index] == startChar)
                     {
-                        endOfString = true;
-                        break;
+                        if (index + 1 < line.Length && line[index + 1] == startChar)
+                        {
+                            index++;
+                        }
+                        else
+                        {
+                            endOfString = true;
+                            break;
+                        }
                     }
                     result.Append(line[index]);
                     index++;
@@ -88,7 +95,7 @@ namespace HanabiLang.Lexers
                     break;
                 lineIndex++;
                 if (lineIndex < lines.Count())
-                    result.Append('\n');
+                    result.Append(Environment.NewLine);
                 else
                     break;
                 index = 0;
@@ -119,8 +126,16 @@ namespace HanabiLang.Lexers
                     char c = line[index];
                     if (c == startChar && openSqaureIndexQueue.Count == 0)
                     {
-                        endOfString = true;
-                        break;
+                        if (index + 1 < line.Length && line[index + 1] == startChar)
+                        {
+                            text.Append(c);
+                            index += 2;
+                        }
+                        else
+                        {
+                            endOfString = true;
+                            break;
+                        }
                     }
                     else if (c == '{')
                     {
@@ -211,7 +226,7 @@ namespace HanabiLang.Lexers
                     break;
                 lineIndex++;
                 if (lineIndex < lines.Count())
-                    text.Append('\n');
+                    text.Append(Environment.NewLine);
                 else
                     break;
                 index = 0;
@@ -237,15 +252,14 @@ namespace HanabiLang.Lexers
             StringBuilder text = new StringBuilder();
             Queue<int> openSqaureIndexQueue = new Queue<int>();
             List<List<Token>> interpolatedTokens = new List<List<Token>>();
-
-            if (index >= line.Length)
-                throw new SystemException($"string defined in line: {lineIndex + 1} is not ended");
+            bool endOfString = false;
 
             while (index < line.Length)
             {
                 char c = line[index];
-                if (c == startChar)
+                if (c == startChar && openSqaureIndexQueue.Count == 0)
                 {
+                    endOfString = true;
                     break;
                 }
                 if (c == '{')
@@ -385,6 +399,10 @@ namespace HanabiLang.Lexers
                     index++;
                 }
             }
+            
+            if (!endOfString)
+                throw new SystemException($"string defined in line: {lineIndex + 1} is not ended");
+
             if (text.Length > 0)
             {
                 texts.Add(text.ToString());
@@ -397,16 +415,15 @@ namespace HanabiLang.Lexers
             string line, int startLineIndex)
         {
             StringBuilder result = new StringBuilder();
-
             int lineIndex = startLineIndex;
-            if (index >= line.Length)
-                throw new SystemException($"string defined in line: {lineIndex + 1} is not ended");
+            bool endOfString = false;
 
             while (index < line.Length)
             {
                 char c = line[index];
                 if (c == startChar)
                 {
+                    endOfString = true;
                     break;
                 }
                 else if (c == '\\')
@@ -499,6 +516,10 @@ namespace HanabiLang.Lexers
                     index++;
                 }
             }
+
+            if (!endOfString)
+                throw new SystemException($"string defined in line: {lineIndex + 1} is not ended");
+
             return new Token(TokenType.STRING, result.ToString(), startLineIndex + 1);
         }
 
@@ -519,6 +540,9 @@ namespace HanabiLang.Lexers
 
                     else if (c == '#')
                         break;
+
+                    else if (c == '\r' || c == '\n')
+                        continue;
 
                     else if (isBlockComment)
                     {
@@ -605,7 +629,7 @@ namespace HanabiLang.Lexers
                         }
 
                         i--;
-                        
+
                         string number = numberBuilder.ToString();
                         if (number.EndsWith("."))
                         {
@@ -880,7 +904,10 @@ namespace HanabiLang.Lexers
                             i += 2;
                             tokens.Add(InterpolatedEscapeStringToken(line[i - 1], ref i, line, lineIndex));
                         }
-                        else throw new SystemException($"Unexpected Token $, line: {lineIndex + 1}");
+                        else
+                        {
+                            throw new SystemException($"Unexpected Token $, line: {lineIndex + 1}");
+                        }
                     }
 
                     else if (c == '@')
@@ -892,11 +919,14 @@ namespace HanabiLang.Lexers
                             {
                                 i++;
                                 int beforeLineIndex = lineIndex;
-                                tokens.Add(InterpolatedLiteralStringToken(line[i - i], ref i, lines, ref lineIndex));
+                                tokens.Add(InterpolatedLiteralStringToken(line[i - 1], ref i, lines, ref lineIndex));
                                 if (lineIndex > beforeLineIndex)
                                     break;
                             }
-                            else throw new SystemException($"Unexpected Token @$, line: {lineIndex + 1}");
+                            else
+                            {
+                                throw new SystemException($"Unexpected Token @$, line: {lineIndex + 1}");
+                            }
                         }
                         else if (i + 1 < line.Length && (line[i + 1] == '\'' || line[i + 1] == '\"'))
                         {
@@ -905,6 +935,10 @@ namespace HanabiLang.Lexers
                             tokens.Add(LiteralStringToken(line[i - 1], ref i, lines, ref lineIndex));
                             if (lineIndex > beforeLineIndex)
                                 break;
+                        }
+                        else
+                        {
+                            throw new SystemException($"Unexpected Token @, line: {lineIndex + 1}");
                         }
                     }
 
