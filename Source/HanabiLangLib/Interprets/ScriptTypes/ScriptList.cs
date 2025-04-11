@@ -500,7 +500,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             }); 
 
-            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 long index = ScriptInt.AsCSharp(args[1].TryObject);
@@ -511,7 +511,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 return listValue[(int)ScriptInt.Modulo(index, listValue.Count)];
             });
-            this.AddFunction("set_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int), new FnParameter("value") }, args =>
+            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 long index = ScriptInt.AsCSharp(args[1].TryObject);

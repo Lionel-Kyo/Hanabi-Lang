@@ -1036,6 +1036,8 @@ namespace HanabiLang.Parses
             if (!isOneParam)
             {
                 this.Expect(TokenType.OPEN_ROUND_BRACKET);
+                if (CurrentToken.Type != TokenType.IDENTIFIER && CurrentToken.Type != TokenType.KEYWORD && CurrentToken.Type != TokenType.CLOSE_ROUND_BRACKET)
+                    throw new NotLambdaParseException("Expected identifier, keyword, close round bracket", CurrentToken);
 
                 while (this.HasToken && this.CurrentToken.Type != TokenType.CLOSE_ROUND_BRACKET)
                 {
@@ -1128,11 +1130,12 @@ namespace HanabiLang.Parses
                     throw new ParseException("Expected identifier" , this.CurrentToken);
 
                 string paramName = this.CurrentToken.Raw;
+                this.Expect(TokenType.IDENTIFIER);
+
                 AstNode paramType = null;
                 AstNode paramValue = null;
-                this.currentTokenIndex++;
-                if (this.HasToken && 
-                    this.CurrentToken.Type == TokenType.COLON)
+
+                if (this.HasToken && this.CurrentToken.Type == TokenType.COLON)
                 {
                     this.Expect(TokenType.COLON);
                     paramType = Expression();
@@ -1145,8 +1148,6 @@ namespace HanabiLang.Parses
                     paramValue = Expression();
                 }
                 parameters.Add(new FnDefineParameter(paramName, paramType, paramValue));
-
-                //this.currentTokenIndex++;
             }
 
             AstNode returnType = null;

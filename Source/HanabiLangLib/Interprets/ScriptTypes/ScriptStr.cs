@@ -310,7 +310,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(0);
             });
 
-            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 long index = ScriptInt.AsCSharp(args[1].TryObject);

@@ -112,14 +112,14 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(obj);
             });
 
-            this.AddFunction("get_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("key") }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];
 
                 return AsCSharp(_this)[key];
             });
-            this.AddFunction("set_[]", new List<FnParameter> { new FnParameter("this"), new FnParameter("key"), new FnParameter("value") }, args =>
+            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key"), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 ScriptValue key = args[1];

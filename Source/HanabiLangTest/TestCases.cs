@@ -79,6 +79,28 @@ namespace HanabiLangTest
             return result;
         }
 
+        public static void StringTest()
+        {
+            string sourceCode = @"
+let a = null;
+
+const result1 = $""{(a == null ? ""Hi"" : 1234)}""
+const result2 = @$""{(a == null ? ""Hi"" : 1234)}""
+a = true;
+const result3 = $""{(a == null ? ""Hi"" : 1234)}""
+const result4 = $@""{(a == null ? ""Hi"" : 1234)}""
+const result5 = @""{a == null ? """" : 1234}""
+";
+            var values = Interpret(sourceCode, out _, "result1", "result2", "result3", "result4", "result5");
+            bool? a = null;
+            CheckEquals(values["result1"], new ScriptValue($"{(a == null ? "Hi" : 1234)}"));
+            CheckEquals(values["result2"], new ScriptValue(@$"{(a == null ? "Hi" : 1234)}"));
+            a = true;
+            CheckEquals(values["result3"], new ScriptValue($"{(a == null ? "Hi" : 1234)}"));
+            CheckEquals(values["result4"], new ScriptValue($@"{(a == null ? "Hi" : 1234)}"));
+            CheckEquals(values["result5"], new ScriptValue(@"{a == null ? "" : 1234}"));
+        }
+
         public static void TryCatch1()
         {
             string sourceCode = @"
@@ -156,11 +178,13 @@ const Test = () => {
 	}
 };
 
-var result = Test();
+const result1 = Test();
+const result2 = ((((()=>()=>()=>()=>""Hello, World""))))()()()();
 ";
 
-            var values = Interpret(sourceCode, out var interpreter, "result");
-            CheckEquals(values["result"], new ScriptValue("Has Break"));
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            CheckEquals(values["result1"], new ScriptValue("Has Break"));
+            CheckEquals(values["result2"], new ScriptValue("Hello, World"));
         }
 
         public static void BubbleSortTest()

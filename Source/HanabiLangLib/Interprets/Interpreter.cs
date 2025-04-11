@@ -334,7 +334,7 @@ namespace HanabiLang.Interprets
             if (leftScope.TryGetValue(node.Name, out ScriptVariable variable))
             {
                 var fns = variable.Value?.TryFunction;
-                if (fns != null && !fns.IsLambda && !(fns is ScriptBoundFns))
+                if (fns != null && !(fns is ScriptBoundFns))
                 {
                     if (left.IsObject)
                         return new ValueReference(new ScriptValue(new ScriptBoundFns(fns, left.TryObject, accessLevel)));
@@ -1695,8 +1695,8 @@ namespace HanabiLang.Interprets
 
                 var index = InterpretExpression(interpretScope, realNode.Index);
 
-                obj.ClassType.Scope.Variables.TryGetValue("get_[]", out ScriptVariable get_fn);
-                obj.ClassType.Scope.Variables.TryGetValue("set_[]", out ScriptVariable set_fn);
+                obj.ClassType.Scope.Variables.TryGetValue("__GetIndexer__", out ScriptVariable get_fn);
+                obj.ClassType.Scope.Variables.TryGetValue("__SetIndexer__", out ScriptVariable set_fn);
 
                 if ((get_fn != null && get_fn.Value.IsFunction) || (set_fn != null && set_fn.Value.IsFunction))
                 {
@@ -1718,7 +1718,7 @@ namespace HanabiLang.Interprets
             }
             else if (node is FnDefineNode)
             {
-                // Lambda Function
+                // Lambda Function / get_fn / set_fn
                 var realNode = (FnDefineNode)node;
                 List<FnParameter> fnParameters = new List<FnParameter>();
                 foreach (var param in realNode.Parameters)
@@ -1739,7 +1739,11 @@ namespace HanabiLang.Interprets
                 var scriptFns = new ScriptFns(realNode.Name);
                 scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,
                                 interpretScope, realNode.IsStatic, realNode.Level));
-                return new ValueReference(new ScriptValue(scriptFns));
+
+                if (scriptFns.IsLambda)
+                    return new ValueReference(new ScriptValue(new ScriptBoundFns(scriptFns, null, AccessibilityLevel.Public)));
+                else 
+                    return new ValueReference(new ScriptValue(scriptFns));
             }
             else if (node is TernaryNode)
             {
