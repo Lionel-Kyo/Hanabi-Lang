@@ -70,9 +70,9 @@ namespace HanabiLang.Interprets.ScriptTypes
                         throw new SystemException("Inherit from C# class is not supported");
 
                     if (_class.SuperClass != null)
-                        CopyClassMember(_class.SuperClass, this.SuperClass, AccessibilityLevel.Protected, true);
+                        CopyClassMember(_class.SuperClass, this.SuperClass, AccessibilityLevel.Protected, true, false);
 
-                    CopyClassMember(_class, this.SuperClass, AccessibilityLevel.Protected, true);
+                    CopyClassMember(_class, this.SuperClass, AccessibilityLevel.Protected, true, false);
                 }
                 this.SuperClasses = GetAllSuperClassesFromDefinedSuperClasses(definedSuperClasses).ToList();
             }
@@ -107,18 +107,23 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.Body = new List<object>();
 
             if (this.SuperClass != null)
-                CopyClassMember(this.SuperClass, this, AccessibilityLevel.Protected, false);
+                CopyClassMember(this.SuperClass, this, AccessibilityLevel.Protected, false, true);
         }
 
-        private static void CopyClassMember(ScriptClass from, ScriptClass to, AccessibilityLevel minLevel, bool replaceMember)
+        private static void CopyClassMember(ScriptClass from, ScriptClass to, AccessibilityLevel minLevel, bool replaceMember, bool skipConstructor)
         {
             foreach (var variable in from.Scope.Variables)
             {
                 if (variable.Value.Value.IsFunction)
                 {
                     var fns = variable.Value.Value.TryFunction;
+                    bool isConstructor = variable.Key.Equals(from.ConstructorName);
+
+                    if (isConstructor && skipConstructor)
+                        continue;
+
                     // Change constructor name
-                    string fnName = variable.Key.Equals(from.ConstructorName) ? to.ConstructorName : variable.Key;
+                    string fnName = isConstructor ? to.ConstructorName : variable.Key;
 
                     ScriptFns scriptFns = null;
                     if (to.Scope.Variables.TryGetValue(fnName, out ScriptVariable scriptVar))

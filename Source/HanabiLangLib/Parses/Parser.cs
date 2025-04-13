@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -66,7 +67,7 @@ namespace HanabiLang.Parses
         }
 
         // Expressions
-        private AstNode Factor(bool skipIndexers, bool skipArrowFn)
+        private AstNode Factor(bool skipIndexer, bool skipArrowFn)
         {
             var currentToken = this.tokens[this.currentTokenIndex];
             switch (currentToken.Type)
@@ -137,14 +138,34 @@ namespace HanabiLang.Parses
                         this.Expect(TokenType.OPERATOR);
 
                         // Unary operator
-                        if (currentToken.Raw == "-" || currentToken.Raw == "+" || currentToken.Raw == "!")
+                        if (currentToken.Raw == "-" || currentToken.Raw == "+")
                         {
-                            var expression = this.TermDot(skipIndexers, skipArrowFn);
+                            var expression = this.TermDot(skipIndexer, skipArrowFn);
+                            if (expression is IntNode)
+                            {
+                                if (currentToken.Raw == "-")
+                                    return new IntNode(-((IntNode)expression).Value);
+                                else if (currentToken.Raw == "+")
+                                    return new IntNode(+((IntNode)expression).Value);
+                            }
+                            else if (expression is FloatNode)
+                            {
+                                if (currentToken.Raw == "-")
+                                    return new FloatNode(-((FloatNode)expression).Value);
+                                else if (currentToken.Raw == "+")
+                                    return new FloatNode(+((FloatNode)expression).Value);
+                            }
+                            return new UnaryNode(expression, currentToken.Raw);
+                        }
+
+                        else if (currentToken.Raw == "!")
+                        {
+                            var expression = this.TermDot(skipIndexer, skipArrowFn);
                             return new UnaryNode(expression, currentToken.Raw);
                         }
                         else if (currentToken.Raw == "*")
                         {
-                            var expression = this.TermDot(skipIndexers, skipArrowFn);
+                            var expression = this.TermDot(skipIndexer, skipArrowFn);
                             return new UnaryNode(expression, currentToken.Raw);
                         }
                         else
@@ -177,7 +198,7 @@ namespace HanabiLang.Parses
 
                         var thing = new ListNode(elements);
 
-                        return CheckIndexersAccess(thing);
+                        return CheckIndexerAccess(thing);
                     }
                 case TokenType.OPEN_CURLY_BRACKET:
                     {
@@ -206,34 +227,34 @@ namespace HanabiLang.Parses
                     }
                 case TokenType.KEYWORD:
                     if (currentToken.Raw == "this" || currentToken.Raw == "super")
-                        return this.Identifier(skipIndexers);
+                        return this.Identifier(skipIndexer);
                     else if (currentToken.Raw == "catch")
                         return this.CatchExpression();
                     throw new ParseException($"Unexpected keyword: {currentToken.Raw}", currentToken);
                 default:
                     break;
             }
-            return this.Identifier(skipIndexers);
+            return this.Identifier(skipIndexer);
         }
 
-        private AstNode TermDot(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermDot(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.Factor(skipIndexers, skipArrowFn);
+            var left = this.Factor(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Type == TokenType.DOT || CurrentToken.Type == TokenType.QUESTION_DOT ||
                 CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET ||
-                (!skipIndexers && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))))
+                (!skipIndexer && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))))
             {
                 if (CurrentToken.Type == TokenType.DOT)
                 {
                     this.Expect(TokenType.DOT);
-                    left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), ".");
+                    left = new ExpressionNode(left, this.Factor(skipIndexer, skipArrowFn), ".");
                 }
                 else if (CurrentToken.Type == TokenType.QUESTION_DOT)
                 {
                     this.Expect(TokenType.QUESTION_DOT);
-                    left = new ExpressionNode(left, this.Factor(skipIndexers, skipArrowFn), "?.");
+                    left = new ExpressionNode(left, this.Factor(skipIndexer, skipArrowFn), "?.");
                 }
                 // Function call
                 else if (CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET)
@@ -241,63 +262,63 @@ namespace HanabiLang.Parses
                     left = FunctionCall(left);
                 }
                 // Indexer
-                else if (!skipIndexers && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
+                else if (!skipIndexer && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
                 {
-                    left = this.CheckIndexersAccess(left);
+                    left = this.CheckIndexerAccess(left);
                 }
             }
 
             return left;
         }
 
-        private AstNode TermArithmetic1(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermArithmetic1(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermDot(skipIndexers, skipArrowFn);
+            var left = this.TermDot(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == "*" || CurrentToken.Raw == "/" || CurrentToken.Raw == "%"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermDot(skipIndexers, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermDot(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
         }
 
-        private AstNode TermArithmetic2(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermArithmetic2(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermArithmetic1(skipIndexers, skipArrowFn);
+            var left = this.TermArithmetic1(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == "+" || CurrentToken.Raw == "-"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermArithmetic1(skipIndexers, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermArithmetic1(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
         }
 
-        private AstNode TermComparative(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermComparative(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermArithmetic2(skipIndexers, skipArrowFn);
+            var left = this.TermArithmetic2(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == ">=" || CurrentToken.Raw == "<=" || CurrentToken.Raw == ">" || CurrentToken.Raw == "<"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermArithmetic2(skipIndexers, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermArithmetic2(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
         }
 
-        private AstNode TermEqual(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermEqual(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermComparative(skipIndexers, skipArrowFn);
+            var left = this.TermComparative(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == "==" || CurrentToken.Raw == "!="))
@@ -306,49 +327,49 @@ namespace HanabiLang.Parses
                 {
                     var currentToken = CurrentToken;
                     this.Expect(TokenType.OPERATOR);
-                    left = new ExpressionNode(left, this.TermComparative(skipIndexers, skipArrowFn), currentToken.Raw);
+                    left = new ExpressionNode(left, this.TermComparative(skipIndexer, skipArrowFn), currentToken.Raw);
                 }
             }
 
             return left;
         }
 
-        private AstNode TermAnd(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermAnd(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermEqual(skipIndexers, skipArrowFn);
+            var left = this.TermEqual(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == "&&"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermEqual(skipIndexers, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermEqual(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
         }
 
-        private AstNode TermOr(bool skipIndexers, bool skipArrowFn)
+        private AstNode TermOr(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermAnd(skipIndexers, skipArrowFn);
+            var left = this.TermAnd(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == "||"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermAnd(skipIndexers, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermAnd(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
         }
 
-        private AstNode Expression(bool skipIndexers = false, bool skipEquals = false, bool skipArrowFn = false)
+        private AstNode Expression(bool skipIndexer = false, bool skipEquals = false, bool skipArrowFn = false)
         {
             if (!HasToken)
                 throw new ParseFormatNotCompleteException("Format is not complete", this.tokens[this.currentTokenIndex - 1]);
 
-            var left = this.TermOr(skipIndexers, skipArrowFn);
+            var left = this.TermOr(skipIndexer, skipArrowFn);
 
             if (!HasToken)
                 return left;
@@ -838,7 +859,7 @@ namespace HanabiLang.Parses
 
             this.Expect(TokenType.KEYWORD);
 
-            var iterator = this.Expression();
+            var iterable = this.Expression();
 
             if (hasBracket)
                 Expect(true, TokenType.CLOSE_ROUND_BRACKET);
@@ -870,7 +891,7 @@ namespace HanabiLang.Parses
                 this.parseScopes.Pop();
             }
 
-            return new ForNode(initializer, iterator, thenStatements);
+            return new ForNode(initializer, iterable, thenStatements);
         }
         private AstNode ReturnStatement()
         {
@@ -1448,7 +1469,7 @@ namespace HanabiLang.Parses
             {
                 if (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET)
                 {
-                    result = CheckIndexersAccess(result);
+                    result = CheckIndexerAccess(result);
                 }
                 else if (CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {
@@ -1458,7 +1479,7 @@ namespace HanabiLang.Parses
 
             return result;
         }
-        private AstNode Identifier(bool skipIndexers)
+        private AstNode Identifier(bool skipIndexer)
         {
             var currentToken = Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
             AstNode result = new VariableReferenceNode(currentToken.Raw);
@@ -1466,24 +1487,99 @@ namespace HanabiLang.Parses
             return result;
         }
 
-        private AstNode CheckIndexersAccess(AstNode child)
+        private AstNode CheckIndexerAccess(AstNode child)
         {
             if (!HasToken)
                 return child;
 
-            var token = this.CurrentToken;
+            var startToken = this.CurrentToken;
 
-            if (!(token.Type == TokenType.OPEN_SQURE_BRACKET || token.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
+            if (!(startToken.Type == TokenType.OPEN_SQURE_BRACKET || startToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))
                 return child;
 
             this.Expect(TokenType.OPEN_SQURE_BRACKET, TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
-            var expression = this.Expression();
-            expression.Line = token.Line;
+            List<List<AstNode>> slicer = new List<List<AstNode>>();
+            List<AstNode> indexer = new List<AstNode>();
 
-            this.Expect(TokenType.CLOSE_SQURE_BRACKET);
+            while (true)
+            {
+                bool isIndexer = false;
+                AstNode startNode = null;
+                AstNode endNode = null;
+                AstNode stepNode = null;
+                if (this.HasToken && this.CurrentToken.Type == TokenType.COLON)
+                {
+                    startNode = new NullNode();
+                    startNode.Line = startToken.Line;
+                }
+                else
+                {
+                    startNode = this.Expression();
+                    startNode.Line = startToken.Line;
+                }
 
-            AstNode result = new IndexersNode(child, expression, token.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
+                if (this.HasToken && this.CurrentToken.Type != TokenType.COLON)
+                {
+                    if (slicer.Count > 0)
+                        throw new ParseException("Cannot mix slicer with indexer", startToken);
+                    indexer.Add(startNode);
+                    isIndexer = true;
+                }
+
+                if (!isIndexer)
+                {
+                    if (indexer.Count > 0)
+                        throw new ParseException("Cannot mix indexer with slicer", startToken);
+
+                    this.Expect(TokenType.COLON);
+                    if (this.HasToken && this.CurrentToken.Type == TokenType.COLON)
+                    {
+                        endNode = new NullNode();
+                        endNode.Line = startToken.Line;
+                    }
+                    else if (this.HasToken && (this.CurrentToken.Type == TokenType.COMMA || this.CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET))
+                    {
+                        endNode = new NullNode();
+                        endNode.Line = startToken.Line;
+                    }
+                    else
+                    {
+                        endNode = this.Expression();
+                        endNode.Line = startToken.Line;
+                    }
+
+                    if (this.HasToken && (this.CurrentToken.Type == TokenType.COMMA || this.CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET))
+                    {
+                        stepNode = new NullNode();
+                        stepNode.Line = startToken.Line;
+                    }
+                    else
+                    {
+                        this.Expect(TokenType.COLON);
+                        if (this.HasToken && (this.CurrentToken.Type == TokenType.COMMA || this.CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET))
+                        {
+                            stepNode = new NullNode();
+                            stepNode.Line = startToken.Line;
+                        }
+                        else
+                        {
+                            stepNode = this.Expression();
+                            stepNode.Line = startToken.Line;
+                        }
+                    }
+                    slicer.Add(new List<AstNode>() { startNode, endNode, stepNode });
+                }
+                Token lastToken = this.Expect(TokenType.COMMA, TokenType.CLOSE_SQURE_BRACKET);
+                if (lastToken.Type == TokenType.CLOSE_SQURE_BRACKET)
+                    break;
+            }
+
+            AstNode result;
+            if (indexer.Count > 0)
+                result = new IndexerNode(child, indexer, startToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
+            else
+                result = new SlicerNode(child, slicer, startToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
             while (HasToken &&
                 (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET ||
@@ -1493,7 +1589,7 @@ namespace HanabiLang.Parses
             {
                 if (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET)
                 {
-                    result = CheckIndexersAccess(result);
+                    result = CheckIndexerAccess(result);
                 }
                 else if (CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET)
                 {

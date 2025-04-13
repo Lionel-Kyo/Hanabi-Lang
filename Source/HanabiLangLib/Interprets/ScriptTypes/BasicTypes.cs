@@ -15,7 +15,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptObject NullValue = Null.Create();
         public static readonly ScriptTypeClass TypeClass = new ScriptTypeClass();
         public static readonly SciptFunctionClass FunctionClass = new SciptFunctionClass();
-        public static readonly ScriptIterator Iterator = new ScriptIterator();
+        public static readonly ScriptIterable Iterable = new ScriptIterable();
         public static readonly ScriptUnzipable Unzipable = new ScriptUnzipable();
         public static readonly ScriptInt Int = new ScriptInt();
         public static readonly ScriptFloat Float = new ScriptFloat();

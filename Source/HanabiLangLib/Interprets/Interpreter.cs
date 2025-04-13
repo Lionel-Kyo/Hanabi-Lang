@@ -47,7 +47,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Variables.Add("range", new ScriptVariable(BasicTypes.Range.Name, BasicTypes.Range));
                 this.CurrentScope.Variables.Add("List", new ScriptVariable(BasicTypes.List.Name, BasicTypes.List));
                 this.CurrentScope.Variables.Add("Dict", new ScriptVariable(BasicTypes.Dict.Name, BasicTypes.Dict));
-                this.CurrentScope.Variables.Add("Iterator", new ScriptVariable(BasicTypes.Iterator.Name, BasicTypes.Iterator));
+                this.CurrentScope.Variables.Add("Iterable", new ScriptVariable(BasicTypes.Iterable.Name, BasicTypes.Iterable));
                 this.CurrentScope.Variables.Add("Exception", new ScriptVariable(BasicTypes.Exception.Name, BasicTypes.Exception));
                 this.CurrentScope.Variables.Add("FnEvent", new ScriptVariable(BasicTypes.FnEvent.Name, BasicTypes.FnEvent));
                 this.CurrentScope.Variables.Add("Json", new ScriptVariable(BasicTypes.Json.Name, BasicTypes.Json));
@@ -411,7 +411,7 @@ namespace HanabiLang.Interprets
                     var _value = catchedExpresion.Item1 ?? new ScriptValue();
                     if (isMultiDefine)
                     {
-                        if (ScriptIterator.TryGetIterator(_value.TryObject, out var _setValues))
+                        if (ScriptIterable.TryGetIterable(_value.TryObject, out var _setValues))
                         {
                             if (_setValues is List<ScriptValue>)
                                 setValues = (List<ScriptValue>)_setValues;
@@ -434,7 +434,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            var ex = new SystemException($"{_value} is not a iterator");
+                            var ex = new SystemException($"{_value} is not iterable");
                             var variable = new ScriptVariable(node.Names[node.Names.Count - 1], null, new ScriptValue(BasicTypes.Exception.Create(ex)), node.IsConstant, node.IsStatic, node.Level);
                             scope.Variables[node.Names[node.Names.Count - 1]] = variable;
                             setValues = Enumerable.Range(0, node.Names.Count - 1).Select(i => new ScriptValue()).ToList();
@@ -465,8 +465,8 @@ namespace HanabiLang.Interprets
 
             if (isMultiDefine && setValue != null && setValues == null)
             {
-                if (!ScriptIterator.TryGetIterator(setValue.TryObject, out var _setValues))
-                    throw new SystemException($"{setValue} is not a iterator");
+                if (!ScriptIterable.TryGetIterable(setValue.TryObject, out var _setValues))
+                    throw new SystemException($"{setValue} is not iterable");
 
                 if (_setValues is List<ScriptValue>)
                     setValues = (List<ScriptValue>)_setValues;
@@ -588,7 +588,7 @@ namespace HanabiLang.Interprets
                     var _value = catchedExpresion.Item1 ?? new ScriptValue();
                     if (isMultiAssign)
                     {
-                        if (ScriptIterator.TryGetIterator(_value.TryObject, out var _assignValues))
+                        if (ScriptIterable.TryGetIterable(_value.TryObject, out var _assignValues))
                         {
                             if (_assignValues is List<ScriptValue>)
                                 assignValues = (List<ScriptValue>)_assignValues;
@@ -627,7 +627,7 @@ namespace HanabiLang.Interprets
                         }
                         else
                         {
-                            var ex = new SystemException($"{_value} is not a iterator");
+                            var ex = new SystemException($"{_value} is not iterable");
                             ValueReference toAssign = InterpretExpression(scope, node.References[node.References.Count - 1]);
                             toAssign.Ref = new ScriptValue(BasicTypes.Exception.Create(ex));
                             assignValues = Enumerable.Range(0, node.References.Count - 1).Select(i => new ScriptValue()).ToList();
@@ -692,8 +692,8 @@ namespace HanabiLang.Interprets
 
             if (isMultiAssign && assignValues == null)
             {
-                if (!ScriptIterator.TryGetIterator(assignValue.TryObject, out var _assignValues))
-                    throw new SystemException($"{assignValue} is not a iterator");
+                if (!ScriptIterable.TryGetIterable(assignValue.TryObject, out var _assignValues))
+                    throw new SystemException($"{assignValue} is not iterable");
 
                 if (_assignValues is List<ScriptValue>)
                     assignValues = (List<ScriptValue>)_assignValues;
@@ -763,16 +763,17 @@ namespace HanabiLang.Interprets
         {
             if (IsExpressionNode(node))
             {
-                var result = InterpretExpression(interpretScope, node);
+                var resultRef = InterpretExpression(interpretScope, node);
                 if (isPrintExpression)
                 {
+                    var result = resultRef.Ref;
                     string _temp;
-                    if (result.Ref.IsClassTypeOf(BasicTypes.Str))
-                        Console.WriteLine(ScriptJson.StringToJsonString(result.Ref.ToString(), false));
+                    if (result.IsClassTypeOf(BasicTypes.Str))
+                        Console.WriteLine(ScriptJson.StringToJsonString(result.ToString(), false));
                     else
-                        Console.WriteLine((_temp = ScriptJson.StringToJsonString(result.Ref.ToString(), false)).Substring(1, _temp.Length - 2));
+                        Console.WriteLine((_temp = ScriptJson.StringToJsonString(result.ToString(), false)).Substring(1, _temp.Length - 2));
                 }
-                return result;
+                return resultRef;
             }
             else if (IsStatementNode(node))
             {
@@ -1156,15 +1157,10 @@ namespace HanabiLang.Interprets
             else if (node is ForNode)
             {
                 var realNode = (ForNode)node;
-                var location = InterpretExpression(interpretScope, realNode.Iterator).Ref;
+                var location = InterpretExpression(interpretScope, realNode.Iterable).Ref;
 
-                if (!location.IsObject)
-                    throw new SystemException("For loop running failed, variable is not enumerable");
-
-                ScriptObject scriptObject = (ScriptObject)location.Value;
-
-                if (!ScriptIterator.TryGetIterator(scriptObject, out var iter))
-                    throw new SystemException("For loop running failed, variable is not enumerable");
+                if (!ScriptIterable.TryGetIterable(location.TryObject, out var iter))
+                    throw new SystemException("For loop running failed, variable is not iterable");
 
                 var hasBreak = false;
 
@@ -1179,8 +1175,8 @@ namespace HanabiLang.Interprets
                     }
                     else
                     {
-                        if (!ScriptIterator.TryGetIterator(item.TryObject, out var _initializerValues))
-                            new SystemException($"{item} is not a iterator");
+                        if (!ScriptIterable.TryGetIterable(item.TryObject, out var _initializerValues))
+                            new SystemException($"{item} is not iterable");
 
                         List<ScriptValue> initializerValues;
                         if (_initializerValues is List<ScriptValue>)
@@ -1680,9 +1676,9 @@ namespace HanabiLang.Interprets
 
                 return new ValueReference(new ScriptValue(keyValues));
             }
-            else if (node is IndexersNode)
+            else if (node is IndexerNode)
             {
-                var realNode = (IndexersNode)node;
+                var realNode = (IndexerNode)node;
 
                 var left = InterpretExpression(interpretScope, realNode.Object);
 
@@ -1693,14 +1689,58 @@ namespace HanabiLang.Interprets
                 if (obj == null)
                     throw new SystemException("Indexer can only apply in object");
 
-                var index = InterpretExpression(interpretScope, realNode.Index);
-
-                obj.ClassType.Scope.Variables.TryGetValue("__GetIndexer__", out ScriptVariable get_fn);
-                obj.ClassType.Scope.Variables.TryGetValue("__SetIndexer__", out ScriptVariable set_fn);
-
-                if ((get_fn != null && get_fn.Value.IsFunction) || (set_fn != null && set_fn.Value.IsFunction))
+                List<ScriptValue> indexes = new List<ScriptValue>();
+                foreach (var index in realNode.Indexes)
                 {
-                    return new ValueReference(() => get_fn.Value.TryFunction.Call(obj, index.Ref), x => set_fn.Value.TryFunction.Call(obj, index.Ref, x));
+                    indexes.Add(InterpretExpression(interpretScope, index).Ref);
+                }
+                ScriptValue indexer = new ScriptValue(indexes);
+
+                obj.ClassType.Scope.Variables.TryGetValue("__GetIndexer__", out ScriptVariable getFn);
+                obj.ClassType.Scope.Variables.TryGetValue("__SetIndexer__", out ScriptVariable setFn);
+
+                if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
+                {
+                    return new ValueReference(() => getFn.Value.TryFunction.Call(obj, indexer), x => setFn.Value.TryFunction.Call(obj, indexer, x));
+                }
+                else
+                {
+                    throw new SystemException("The variable cannot use indexer");
+                }
+            }
+            else if (node is SlicerNode)
+            {
+                var realNode = (SlicerNode)node;
+
+                var left = InterpretExpression(interpretScope, realNode.Object);
+
+                if (realNode.IsNullConditional && left.Ref.IsNull)
+                    return new ValueReference(new ScriptValue());
+
+                ScriptObject obj = left.Ref.TryObject;
+                if (obj == null)
+                    throw new SystemException("Slicer can only apply in object");
+
+                List<ScriptValue> _slices = new List<ScriptValue>();
+                foreach (var slice in realNode.Slices)
+                {
+                    List<ScriptValue> sliceItem = new List<ScriptValue>();
+                    foreach (var slicerValue in slice)
+                    {
+                        sliceItem.Add(InterpretExpression(interpretScope, slicerValue).Ref);
+                        if (!sliceItem[sliceItem.Count - 1].IsNull && sliceItem[sliceItem.Count - 1].TryObject?.ClassType != BasicTypes.Int)
+                            throw new SystemException("Slicer item can only be null or int");
+                    }
+                    _slices.Add(new ScriptValue(sliceItem));
+                }
+                ScriptValue slicer = new ScriptValue(_slices);
+
+                obj.ClassType.Scope.Variables.TryGetValue("__GetSlicer__", out ScriptVariable getFn);
+                obj.ClassType.Scope.Variables.TryGetValue("__SetSlicer__", out ScriptVariable setFn);
+
+                if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
+                {
+                    return new ValueReference(() => getFn.Value.TryFunction.Call(obj, slicer), x => setFn.Value.TryFunction.Call(obj, slicer, x));
                 }
                 else
                 {

@@ -554,14 +554,14 @@ var result1 = a.GetValue(""Test"");
         }
 
 
-        public static void IteratorTest()
+        public static void IterableTest()
         {
             string sourceCode = @"
-class Test: Iterator {
+class Test: Iterable {
     private let values = null;
     public let Iter => TestIterator.Create(this.values);
 
-    public fn Test(this, values: Iterator) {
+    public fn Test(this, values: Iterable) {
         this.values = values;
     }
 
@@ -591,7 +591,7 @@ class Test: Iterator {
 
         public static fn Create(values) {
             let result = TestIterator(values);
-            return Iterator(result.GetCurrent, result.MoveNext, result.Reset);
+            return Iterable.Iterator(result.GetCurrent, result.MoveNext, result.Reset);
         }
     }
 }

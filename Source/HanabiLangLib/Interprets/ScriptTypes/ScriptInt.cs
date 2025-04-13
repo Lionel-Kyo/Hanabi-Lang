@@ -254,6 +254,67 @@ namespace HanabiLang.Interprets.ScriptTypes
             return (string)this.ToStr(_this).BuildInObject;
         }
 
+        public static ulong ValidateToUInt64(long i)
+        {
+            if (i < 0)
+                throw new ArgumentOutOfRangeException($"{i} < 0");
+            return (ulong)i;
+        }
+
+        public static int ValidateToInt32(long i)
+        {
+            if (i < int.MinValue)
+                throw new ArgumentOutOfRangeException($"{i} < {int.MinValue}");
+            else if (i > int.MaxValue)
+                throw new ArgumentOutOfRangeException($"{i} > {int.MaxValue}");
+            return (int)i;
+        }
+
+        public static uint ValidateToUInt32(long i)
+        {
+            if (i < uint.MinValue)
+                throw new ArgumentOutOfRangeException($"{i} < {uint.MinValue}");
+            else if (i > uint.MaxValue)
+                throw new ArgumentOutOfRangeException($"{i} > {uint.MaxValue}");
+            return (uint)i;
+        }
+
+        public static short ValidateToInt16(long i)
+        {
+            if (i < short.MinValue)
+                throw new ArgumentOutOfRangeException($"{i} < {short.MinValue}");
+            else if (i > short.MaxValue)
+                throw new ArgumentOutOfRangeException($"{i} > {short.MaxValue}");
+            return (short)i;
+        }
+
+        public static ushort ValidateToUInt16(long i)
+        {
+            if (i < ushort.MinValue)
+                throw new ArgumentOutOfRangeException($"{i} < {ushort.MinValue}");
+            else if (i > ushort.MaxValue)
+                throw new ArgumentOutOfRangeException($"{i} > {ushort.MaxValue}");
+            return (ushort)i;
+        }
+
+        public static byte ValidateToInt8(long i)
+        {
+            if (i < byte.MinValue)
+                throw new ArgumentOutOfRangeException($"{i} < {byte.MinValue}");
+            else if (i > byte.MaxValue)
+                throw new ArgumentOutOfRangeException($"{i} > {byte.MaxValue}");
+            return (byte)i;
+        }
+
+        public static sbyte ValidateToUInt8(long i)
+        {
+            if (i < sbyte.MinValue)
+                throw new ArgumentOutOfRangeException($"{i} < {sbyte.MinValue}");
+            else if (i > sbyte.MaxValue)
+                throw new ArgumentOutOfRangeException($"{i} > {sbyte.MaxValue}");
+            return (sbyte)i;
+        }
+
         public static long AsCSharp(ScriptObject _this)
         {
             return (long)_this.BuildInObject;

@@ -378,7 +378,7 @@ namespace HanabiLang.Interprets
             var obj = a.TryObject;
             if (obj != null)
             {
-                if (!ScriptIterator.TryGetIterator(obj, out var iter))
+                if (!ScriptIterable.TryGetIterable(obj, out var iter))
                     throw new SystemException($"Cannot unzip {((ScriptObject)a.value).ClassType.Name}");
 
                 return new ScriptValue(BasicTypes.Unzipable.Create(iter));

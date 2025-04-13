@@ -9,7 +9,7 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptUnzipable : ScriptClass
     {
         public ScriptUnzipable() :
-            base("Unzipable", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
+            base("Unzipable", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
@@ -20,7 +20,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 ScriptObject value = args[1].TryObject;
 
-                if (!ScriptIterator.TryGetIterator(value, out var iter))
+                if (!ScriptIterable.TryGetIterable(value, out var iter))
                     throw new SystemException("Create List failed, variable is not enumerable");
 
                 _this.BuildInObject = iter;
@@ -30,7 +30,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             AddVariable("Iter", args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                return new ScriptValue(BasicTypes.Iterator.Create(AsCSharp(_this)));
+                return new ScriptValue(BasicTypes.Iterable.Create(AsCSharp(_this)));
             }, null, false, null);
         }
 

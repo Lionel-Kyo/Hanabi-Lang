@@ -21,7 +21,12 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
 
-                ScriptObject value = (ScriptObject)args[1].Value;
+                ScriptObject value = args[1].TryObject;
+                if (value == null)
+                {
+                    throw new ArgumentException("Non-object cannot convert to bool");
+                }
+
                 if (value.ClassType is ScriptInt)
                 {
                     _this.BuildInObject = Convert.ToBoolean(ScriptInt.AsCSharp(value));
@@ -37,6 +42,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 else if (value.ClassType is ScriptStr)
                 {
                     _this.BuildInObject = Convert.ToBoolean(ScriptStr.AsCSharp(value));
+                }
+                else
+                {
+                    throw new ArgumentException($"{value.ClassType.Name} cannot convert to bool");
                 }
 
                 return ScriptValue.Null;

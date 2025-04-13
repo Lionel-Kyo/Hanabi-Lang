@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace HanabiLang.Parses.Nodes
 {
-    class IndexersNode : AstNode, IExpressionNode
+    class SlicerNode : AstNode, IExpressionNode
     {
         public AstNode Object { get; private set; }
-        public AstNode Index { get; private set; }
+        public List<List<AstNode>> Slices { get; private set; }
         public bool IsNullConditional { get; private set; }
 
-        public IndexersNode(AstNode obj, AstNode index, bool isNullConditional)
+        public SlicerNode(AstNode obj, List<List<AstNode>> slices, bool isNullConditional)
         {
             this.Object = obj;
-            this.Index = index;
+            this.Slices = slices;
             this.IsNullConditional = isNullConditional;
         }
 
@@ -26,9 +26,8 @@ namespace HanabiLang.Parses.Nodes
             result.Append('(');
             result.Append(Object.ToString());
             result.Append(this.IsNullConditional ? " ? ": " ");
-            result.Append(Index.ToString());
+            result.Append(string.Join(", ", Slices.Select(i => "[" + string.Join(":", i) + "]")));
             result.Append(')');
-            //result.Append("  ");
             return result.ToString();
         }
     }

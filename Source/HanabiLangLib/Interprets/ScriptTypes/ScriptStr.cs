@@ -6,13 +6,14 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using static HanabiLang.Interprets.ScriptTypes.ScriptRange;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
     public class ScriptStr : ScriptClass
     {
         public ScriptStr() :
-            base("str", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
+            base("str", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
             this.AddFunction(ConstructorName, new List<FnParameter>() 
             {
@@ -32,7 +33,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             AddVariable("Iter", args =>
             {
                 string text = AsCSharp(args[0].TryObject);
-                var result = BasicTypes.Iterator.Create(text.Select(c => new ScriptValue(c)));
+                var result = BasicTypes.Iterable.Create(text.Select(c => new ScriptValue(c)));
                 return new ScriptValue(result);
             }, null, false, null);
 
@@ -287,11 +288,11 @@ namespace HanabiLang.Interprets.ScriptTypes
             this.AddFunction("Join", new List<FnParameter>()
             {
                 new FnParameter("this", BasicTypes.Str, null, false),
-                new FnParameter("values", BasicTypes.Iterator, null, false),
+                new FnParameter("values", BasicTypes.Iterable, null, false),
             }, args =>
             {
                 string seperator = AsCSharp(args[0].TryObject);
-                ScriptIterator.TryGetIterator(args[1].TryObject, out var values);
+                ScriptIterable.TryGetIterable(args[1].TryObject, out var values);
                 return new ScriptValue(string.Join(seperator, values));
             }, false);
 
@@ -310,16 +311,40 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(0);
             });
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.Int) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                long index = ScriptInt.AsCSharp(args[1].TryObject);
                 string value = AsCSharp(_this);
+
+                List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);
+                if (indexes.Count > 1)
+                    throw new ArgumentException("Only 1 indexer is allowed for str");
+
+                var indexObj = indexes[0].TryObject;
+                if (indexObj?.ClassType != BasicTypes.Int)
+                    throw new ArgumentException("Only int is allowed for str indexer");
+                long index = ScriptInt.AsCSharp(indexObj);
 
                 if ((index >= value.Length) || index < 0 && index < (value.Length * -1))
                     throw new IndexOutOfRangeException();
 
                 return new ScriptValue(value[(int)ScriptInt.Modulo(index, value.Length)]);
+            });
+
+            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                List<ScriptValue> slicer = ScriptList.AsCSharp(args[1].TryObject);
+
+                if (slicer.Count > 1)
+                    throw new ArgumentException("Only 1 slicer is allowed for str");
+
+                List<ScriptValue> slicerValues = ScriptList.AsCSharp(slicer[0].TryObject);
+
+                long? start = slicerValues[0].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[0].TryObject);
+                long? end = slicerValues[1].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[1].TryObject);
+                long? step = slicerValues[2].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[2].TryObject);
+                return new ScriptValue(Slice((string)AsCSharp(_this), start, end, step));
             });
         }
 
@@ -349,13 +374,42 @@ namespace HanabiLang.Interprets.ScriptTypes
             return base.Multiply(_this, value);
         }
 
-        //private static IEnumerable<ScriptValue> StrIterator(string value)
-        //{
-        //    foreach (char c in value)
-        //    {
-        //        yield return new ScriptValue(c);
-        //    }
-        //}
+        public static string Slice(string str, long? start = null, long? end = null, long? step = null)
+        {
+            if (str == null)
+                throw new ArgumentNullException("str");
+
+            int length = str.Length;
+
+            Range adjusted = Range.CreateAdjusted(length, start, end, step);
+            int i32Start = ScriptInt.ValidateToInt32(adjusted.Start);
+            int i32End = ScriptInt.ValidateToInt32(adjusted.End);
+            int i32Step = ScriptInt.ValidateToInt32(adjusted.Step);
+
+            if (i32Step == 1)
+            {
+                if (i32Start > i32End)
+                    return "";
+                return str.Substring(i32Start, i32End - i32Start);
+            }
+
+            StringBuilder result = new StringBuilder();
+            if (i32Step > 0)
+            {
+                for (int i = i32Start; i < i32End; i += i32Step)
+                {
+                    result.Append(str[i]);
+                }
+            }
+            else
+            {
+                for (int i = i32Start; i > i32End; i += i32Step)
+                {
+                    result.Append(str[i]);
+                }
+            }
+            return result.ToString();
+        }
 
         public override ScriptObject ToStr(ScriptObject _this) => _this;
 

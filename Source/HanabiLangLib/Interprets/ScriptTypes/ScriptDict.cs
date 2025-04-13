@@ -13,8 +13,18 @@ namespace HanabiLang.Interprets.ScriptTypes
     public class ScriptDict : ScriptClass
     {
         public ScriptDict() :
-            base("Dict", new List<ScriptClass> { BasicTypes.Iterator }, isStatic: false)
+            base("Dict", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
+            this.AddFunction(ConstructorName, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                _this.BuildInObject = new Dictionary<ScriptValue, ScriptValue>();
+                return ScriptValue.Null;
+            });
+
             AddVariable("Length", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
@@ -24,7 +34,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             AddVariable("Iter", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                var result = BasicTypes.Iterator.Create(AsCSharp(_this).Select(kv => new ScriptValue(BasicTypes.KeyValuePair.Create(kv))));
+                var result = BasicTypes.Iterable.Create(AsCSharp(_this).Select(kv => new ScriptValue(BasicTypes.KeyValuePair.Create(kv))));
                 return new ScriptValue(result);
             }, null, false, null);
 
@@ -112,20 +122,36 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(obj);
             });
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key") }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                ScriptValue key = args[1];
+                List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);
+                if (indexes.Count > 1)
+                    throw new ArgumentException("Only 1 indexer is allowed for Dict");
+                ScriptValue key = indexes[0];
 
                 return AsCSharp(_this)[key];
             });
-            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key"), new FnParameter("value") }, args =>
+            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key", BasicTypes.List), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                ScriptValue key = args[1];
+                List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);
+                if (indexes.Count > 1)
+                    throw new ArgumentException("Only 1 indexer is allowed for Dict");
+                ScriptValue key = indexes[0];
 
                 AsCSharp(_this)[key] = args[2];
                 return ScriptValue.Null;
+            });
+
+            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
+            {
+                throw new SystemException("Dict cannot get slicer");
+            });
+
+            this.AddFunction("__SetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List), new FnParameter("value") }, args =>
+            {
+                throw new SystemException("Dict cannot set slicer");
             });
         }
 
@@ -156,14 +182,6 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
             return ScriptBool.False;
         }
-
-        //private static IEnumerable<ScriptValue> DictIterator(Dictionary<ScriptValue, ScriptValue> value)
-        //{
-        //    foreach (var c in value)
-        //    {
-        //        yield return new ScriptValue(BasicTypes.KeyValuePair.Create(c));
-        //    }
-        //}
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
