@@ -962,15 +962,15 @@ namespace HanabiLang.Interprets
                 var scope = new ScriptScope(null, interpretScope);
 
                 var compareResult = InterpretExpression(scope, realNode.Condition).Ref;
-
-                if (!(compareResult.Value is ScriptObject))
+                var compareResultObj = compareResult.TryObject;
+                if (compareResultObj == null)
                     throw new SystemException($"Cannot compare {compareResult}");
 
-                if (!(((ScriptObject)compareResult.Value).ClassType is ScriptBool))
+                if (!(compareResultObj.ClassType is ScriptBool))
                     throw new SystemException($"Cannot compare {compareResult}");
 
-                List<AstNode> currentBranch = null;
-                if ((bool)((ScriptObject)compareResult.Value).BuildInObject)
+                List<AstNode> currentBranch;
+                if (ScriptBool.AsCSharp(compareResultObj)) 
                     currentBranch = realNode.ThenBranch;
                 else
                     currentBranch = realNode.ElseBranch;
@@ -1003,9 +1003,13 @@ namespace HanabiLang.Interprets
                         if (!statementResult.IsEmpty)
                             return statementResult;
                     }
-                    else
+                    else if (IsExpressionNode(item))
                     {
                         InterpretChild(scope, item, false);
+                    }
+                    else
+                    {
+                        throw new SystemException($"Unexpected if body");
                     }
                 }
 
@@ -1176,7 +1180,7 @@ namespace HanabiLang.Interprets
                     else
                     {
                         if (!ScriptIterable.TryGetIterable(item.TryObject, out var _initializerValues))
-                            new SystemException($"{item} is not iterable");
+                            throw new SystemException($"{item} is not iterable");
 
                         List<ScriptValue> initializerValues;
                         if (_initializerValues is List<ScriptValue>)
@@ -1235,9 +1239,13 @@ namespace HanabiLang.Interprets
                                 return statementResult;
                             }
                         }
+                        else if (IsExpressionNode(bodyNode))
+                        {
+                            InterpretExpression(scope, bodyNode);
+                        }
                         else
                         {
-                            InterpretChild(scope, bodyNode, false);
+                            throw new SystemException($"Unexpected for loop body");
                         }
                     }
 
@@ -1556,8 +1564,8 @@ namespace HanabiLang.Interprets
                 {
                     // Short-Circuit Evaluation
                     // Left operand is false, the entire expression will always be false.
-                    if (left.IsObject && ((ScriptObject)left.Value).ClassType is ScriptBool &&
-                        !(bool)((ScriptObject)left.Value).BuildInObject)
+                    ScriptObject leftObj = left.TryObject;
+                    if (leftObj != null && leftObj.ClassType is ScriptBool && !ScriptBool.AsCSharp(leftObj))
                         return new ValueReference(new ScriptValue(false));
                     right = InterpretExpression(interpretScope, realNode.Right).Ref;
                     return new ValueReference(ScriptValue.And(left, right));
@@ -1566,8 +1574,8 @@ namespace HanabiLang.Interprets
                 {
                     // Short-Circuit Evaluation
                     // Left operand is true, the entire expression will always be true.
-                    if (left.IsObject && ((ScriptObject)left.Value).ClassType is ScriptBool &&
-                        (bool)((ScriptObject)left.Value).BuildInObject)
+                    ScriptObject leftObj = left.TryObject;
+                    if (leftObj != null && leftObj.ClassType is ScriptBool && ScriptBool.AsCSharp(leftObj))
                         return new ValueReference(new ScriptValue(true));
                     right = InterpretExpression(interpretScope, realNode.Right).Ref;
                     return new ValueReference(ScriptValue.Or(left, right));

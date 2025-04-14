@@ -104,9 +104,9 @@ const result5 = @""{a == null ? """" : 1234}""
         public static void TryCatch1()
         {
             string sourceCode = @"
-var value1 = null;
-var value2 = null;
-var value3 = null;
+let value1 = null;
+let value2 = null;
+let value3 = null;
 const list: List = [1, 2, 3];
             
 try {
@@ -139,8 +139,8 @@ class MyException2 : Exception {
     }
 }
 
-var ex1 = null;
-var ex2 = null;
+let ex1 = null;
+let ex2 = null;
 
 try {
     throw MyException2();
@@ -161,8 +161,8 @@ try {
             string sourceCode = @"
 const Test = () => {
 	const lists = [""good"", 3.14, """", 123, ""string"", 0.002, ""testing""]
-	var count = 0
-	var hasBreak = false
+	let count = 0
+	let hasBreak = false
 	for item in lists {
 		count = count + 1
 		if item == ""testing"" {
@@ -193,12 +193,10 @@ const result2 = ((((()=>()=>()=>()=>""Hello, World""))))()()()();
 fn bubbleSort(list, compareFn = (x, y) => x > y) {
     for i in range(list.Length) {
         for j in range(list.Length - i - 1) {
-         if compareFn(list[j], list[j + 1]) {
-           var temp = list[j];
-           list[j] = list[j + 1];
-           list[j + 1] = temp;
-         }
-       }
+            if compareFn(list[j], list[j + 1]) {
+                list[j], list[j + 1] = list[j + 1], list[j]
+            }
+        }
     }
 }
 
@@ -237,7 +235,7 @@ const result = factorial(12);
         {
             string sourceCode = @"
 class TestClass {
-	var value = null;
+	let value = null;
 
 	fn TestClass(this, value) {
 		this.value = value;
@@ -286,7 +284,7 @@ class Middle3: Super3 {
 }
 
 class TestClass: Middle1, Middle3, Middle2 {
-	var Name: str { get; private set; }
+	let Name: str { get; private set; }
 	fn TestClass(this, name: str) {
 		this.Name = name;
 	}
@@ -308,8 +306,8 @@ const result2 = TestClass(""Hello"").ToStr();
         {
             string sourceCode = @"
 class Test1 {
-    var a = 3.14; 
-    var b = str(this.a); 
+    let a = 3.14; 
+    let b = str(this.a); 
     fn GetA(this) {
         return () => () => this.a; 
     }
@@ -365,11 +363,11 @@ class Middle1 : Super1 {
 }
 
 class Test1 : Middle1 { 
-    var a = () => super.A;
+    let a = () => super.A;
 }
 
 class Test2 : Middle1 { 
-    var b = () => super;
+    let b = () => super;
 }
 
 const a = Test1().a;
@@ -387,10 +385,10 @@ const result2 = b().A();
         {
             string sourceCode = @"
 class Test1 { 
-    public var A { get; set; }
-    public var B { get; private set; }
-    public var C { private get; set; }
-    private var D { get; set; }
+    public let A { get; set; }
+    public let B { get; private set; }
+    public let C { private get; set; }
+    private let D { get; set; }
 
     static fn A() {
         return ""A"";
@@ -486,10 +484,10 @@ const result = str(ForLoop(""Hello, World!""));
         public static void FnCallArgsWithName()
         {
             string sourceCode = @"
-var result1 = null;
-var result2 = null;
-var result3 = null;
-var result4 = null;
+let result1 = null;
+let result2 = null;
+let result3 = null;
+let result4 = null;
 fn Test(a, b, c, d) {
     result1 = d;
     result2 = c;
@@ -510,29 +508,29 @@ Test(12, d:34, b:56, c:78)
         {
             string sourceCode = @"
 class Test {
-    public var t1 { get; set; }
-    public var t2: decimal { get; set; }
-    public var t3 { get; set; }
+    public let t1 { get; set; }
+    public let t2: decimal { get; set; }
+    public let t3 { get; set; }
 }
 
 class A {
-    public var a { get; set; }
-    public var b { get; set; }
-    public var c { get; set; }
-    public var d: Test { get; set; }
+    public let a { get; set; }
+    public let b { get; set; }
+    public let c { get; set; }
+    public let d: Test { get; set; }
 }
 
-var a = A();
+let a = A();
 a.a = ""Hello"";
 a.b = 658654383;
 
-var result1 = Json.Serialize(a);
+let result1 = Json.Serialize(a);
 
-var j2 = ""{ \""a\"": \""Hello world\"", \""b\"": 3.14, \""c\"": 12345,  \""d\"": { \""t1\"": \""Test1\"", \""t2\"": 12345, \""t3\"": 3.14 } }""
+let j2 = ""{ \""a\"": \""Hello world\"", \""b\"": 3.14, \""c\"": 12345,  \""d\"": { \""t1\"": \""Test1\"", \""t2\"": 12345, \""t3\"": 3.14 } }""
 
-var b = Json.Deserialize(j2, Type(A));
-var result2 = Json.Serialize(b.d);
-var result3 = Json.Serialize(b);
+let b = Json.Deserialize(j2, Type(A));
+let result2 = Json.Serialize(b.d);
+let result3 = Json.Serialize(b);
 ";
             var values = Interpret(sourceCode, out var interpreter, "result1", "result2", "result3");
             CheckEquals(values["result1"], new ScriptValue("{\"a\": \"Hello\", \"b\": 658654383, \"c\": null, \"d\": null}"));
@@ -547,7 +545,7 @@ const a = {
     ""Test"": 12345
 };
 
-var result1 = a.GetValue(""Test"");
+let result1 = a.GetValue(""Test"");
 ";
             var values = Interpret(sourceCode, out var interpreter, "result1");
             CheckEquals(values["result1"], new ScriptValue(12345));
@@ -680,6 +678,42 @@ const result5a, result5b, result5c, result5d, result5e, result5f, result5Err = c
             CheckEquals(values["result5e"], new ScriptValue());
             CheckEquals(values["result5f"], new ScriptValue());
             CheckNotEquals(values["result5Err"], new ScriptValue());
+        }
+
+        public static void SlicerTest1()
+        {
+            string sourceCode = @"
+const result1 = ""Hello, World""[2:8:2]
+const result2 = ""Hello, World""[2::-1]
+const result3 = ""Hello, World""[::-1]
+const result4 = ""Hello, World""[2:7:2]
+const result5 = ""Hello, World""[-1:-9:-1]
+const result6 = ""Hello, World""[:]
+const result7 = ""Hello, World""[-1:-8:-2]
+const result8 = ""Hello, World""[-2:-1]
+const result9 = ""Hello, World""[0:9:3]
+const result10 = ""Hello, World""[9:3]
+const result11 = ""Hello, World""[2:6:-1]
+const result12 = catch(""Hello, World""[1:5:0])
+const result13 = ""Hello, World""[0:1]
+const result14 = ""Hello, World""[2:2]
+";
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2", "result3", "result4", "result5", "result6",
+                "result7", "result8", "result9", "result10", "result11", "result12", "result13", "result14");
+            CheckEquals(values["result1"], new ScriptValue("lo "));
+            CheckEquals(values["result2"], new ScriptValue("leH"));
+            CheckEquals(values["result3"], new ScriptValue("dlroW ,olleH"));
+            CheckEquals(values["result4"], new ScriptValue("lo "));
+            CheckEquals(values["result5"], new ScriptValue("dlroW ,o"));
+            CheckEquals(values["result6"], new ScriptValue("Hello, World"));
+            CheckEquals(values["result7"], new ScriptValue("drW,"));
+            CheckEquals(values["result8"], new ScriptValue("l"));
+            CheckEquals(values["result9"], new ScriptValue("Hl "));
+            CheckEquals(values["result10"], new ScriptValue(""));
+            CheckEquals(values["result11"], new ScriptValue(""));
+            CheckNotEquals(values["result12"], new ScriptValue());
+            CheckEquals(values["result13"], new ScriptValue("H"));
+            CheckEquals(values["result14"], new ScriptValue(""));
         }
     }
 }
