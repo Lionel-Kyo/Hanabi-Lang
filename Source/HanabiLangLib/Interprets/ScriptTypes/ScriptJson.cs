@@ -55,7 +55,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 if (!args[0].IsObject)
                     throw new SystemException("Only object can be serialize to json");
                 return new ScriptValue(ToJsonString(args[0].TryObject, false, 
-                    (int)ScriptInt.AsCSharp(args[1].TryObject), null, ScriptBool.AsCSharp(args[2].TryObject), ScriptBool.AsCSharp(args[3].TryObject)));
+                    ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject)), null, ScriptBool.AsCSharp(args[2].TryObject), ScriptBool.AsCSharp(args[3].TryObject)));
 
             }, true, AccessibilityLevel.Public);
         }

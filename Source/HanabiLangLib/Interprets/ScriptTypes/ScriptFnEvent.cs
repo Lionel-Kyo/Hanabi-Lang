@@ -67,7 +67,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                     var idObj = args[1].TryObject;
                     if (idObj == null || !idObj.IsTypeOrSubOf(BasicTypes.Int))
                         throw new ArgumentException("FnEvent only can remove by function or id");
-                    int hashCode = (int)ScriptInt.AsCSharp(idObj);
+                    int hashCode = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(idObj));
                     result = RemoveFn(_this, hashCode);
                 }
                 else 

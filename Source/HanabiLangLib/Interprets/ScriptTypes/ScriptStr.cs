@@ -51,7 +51,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 ScriptObject _this = args[0].TryObject;
                 long startIndex = ScriptInt.AsCSharp(args[1].TryObject);
-                return new ScriptValue(AsCSharp(_this).Substring((int)startIndex));
+                return new ScriptValue(AsCSharp(_this).Substring(ScriptInt.ValidateToInt32(startIndex)));
             });
 
             this.AddFunction("SubStr", new List<FnParameter>()
@@ -64,7 +64,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 long startIndex = ScriptInt.AsCSharp(args[1].TryObject);
                 long length = ScriptInt.AsCSharp(args[2].TryObject);
-                return new ScriptValue(AsCSharp(_this).Substring((int)startIndex, (int)length));
+                return new ScriptValue(AsCSharp(_this).Substring(ScriptInt.ValidateToInt32(startIndex), ScriptInt.ValidateToInt32(length)));
             });
 
             this.AddFunction("Contains", new List<FnParameter>()
@@ -88,12 +88,12 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 ScriptObject _this = args[0].TryObject;
                 string value = AsCSharp(args[1].TryObject);
-                int startIndex = (int)ScriptInt.AsCSharp(args[2].TryObject);
+                int startIndex = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[2].TryObject));
                 if (args[3].IsNull)
                 {
                     return new ScriptValue(AsCSharp(_this).IndexOf(value, startIndex));
                 }
-                int count = (int)ScriptInt.AsCSharp(args[3].TryObject);
+                int count = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[3].TryObject));
                 return new ScriptValue(AsCSharp(_this).IndexOf(value, startIndex, count));
             });
 
@@ -107,12 +107,12 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 ScriptObject _this = args[0].TryObject;
                 string value = AsCSharp(args[1].TryObject);
-                int startIndex = (int)ScriptInt.AsCSharp(args[2].TryObject);
+                int startIndex = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[2].TryObject));
                 if (args[3].IsNull)
                 {
                     return new ScriptValue(AsCSharp(_this).LastIndexOf(value, startIndex));
                 }
-                int count = (int)ScriptInt.AsCSharp(args[3].TryObject);
+                int count = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[3].TryObject));
                 return new ScriptValue(AsCSharp(_this).LastIndexOf(value, startIndex, count));
             });
 
@@ -124,12 +124,12 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                int startIndex = (int)ScriptInt.AsCSharp(args[1].TryObject);
+                int startIndex = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject));
                 if (args[2].IsNull)
                 {
                     return new ScriptValue(AsCSharp(_this).Remove(startIndex));
                 }
-                int count = (int)ScriptInt.AsCSharp(args[2].TryObject);
+                int count = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[2].TryObject));
                 return new ScriptValue(AsCSharp(_this).Remove(startIndex, count));
             });
 
@@ -242,7 +242,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                int totalLength = (int)ScriptInt.AsCSharp(args[1].TryObject);
+                int totalLength = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject));
                 string paddingChar = AsCSharp(args[2].TryObject) ?? " ";
                 if (paddingChar.Length <= 0)
                     throw new ArgumentException("paddingChar should not be empty");
@@ -257,7 +257,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                int totalLength = (int)ScriptInt.AsCSharp(args[1].TryObject);
+                int totalLength = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject));
                 string paddingChar = AsCSharp(args[2].TryObject) ?? " ";
                 if (paddingChar.Length <= 0)
                     throw new ArgumentException("paddingChar should not be empty");
@@ -330,12 +330,10 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 if (indexObj?.ClassType != BasicTypes.Int)
                     throw new ArgumentException("Only int/slice is allowed for str indexer");
+
                 long index = ScriptInt.AsCSharp(indexObj);
 
-                if ((index >= value.Length) || index < 0 && index < (value.Length * -1))
-                    throw new IndexOutOfRangeException();
-
-                return new ScriptValue(value[(int)ScriptInt.Modulo(index, value.Length)]);
+                return new ScriptValue(value[ScriptInt.ValidateToInt32(ScriptRange.GetModuloIndex(index, value.Length))]);
             });
         }
 

@@ -35,7 +35,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 if (value.ClassType == BasicTypes.Int)
                 {
-                    int size = (int)ScriptInt.AsCSharp(value);
+                    int size = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(value));
                     _this.BuildInObject = Enumerable.Repeat(new ScriptValue(), size).ToList();
                 }
                 else
@@ -244,7 +244,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 int startIndex = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject));
                 ScriptFns match = (ScriptFns)args[2].Value;
-                var result = AsCSharp(_this).FindLastIndex((int)startIndex, x =>
+                var result = AsCSharp(_this).FindLastIndex(startIndex, x =>
                 {
                     ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return ScriptBool.AsCSharp(matchResult);
@@ -264,7 +264,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 int startIndex = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject));
                 int count = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[2].TryObject));
                 ScriptFns match = (ScriptFns)args[3].Value;
-                var result = AsCSharp(_this).FindLastIndex((int)startIndex, (int)count, x =>
+                var result = AsCSharp(_this).FindLastIndex(startIndex, count, x =>
                 {
                     ScriptObject matchResult = (ScriptObject)match.Call(null, x).Value;
                     return ScriptBool.AsCSharp(matchResult);
@@ -334,7 +334,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 int startIndex = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[2].TryObject));
                 if (args[3].IsNull)
                 {
-                    return new ScriptValue(AsCSharp(_this).LastIndexOf(item, (int)startIndex));
+                    return new ScriptValue(AsCSharp(_this).LastIndexOf(item, startIndex));
                 }
                 int count = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[3].TryObject));
                 var result = AsCSharp(_this).LastIndexOf(item, startIndex, count);
@@ -495,7 +495,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 AsCSharp(_this).Sort((x, y) =>
                 {
                     ScriptObject compare = (ScriptObject)fns.Call(null, x, y).Value;
-                    return (int)ScriptInt.AsCSharp(compare);
+                    return ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(compare));
                 });
                 return ScriptValue.Null;
             }); 
@@ -521,10 +521,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 long index = ScriptInt.AsCSharp(indexObj);
 
-                if ((index >= listValue.Count) || index < 0 && index < (listValue.Count * -1))
-                    throw new IndexOutOfRangeException();
-
-                return listValue[(int)ScriptInt.Modulo(index, listValue.Count)];
+                return listValue[ScriptInt.ValidateToInt32(ScriptRange.GetModuloIndex(index, listValue.Count))];
             });
             this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List), new FnParameter("value") }, args =>
             {
@@ -538,11 +535,10 @@ namespace HanabiLang.Interprets.ScriptTypes
                 var indexObj = indexes[0].TryObject;
                 if (indexObj?.ClassType != BasicTypes.Int)
                     throw new ArgumentException("Only int is allowed for List indexer");
+
                 long index = ScriptInt.AsCSharp(indexObj);
 
-                if ((index >= listValue.Count) || index < 0 && index < (listValue.Count * -1))
-                    throw new IndexOutOfRangeException();
-                listValue[(int)ScriptInt.Modulo(index, listValue.Count)] = args[2];
+                listValue[ScriptInt.ValidateToInt32(ScriptRange.GetModuloIndex(index, listValue.Count))] = args[2];
 
                 return ScriptValue.Null;
             });
@@ -573,7 +569,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             {
                 long value = ScriptInt.AsCSharp(right);
                 List<ScriptValue> leftList = AsCSharp(left);
-                List<ScriptValue> result = new List<ScriptValue>((int)(leftList.Count * value));
+                List<ScriptValue> result = new List<ScriptValue>(ScriptInt.ValidateToInt32(leftList.Count * value));
                 for (long i = 0; i < value; i++)
                 {
                     result.AddRange(leftList);

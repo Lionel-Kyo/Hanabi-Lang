@@ -49,13 +49,9 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 if (indexObj?.ClassType != BasicTypes.Int)
                     throw new ArgumentException("Only int/slice is allowed for KeyValuePair indexer");
-                long index = ScriptInt.AsCSharp(indexObj);
 
-                int length = 2;
-                if ((index >= length) || index < 0 && index < (length * -1))
-                    throw new IndexOutOfRangeException();
+                long index = ScriptRange.GetModuloIndex(ScriptInt.AsCSharp(indexObj), 2);
 
-                long moduloValue = ScriptInt.Modulo(index, 2);
                 return index == 0 ? kvValue.Key : kvValue.Value;
             });
         }

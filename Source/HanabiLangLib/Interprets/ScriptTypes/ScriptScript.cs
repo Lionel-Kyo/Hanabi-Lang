@@ -21,16 +21,16 @@ namespace HanabiLang.Interprets.ScriptTypes
                 }, true, AccessibilityLevel.Public)),
                 new ScriptFns("set_ExitCode", new ScriptFn(new List<FnParameter>{ new FnParameter("value", BasicTypes.Int) }, null, _args =>
                 {
-                    long value = (long)_args[0].TryObject.BuildInObject;
-                    Environment.ExitCode = (int)value;
+                    long value = ScriptInt.AsCSharp(_args[0].TryObject);
+                    Environment.ExitCode = ScriptInt.ValidateToInt32(value);
                     return new ScriptValue();
                 }, true, AccessibilityLevel.Public))
                 , false, true, AccessibilityLevel.Public);
             this.Scope.Variables["Exit"] = new ScriptVariable("Exit", new ScriptFns("Exit", new ScriptFn(new List<FnParameter> { new FnParameter("exitCode", BasicTypes.Int, new ScriptValue(Environment.ExitCode)) }, null, 
                 _args =>
                 {
-                    int exitCode = (int)(long)((ScriptObject)_args[0].Value).BuildInObject;
-                    Environment.Exit(exitCode);
+                    long exitCode = ScriptInt.AsCSharp(_args[0].TryObject);
+                    Environment.Exit(ScriptInt.ValidateToInt32(exitCode));
                     return ScriptValue.Null;
                 }, true, AccessibilityLevel.Public)), AccessibilityLevel.Public);
         }

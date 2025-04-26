@@ -133,9 +133,17 @@ namespace HanabiLang.Interprets.ScriptTypes
             }
         }
 
+        public static long GetModuloIndex(long index, long length)
+        {
+            if ((index >= length) || index < 0 && index < (length * -1))
+                throw new IndexOutOfRangeException();
+
+            return ScriptInt.Modulo(index, length);
+        }
+
         private static long Index(Range range, long index)
         {
-            return range.Start + range.Step * index;
+            return range.Start + range.Step * GetModuloIndex(index, range.GetLength());
         }
 
         private static Range Slice(Range range, long? start, long? end, long? step)

@@ -184,7 +184,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 TryGetIterable(args[0].TryObject, out var iter);
-                var result = iter.ElementAt((int)ScriptInt.AsCSharp(args[1].TryObject));
+                var result = iter.ElementAt(ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject)));
                 return result;
             });
 
@@ -437,7 +437,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 TryGetIterable(args[0].TryObject, out var iter);
-                var result = iter.Skip((int)ScriptInt.AsCSharp(args[1].TryObject));
+                var result = iter.Skip(ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject)));
                 return new ScriptValue(BasicTypes.Iterable.Create(result));
             });
 
@@ -494,7 +494,7 @@ namespace HanabiLang.Interprets.ScriptTypes
             }, args =>
             {
                 TryGetIterable(args[0].TryObject, out var iter);
-                var result = iter.Take((int)ScriptInt.AsCSharp(args[1].TryObject));
+                var result = iter.Take(ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[1].TryObject)));
                 return new ScriptValue(BasicTypes.Iterable.Create(result));
             });
 
