@@ -568,27 +568,26 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(BasicTypes.Iterable.Create(result));
             });
 
-            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 if (!TryGetIterable(_this, out var iter))
                     throw new SystemException($"{_this} is not iterable");
-                List<ScriptValue> slicer = ScriptList.AsCSharp(args[1].TryObject);
+                List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);
 
-                if (slicer.Count > 1)
-                    throw new ArgumentException("Only 1 slicer is allowed for Iterable");
+                if (indexes.Count > 1)
+                    throw new ArgumentException("Only 1 indexer is allowed for Iterable");
 
-                List<ScriptValue> slicerValues = ScriptList.AsCSharp(slicer[0].TryObject);
+                var indexObj = indexes[0].TryObject;
 
-                long? start = slicerValues[0].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[0].TryObject);
-                long? end = slicerValues[1].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[1].TryObject);
-                long? step = slicerValues[2].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[2].TryObject);
-                return new ScriptValue(ScriptIterable.Slice(iter, start, end, step));
-            });
+                if (indexObj?.ClassType == BasicTypes.Slice)
+                {
+                    var slice = ScriptSlice.AsCSharp(indexes[0].TryObject);
 
-            this.AddFunction("__SetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List), new FnParameter("value") }, args =>
-            {
-                throw new SystemException("Iterable cannot set slicer");
+                    return new ScriptValue(Slice(iter, slice.Start, slice.End, slice.Step));
+                }
+
+                throw new ArgumentException("Only slice is allowed for iterable indexer");
             });
         }
 
@@ -632,10 +631,10 @@ namespace HanabiLang.Interprets.ScriptTypes
             var list = iterable is IList<T> ? (IList<T>)iterable : new List<T>(iterable);
             int length = list.Count;
 
-            Range adjusted = Range.CreateAdjusted(length, start, end, step);
-            int i32Start = ScriptInt.ValidateToInt32(adjusted.Start);
-            int i32End = ScriptInt.ValidateToInt32(adjusted.End);
-            int i32Step = ScriptInt.ValidateToInt32(adjusted.Step);
+            var adjusted = ScriptSlice.Slice.FillNullValues(length, start, end, step);
+            int i32Start = ScriptInt.ValidateToInt32(adjusted.Start.Value);
+            int i32End = ScriptInt.ValidateToInt32(adjusted.End.Value);
+            int i32Step = ScriptInt.ValidateToInt32(adjusted.Step.Value);
 
             if (i32Step == 1)
             {

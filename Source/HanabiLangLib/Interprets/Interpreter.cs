@@ -45,6 +45,7 @@ namespace HanabiLang.Interprets
                 this.CurrentScope.Variables.Add("decimal", new ScriptVariable(BasicTypes.Decimal.Name, BasicTypes.Decimal));
                 this.CurrentScope.Variables.Add("bool", new ScriptVariable(BasicTypes.Bool.Name, BasicTypes.Bool));
                 this.CurrentScope.Variables.Add("range", new ScriptVariable(BasicTypes.Range.Name, BasicTypes.Range));
+                this.CurrentScope.Variables.Add("slice", new ScriptVariable(BasicTypes.Slice.Name, BasicTypes.Slice));
                 this.CurrentScope.Variables.Add("List", new ScriptVariable(BasicTypes.List.Name, BasicTypes.List));
                 this.CurrentScope.Variables.Add("Dict", new ScriptVariable(BasicTypes.Dict.Name, BasicTypes.Dict));
                 this.CurrentScope.Variables.Add("Iterable", new ScriptVariable(BasicTypes.Iterable.Name, BasicTypes.Iterable));
@@ -1710,45 +1711,6 @@ namespace HanabiLang.Interprets
                 if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
                 {
                     return new ValueReference(() => getFn.Value.TryFunction.Call(obj, indexer), x => setFn.Value.TryFunction.Call(obj, indexer, x));
-                }
-                else
-                {
-                    throw new SystemException("The variable cannot use indexer");
-                }
-            }
-            else if (node is SlicerNode)
-            {
-                var realNode = (SlicerNode)node;
-
-                var left = InterpretExpression(interpretScope, realNode.Object);
-
-                if (realNode.IsNullConditional && left.Ref.IsNull)
-                    return new ValueReference(new ScriptValue());
-
-                ScriptObject obj = left.Ref.TryObject;
-                if (obj == null)
-                    throw new SystemException("Slicer can only apply in object");
-
-                List<ScriptValue> _slices = new List<ScriptValue>();
-                foreach (var slice in realNode.Slices)
-                {
-                    List<ScriptValue> sliceItem = new List<ScriptValue>();
-                    foreach (var slicerValue in slice)
-                    {
-                        sliceItem.Add(InterpretExpression(interpretScope, slicerValue).Ref);
-                        if (!sliceItem[sliceItem.Count - 1].IsNull && sliceItem[sliceItem.Count - 1].TryObject?.ClassType != BasicTypes.Int)
-                            throw new SystemException("Slicer item can only be null or int");
-                    }
-                    _slices.Add(new ScriptValue(sliceItem));
-                }
-                ScriptValue slicer = new ScriptValue(_slices);
-
-                obj.ClassType.Scope.Variables.TryGetValue("__GetSlicer__", out ScriptVariable getFn);
-                obj.ClassType.Scope.Variables.TryGetValue("__SetSlicer__", out ScriptVariable setFn);
-
-                if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
-                {
-                    return new ValueReference(() => getFn.Value.TryFunction.Call(obj, slicer), x => setFn.Value.TryFunction.Call(obj, slicer, x));
                 }
                 else
                 {

@@ -1497,8 +1497,7 @@ namespace HanabiLang.Parses
 
             this.Expect(TokenType.OPEN_SQURE_BRACKET, TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
-            List<List<AstNode>> slicer = new List<List<AstNode>>();
-            List<AstNode> indexer = new List<AstNode>();
+            List<AstNode> elements = new List<AstNode>();
 
             while (true)
             {
@@ -1517,19 +1516,16 @@ namespace HanabiLang.Parses
                     startNode.Line = startToken.Line;
                 }
 
+                // indexer
                 if (this.HasToken && this.CurrentToken.Type != TokenType.COLON)
                 {
-                    if (slicer.Count > 0)
-                        throw new ParseException("Cannot mix slicer with indexer", startToken);
-                    indexer.Add(startNode);
+                    elements.Add(startNode);
                     isIndexer = true;
                 }
 
+                // slicer
                 if (!isIndexer)
                 {
-                    if (indexer.Count > 0)
-                        throw new ParseException("Cannot mix indexer with slicer", startToken);
-
                     this.Expect(TokenType.COLON);
                     if (this.HasToken && this.CurrentToken.Type == TokenType.COLON)
                     {
@@ -1566,18 +1562,14 @@ namespace HanabiLang.Parses
                             stepNode.Line = startToken.Line;
                         }
                     }
-                    slicer.Add(new List<AstNode>() { startNode, endNode, stepNode });
+                    elements.Add(new FnReferenceCallNode(new VariableReferenceNode("slice"), new List<AstNode>() { startNode, endNode, stepNode }, new Dictionary<string, AstNode>(), false));
                 }
                 Token lastToken = this.Expect(TokenType.COMMA, TokenType.CLOSE_SQURE_BRACKET);
                 if (lastToken.Type == TokenType.CLOSE_SQURE_BRACKET)
                     break;
             }
 
-            AstNode result;
-            if (indexer.Count > 0)
-                result = new IndexerNode(child, indexer, startToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
-            else
-                result = new SlicerNode(child, slicer, startToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
+            AstNode result = new IndexerNode(child, elements, startToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET);
 
             while (HasToken &&
                 (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET ||

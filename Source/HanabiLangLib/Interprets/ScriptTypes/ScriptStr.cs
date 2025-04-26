@@ -311,7 +311,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(0);
             });
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.List) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 string value = AsCSharp(_this);
@@ -321,30 +321,21 @@ namespace HanabiLang.Interprets.ScriptTypes
                     throw new ArgumentException("Only 1 indexer is allowed for str");
 
                 var indexObj = indexes[0].TryObject;
+
+                if (indexObj?.ClassType == BasicTypes.Slice)
+                {
+                    var slice = ScriptSlice.AsCSharp(indexObj);
+                    return new ScriptValue(Slice(AsCSharp(_this), slice.Start, slice.End, slice.Step));
+                }
+
                 if (indexObj?.ClassType != BasicTypes.Int)
-                    throw new ArgumentException("Only int is allowed for str indexer");
+                    throw new ArgumentException("Only int/slice is allowed for str indexer");
                 long index = ScriptInt.AsCSharp(indexObj);
 
                 if ((index >= value.Length) || index < 0 && index < (value.Length * -1))
                     throw new IndexOutOfRangeException();
 
                 return new ScriptValue(value[(int)ScriptInt.Modulo(index, value.Length)]);
-            });
-
-            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
-            {
-                ScriptObject _this = args[0].TryObject;
-                List<ScriptValue> slicer = ScriptList.AsCSharp(args[1].TryObject);
-
-                if (slicer.Count > 1)
-                    throw new ArgumentException("Only 1 slicer is allowed for str");
-
-                List<ScriptValue> slicerValues = ScriptList.AsCSharp(slicer[0].TryObject);
-
-                long? start = slicerValues[0].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[0].TryObject);
-                long? end = slicerValues[1].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[1].TryObject);
-                long? step = slicerValues[2].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[2].TryObject);
-                return new ScriptValue(Slice((string)AsCSharp(_this), start, end, step));
             });
         }
 
@@ -381,10 +372,10 @@ namespace HanabiLang.Interprets.ScriptTypes
 
             int length = str.Length;
 
-            Range adjusted = Range.CreateAdjusted(length, start, end, step);
-            int i32Start = ScriptInt.ValidateToInt32(adjusted.Start);
-            int i32End = ScriptInt.ValidateToInt32(adjusted.End);
-            int i32Step = ScriptInt.ValidateToInt32(adjusted.Step);
+            var adjusted = ScriptSlice.Slice.FillNullValues(length, start, end, step);
+            int i32Start = ScriptInt.ValidateToInt32(adjusted.Start.Value);
+            int i32End = ScriptInt.ValidateToInt32(adjusted.End.Value);
+            int i32Step = ScriptInt.ValidateToInt32(adjusted.Step.Value);
 
             if (i32Step == 1)
             {

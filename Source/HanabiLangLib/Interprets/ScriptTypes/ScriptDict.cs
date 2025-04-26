@@ -143,16 +143,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 AsCSharp(_this)[key] = args[2];
                 return ScriptValue.Null;
             });
-
-            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
-            {
-                throw new SystemException("Dict cannot get slicer");
-            });
-
-            this.AddFunction("__SetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List), new FnParameter("value") }, args =>
-            {
-                throw new SystemException("Dict cannot set slicer");
-            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, new Dictionary<ScriptValue, ScriptValue>());

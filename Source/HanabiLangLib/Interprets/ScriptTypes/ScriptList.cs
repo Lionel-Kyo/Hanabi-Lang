@@ -500,7 +500,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return ScriptValue.Null;
             }); 
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.List) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 List<ScriptValue> listValue = AsCSharp(_this);
@@ -510,8 +510,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                     throw new ArgumentException("Only 1 indexer is allowed for List");
 
                 var indexObj = indexes[0].TryObject;
+                if (indexObj?.ClassType == BasicTypes.Slice)
+                {
+                    var slice = ScriptSlice.AsCSharp(indexObj);
+                    return new ScriptValue(ScriptIterable.Slice(AsCSharp(_this), slice.Start, slice.End, slice.Step));
+                }
+
                 if (indexObj?.ClassType != BasicTypes.Int)
-                    throw new ArgumentException("Only int is allowed for List indexer");
+                    throw new ArgumentException("Only int/slice is allowed for List indexer");
+
                 long index = ScriptInt.AsCSharp(indexObj);
 
                 if ((index >= listValue.Count) || index < 0 && index < (listValue.Count * -1))
@@ -519,7 +526,7 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 return listValue[(int)ScriptInt.Modulo(index, listValue.Count)];
             });
-            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("index", BasicTypes.List), new FnParameter("value") }, args =>
+            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 List<ScriptValue> listValue = AsCSharp(_this);
@@ -538,21 +545,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 listValue[(int)ScriptInt.Modulo(index, listValue.Count)] = args[2];
 
                 return ScriptValue.Null;
-            });
-            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
-            {
-                ScriptObject _this = args[0].TryObject;
-                List<ScriptValue> slicer = ScriptList.AsCSharp(args[1].TryObject);
-
-                if (slicer.Count > 1)
-                    throw new ArgumentException("Only 1 slicer is allowed for List");
-
-                List<ScriptValue> slicerValues = ScriptList.AsCSharp(slicer[0].TryObject);
-
-                long? start = slicerValues[0].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[0].TryObject);
-                long? end = slicerValues[1].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[1].TryObject);
-                long? step = slicerValues[2].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[2].TryObject);
-                return new ScriptValue(ScriptIterable.Slice(AsCSharp(_this), start, end, step));
             });
         }
 

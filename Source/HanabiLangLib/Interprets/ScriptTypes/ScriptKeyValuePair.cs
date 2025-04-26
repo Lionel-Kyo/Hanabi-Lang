@@ -30,7 +30,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(result);
             }, null, false, null);
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this") , new FnParameter("index", BasicTypes.List) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this") , new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 var kvValue = AsCSharp(_this);
@@ -40,8 +40,15 @@ namespace HanabiLang.Interprets.ScriptTypes
                     throw new ArgumentException("Only 1 indexer is allowed for List");
 
                 var indexObj = indexes[0].TryObject;
+
+                if (indexObj?.ClassType == BasicTypes.Slice)
+                {
+                    var slice = ScriptSlice.AsCSharp(indexObj);
+                    return new ScriptValue(ScriptIterable.Slice(new List<ScriptValue> { kvValue.Key, kvValue.Value }, slice.Start, slice.End, slice.Step));
+                }
+
                 if (indexObj?.ClassType != BasicTypes.Int)
-                    throw new ArgumentException("Only int is allowed for List indexer");
+                    throw new ArgumentException("Only int/slice is allowed for KeyValuePair indexer");
                 long index = ScriptInt.AsCSharp(indexObj);
 
                 int length = 2;
@@ -50,24 +57,6 @@ namespace HanabiLang.Interprets.ScriptTypes
 
                 long moduloValue = ScriptInt.Modulo(index, 2);
                 return index == 0 ? kvValue.Key : kvValue.Value;
-            });
-
-            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
-            {
-                ScriptObject _this = args[0].TryObject;
-                List<ScriptValue> slicer = ScriptList.AsCSharp(args[1].TryObject);
-
-                if (slicer.Count > 1)
-                    throw new ArgumentException("Only 1 slicer is allowed for KeyValuePair");
-
-                List<ScriptValue> slicerValues = ScriptList.AsCSharp(slicer[0].TryObject);
-
-                long? start = slicerValues[0].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[0].TryObject);
-                long? end = slicerValues[1].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[1].TryObject);
-                long? step = slicerValues[2].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[2].TryObject);
-
-                var keyValue = AsCSharp(_this);
-                return new ScriptValue(string.Join("", ScriptIterable.Slice(new List<ScriptValue> { keyValue.Key, keyValue.Value }, start, end, step)));
             });
         }
 

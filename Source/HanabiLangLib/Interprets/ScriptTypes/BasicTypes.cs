@@ -26,6 +26,7 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptDict Dict = new ScriptDict();
         public static readonly ScriptKeyValuePair KeyValuePair = new ScriptKeyValuePair();
         public static readonly ScriptRange Range = new ScriptRange();
+        public static readonly ScriptSlice Slice = new ScriptSlice();
         public static readonly ScriptException Exception = new ScriptException();
         public static readonly ScriptCatchedExpression CatchedExpression = new ScriptCatchedExpression();
         public static readonly ScriptEnum Enum = new ScriptEnum();

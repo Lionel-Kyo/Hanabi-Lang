@@ -90,23 +90,30 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).GetLength());
             }, null, false, null);
 
-            this.AddFunction("__GetSlicer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("slicer", BasicTypes.List) }, args =>
+            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 Range range = AsCSharp(_this);
-                List<ScriptValue> slicer = ScriptList.AsCSharp(args[1].TryObject);
+                List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);
 
-                if (slicer.Count > 1)
-                    throw new ArgumentException("Only 1 slicer is allowed for range");
+                if (indexes.Count > 1)
+                    throw new ArgumentException("Only 1 indexer is allowed for range");
 
-                List<ScriptValue> slicerValues = ScriptList.AsCSharp(slicer[0].TryObject);
+                var indexObj = indexes[0].TryObject;
 
-                long? start = slicerValues[0].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[0].TryObject);
-                long? end = slicerValues[1].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[1].TryObject);
-                long? step = slicerValues[2].IsNull ? (long?)null : ScriptInt.AsCSharp(slicerValues[2].TryObject);
+                if (indexObj?.ClassType == BasicTypes.Slice)
+                {
+                    var slice = ScriptSlice.AsCSharp(indexes[0].TryObject);
 
+                    return new ScriptValue(BasicTypes.Range.Create(Slice(range, slice.Start, slice.End, slice.Step)));
+                }
 
-                return new ScriptValue(BasicTypes.Range.Create(Slicer(range, start, end, step)));
+                if (indexObj?.ClassType != BasicTypes.Int)
+                    throw new ArgumentException("Only int/slice is allowed for range indexer");
+
+                long index = ScriptInt.AsCSharp(indexObj);
+
+                return new ScriptValue(Index(range, index));
             });
         }
 
@@ -124,56 +131,21 @@ namespace HanabiLang.Interprets.ScriptTypes
                 yield return new ScriptValue(x);
                 x += step;
             }
-            /*do
-            {
-                yield return new ScriptValue(x);
-                x += step;
-                if (step < 0 && x <= end || 0 < step && end <= x)
-                    break;
-            }
-            while (true);*/
         }
 
-        private static long CalculateLength(Range range)
+        private static long Index(Range range, long index)
         {
-            if (range.Step > 0 && range.Start < range.End)
-                return 1 + (range.End - 1 - range.Start) / range.Step;
-            else if (range.Step < 0 && range.Start > range.End)
-                return 1 + (range.Start - 1 - range.End) / (0 - range.Step);
-            else
-                return 0;
+            return range.Start + range.Step * index;
         }
 
-        private static Range Slicer(Range range, long? start, long? end, long? step)
+        private static Range Slice(Range range, long? start, long? end, long? step)
         {
             long length = range.GetLength();
-            //long _step = step ?? 1;
+            var adjusted = ScriptSlice.Slice.FillNullValues(length, start, end, step);
 
-            //if (start.HasValue)
-            //{
-            //    if (start < 0)
-            //        start += length;
-            //    if (start < 0)
-            //        start = 0;
-            //    if (start >= length)
-            //        start = length - 1;
-            //}
-            //if (end.HasValue)
-            //{
-            //    if (end < 0)
-            //        end += length;
-            //    if (end < 0)
-            //        end = -1;
-            //    if (end > length)
-            //        end = length;
-            //}
-            //long _start = start ?? (_step > 0 ? 0 : length - 1);
-            //long _end = end ?? (_step > 0 ? length : -1);
-            Range adjusted = Range.CreateAdjusted(length, start, end, step);
-
-            long newStart = (range.Step == 1) ? (range.Start + adjusted.Start) : (range.Start + (adjusted.Start * range.Step));
-            long newStop = (range.Step == 1) ? (range.Start + adjusted.End) : (range.Start + (adjusted.End * range.Step));
-            long newStep = range.Step * adjusted.Step;
+            long newStart = (range.Step == 1) ? (range.Start + adjusted.Start.Value) : (range.Start + (adjusted.Start.Value * range.Step));
+            long newStop = (range.Step == 1) ? (range.Start + adjusted.End.Value) : (range.Start + (adjusted.End.Value * range.Step));
+            long newStep = range.Step * adjusted.Step.Value;
 
             return new Range(newStart, newStop, newStep);
         }
@@ -217,46 +189,6 @@ namespace HanabiLang.Interprets.ScriptTypes
                 this.Start = start;
                 this.End = end;
                 this.Step = step;
-            }
-
-            public static Range CreateAdjusted(long length, long? start, long? end, long? step)
-            {
-                long _step = step.HasValue ? step.Value : 1;
-                if (_step == 0)
-                    throw new ArgumentException("step cannot be zero.");
-                long _start;
-                if (start.HasValue)
-                {
-                    _start = start.Value;
-                    if (_start < 0)
-                        _start += length;
-                    if (_start < 0)
-                        _start = _step < 0 ? -1 : 0;
-                    if (_start >= length)
-                        _start = _step < 0 ? length - 1 : length;
-                }
-                else
-                {
-                    _start = _step < 0 ? length - 1 : 0;
-                }
-
-                long _end;
-                if (end.HasValue)
-                {
-                    _end = end.Value;
-                    if (_end < 0)
-                        _end += length;
-                    if (_end < 0)
-                        _end = _step < 0 ? -1 : 0;
-                    if (_end >= length)
-                        _end = _step < 0 ? length - 1 : length;
-                }
-                else
-                {
-                    _end = _step < 0 ? -1 : length;
-                }
-
-                return new Range(_start, _end, _step);
             }
 
             public long GetLength()
