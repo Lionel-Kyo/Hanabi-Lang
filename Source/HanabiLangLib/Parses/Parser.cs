@@ -1702,7 +1702,15 @@ namespace HanabiLang.Parses
                         while (this.HasToken && this.CurrentToken.Type == TokenType.COMMA)
                         {
                             this.Expect(TokenType.COMMA);
-                            references.Add(this.Expression(skipEquals: true));
+                            try
+                            {
+                                references.Add(this.Expression(skipEquals: true));
+                            }
+                            catch (ParseException) 
+                            { 
+                                this.currentTokenIndex = lastTokenIndex;
+                                break; 
+                            }
                         }
                         List<AstNode> toAssigned = new List<AstNode>();
                         if (this.HasToken && this.CurrentToken.Type == TokenType.EQUALS)

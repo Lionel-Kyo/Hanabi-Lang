@@ -178,13 +178,23 @@ const Test = () => {
 	}
 };
 
+const Add = (a, b) => {
+    return a + b;
+};
+
+const CallArg = (arg) => {
+    return arg();
+};
+
 const result1 = Test();
 const result2 = ((((()=>()=>()=>()=>""Hello, World""))))()()()();
+const result3 = CallArg(() => Add(1, 2),);
 ";
 
-            var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
+            var values = Interpret(sourceCode, out var interpreter, "result1", "result2", "result3");
             CheckEquals(values["result1"], new ScriptValue("Has Break"));
             CheckEquals(values["result2"], new ScriptValue("Hello, World"));
+            CheckEquals(values["result3"], new ScriptValue(3));
         }
 
         public static void BubbleSortTest()
