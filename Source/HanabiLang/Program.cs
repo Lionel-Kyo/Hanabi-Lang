@@ -21,7 +21,7 @@ void ExecuteFile(string[] args)
         path = args[0];
     else
         return;
-    string[] lines = File.ReadAllLines(path);
+    string[] lines = Lexer.ReadScriptToLines(path);
     var tokens = Lexer.Tokenize(lines);
     //Console.WriteLine(string.Join("\n", tokens));
     var parser = new Parser(tokens);

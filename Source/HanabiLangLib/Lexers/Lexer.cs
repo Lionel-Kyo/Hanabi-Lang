@@ -980,5 +980,10 @@ namespace HanabiLang.Lexers
             return tokens;
 
         }
+
+        public static string[] ReadScriptToLines(string fullPath)
+        {
+            return System.IO.File.ReadAllLines(fullPath);
+        }
     }
 }

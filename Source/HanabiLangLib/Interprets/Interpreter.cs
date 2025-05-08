@@ -253,7 +253,7 @@ namespace HanabiLang.Interprets
                 Interpreter newInterpreter = null;
                 if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
                 {
-                    string[] lines = System.IO.File.ReadAllLines(fullPath);
+                    string[] lines = Lexer.ReadScriptToLines(fullPath);
                     var tokens = Lexer.Tokenize(lines);
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
