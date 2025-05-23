@@ -645,7 +645,7 @@ namespace HanabiLang.Lexers
                             if (numberBase == 10)
                                 tokens.Add(new Token(TokenType.INT, number, lineIndex + 1));
                             else
-                                tokens.Add(new Token(TokenType.INT, Convert.ToInt32(number, numberBase).ToString(), lineIndex + 1));
+                                tokens.Add(new Token(TokenType.INT, Convert.ToInt64(number, numberBase).ToString(), lineIndex + 1));
                         }
                     }
 
