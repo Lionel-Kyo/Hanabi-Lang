@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.ComponentModel;
 
 namespace HanabiLang.Lexers
 {
@@ -527,6 +528,7 @@ namespace HanabiLang.Lexers
         {
             List<Token> tokens = new List<Token>();
             bool isBlockComment = false;
+            bool? isPositiveSignedNumber = null;
 
             for (int lineIndex = 0; lineIndex < lines.Count(); lineIndex++)
             {
@@ -557,10 +559,11 @@ namespace HanabiLang.Lexers
                     }
 
                     // check int / float
-                    else if (char.IsDigit(c))
+                    else if (isPositiveSignedNumber.HasValue || char.IsDigit(c))
                     {
                         StringBuilder numberBuilder = new StringBuilder();
-                        byte dotNums = 0;
+                        bool isFloat = false;
+                        bool isScientific = false;
                         int numberBase = 10;
 
                         if (c == '0' && i + 1 < line.Length)
@@ -594,11 +597,11 @@ namespace HanabiLang.Lexers
                                 break;
                             if (c == '.')
                             {
-                                dotNums++;
                                 if (numberBase != 10)
                                     throw new SystemException($"Unexpected floating point (base{numberBase}): line {lineIndex + 1}");
-                                if (dotNums > 1)
+                                if (isFloat)
                                     throw new SystemException($"Unexpected floating point: line {lineIndex + 1}");
+                                isFloat = true;
                             }
                             else
                             {
@@ -614,6 +617,12 @@ namespace HanabiLang.Lexers
                                 }
                                 else if (numberBase == 10)
                                 {
+                                    if (c == 'e' || c == 'E')
+                                    {
+                                        isScientific = true;
+                                        break;
+                                    }
+
                                     if (!(c >= '0' && c <= '9'))
                                         throw new SystemException($"Unexpected base{numberBase} number: line {lineIndex + 1}");
                                 }
@@ -628,6 +637,11 @@ namespace HanabiLang.Lexers
                             i++;
                         }
 
+                        if (isScientific)
+                        {
+                            // TODO:
+                        }
+
                         i--;
 
                         string number = numberBuilder.ToString();
@@ -636,17 +650,37 @@ namespace HanabiLang.Lexers
                             throw new SystemException($"Unexpected number ends with \".\": line {lineIndex + 1}");
                         }
 
-                        if (dotNums == 1)
+                        bool sign = isPositiveSignedNumber.HasValue ? isPositiveSignedNumber.Value : true;
+                        if (isFloat)
                         {
+                            number = (sign ? "+" : "-") + number;
+                            try
+                            {
+                                double.Parse(number);
+                            }
+                            catch (OverflowException)
+                            {
+                                if (sign)
+                                    throw new OverflowException($"float value: {number} > +{double.MaxValue}");
+                                else
+                                    throw new OverflowException($"float value: {number} < {double.MinValue}");
+                            }
+
                             tokens.Add(new Token(TokenType.FLOAT, number, lineIndex + 1));
                         }
-                        else if (dotNums == 0)
+                        else
                         {
-                            if (numberBase == 10)
-                                tokens.Add(new Token(TokenType.INT, number, lineIndex + 1));
-                            else
-                                tokens.Add(new Token(TokenType.INT, Convert.ToInt64(number, numberBase).ToString(), lineIndex + 1));
+                            // Convert.ToInt64 converts non 10 base value > long.MaxValue to negative value.
+                            ulong u64Value = Convert.ToUInt64(number, numberBase);
+                            number = (sign ? "+" : "-") + u64Value.ToString();
+                            if (sign && u64Value > long.MaxValue)
+                                throw new OverflowException($"int value: {number} > +{long.MaxValue}");
+                            else if (!sign && u64Value > ((ulong)long.MaxValue + 1))
+                                throw new OverflowException($"int value: {number} < {long.MinValue}");
+
+                            tokens.Add(new Token(TokenType.INT, number, lineIndex + 1));
                         }
+                        isPositiveSignedNumber = null;
                     }
 
                     // check identifier
@@ -705,7 +739,6 @@ namespace HanabiLang.Lexers
                             i++;
                         }
                         else tokens.Add(new Token(TokenType.EQUALS, "=", lineIndex + 1));
-                        continue;
                     }
 
                     // <=, <
@@ -786,10 +819,13 @@ namespace HanabiLang.Lexers
                             tokens.Add(new Token(TokenType.OPERATOR, $"{c}=", lineIndex + 1));
                             i++;
                         }
-                        // +, =
+                        // +, -
                         else
                         {
-                            tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), lineIndex + 1));
+                            if (i + 1 < line.Length && char.IsDigit(line[i + 1]))
+                                isPositiveSignedNumber = c == '+';
+                            else
+                                tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), lineIndex + 1));
                         }
                     }
 

@@ -141,20 +141,6 @@ namespace HanabiLang.Parses
                         if (currentToken.Raw == "-" || currentToken.Raw == "+")
                         {
                             var expression = this.TermDot(skipIndexer, skipArrowFn);
-                            if (expression is IntNode)
-                            {
-                                if (currentToken.Raw == "-")
-                                    return new IntNode(-((IntNode)expression).Value);
-                                else if (currentToken.Raw == "+")
-                                    return new IntNode(+((IntNode)expression).Value);
-                            }
-                            else if (expression is FloatNode)
-                            {
-                                if (currentToken.Raw == "-")
-                                    return new FloatNode(-((FloatNode)expression).Value);
-                                else if (currentToken.Raw == "+")
-                                    return new FloatNode(+((FloatNode)expression).Value);
-                            }
                             return new UnaryNode(expression, currentToken.Raw);
                         }
 
