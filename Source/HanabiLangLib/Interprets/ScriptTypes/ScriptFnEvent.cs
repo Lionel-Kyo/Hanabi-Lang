@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Collections;
+using System.Linq;
 
 namespace HanabiLangLib.Interprets.ScriptTypes
 {
@@ -70,7 +71,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                     int hashCode = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(idObj));
                     result = RemoveFn(_this, hashCode);
                 }
-                else 
+                else
                 {
                     result = RemoveFn(_this, fn);
                 }
@@ -78,6 +79,18 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
 
             this.AddFunction("Call", new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("args", (ScriptClass)null, null, true),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                var _args = ScriptList.AsCSharp(args[1].TryObject);
+                Call(_this, false, _args.ToArray());
+                return ScriptValue.Null;
+            });
+
+            this.AddFunction("SafeCall", new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("args", (ScriptClass)null, null, true),
@@ -130,6 +143,26 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         {
             var fns = AsCSharp(_this);
             foreach (var fn in fns)
+            {
+                try
+                {
+                    fn.Call(null, args);
+                }
+                catch (Exception ex)
+                {
+                    if (!skipEachFnError)
+                        throw ex;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Call with cloned fns
+        /// </summary>
+        public static void SafeCall(ScriptObject _this, bool skipEachFnError, params ScriptValue[] args)
+        {
+            var fns = AsCSharp(_this);
+            foreach (var fn in fns.ToList())
             {
                 try
                 {
