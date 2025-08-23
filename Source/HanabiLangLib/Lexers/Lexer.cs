@@ -18,13 +18,40 @@ namespace HanabiLang.Lexers
             '^', '&', '*', '(', ')', '-', '+',
             '=', '[', ']', '{', '}', '|', '\\',
             ';', ':', '\'', '\"', ',', '.', '<',
-            '>', '/', '?', ' ', '\t', '\r', '\n', '\0'
+            '>', '/', '?'
         };
 
         /// <summary>
         /// Token skip characters
         /// </summary>
-        private static readonly char[] SkipChars = new char[] { ' ', '\t', '\r', '\0' };
+        private static readonly char[] SkipChars = new char[]
+        {
+            ' ', // Normal Space
+            '\t', // Horizontal Tab
+            '\r', // Carriage Return
+            '\0', // Zero
+            '\u000B', // Vertical Tab
+            '\u000C', // Form Feed
+            '\u00A0', // No-Break Space
+            '\u1680', // Ogham Space Mark
+            '\u2000', // En Quad
+            '\u2001', // Em Quad
+            '\u2002', // En Space
+            '\u2003', // Em Space
+            '\u2004', // Three-Per-Em Space
+            '\u2005', // Four-Per-Em Space
+            '\u2006', // Six-Per-Em Space
+            '\u2007', // Figure Space
+            '\u2008', // Punctuation Space
+            '\u2009', // Thin Space
+            '\u200A', // Hair Space
+            '\u2028', // Line Separator
+            '\u2029', // Paragraph Separator
+            '\u202F', // Narrow No-Break Space
+            '\u205F', // Medium Mathematical Space
+            '\u3000', // Ideographic Space
+            '\uFEFF', // Zero Width No-Break Space (BOM)
+        };
 
         /// <summary>
         /// Reserved keywords
@@ -60,6 +87,8 @@ namespace HanabiLang.Lexers
             if (firstChar && char.IsDigit(c))
                 return false;
             if (IdentifierNotAllowedChars.Contains(c))
+                return false;
+            if (SkipChars.Contains(c))
                 return false;
             return true;
         }
@@ -593,8 +622,10 @@ namespace HanabiLang.Lexers
                         while (i < line.Length)
                         {
                             c = line[i];
-                            if (IdentifierNotAllowedChars.Contains(c) && c != '.')
+
+                            if ((IdentifierNotAllowedChars.Contains(c) || SkipChars.Contains(c)) && c != '.')
                                 break;
+
                             if (c == '.')
                             {
                                 if (numberBase != 10)
