@@ -13,7 +13,7 @@ namespace HanabiLang.Lexers
         /// <summary>
         /// Identifier not allowed charachers
         /// </summary>
-        private static readonly char[] IdentifierNotAllowedChars = new char[]
+        private static readonly HashSet<char> IdentifierNotAllowedChars = new HashSet<char>()
         {   '`', '~', '!', '@', '#', '$', '%',
             '^', '&', '*', '(', ')', '-', '+',
             '=', '[', ']', '{', '}', '|', '\\',
@@ -24,7 +24,7 @@ namespace HanabiLang.Lexers
         /// <summary>
         /// Token skip characters
         /// </summary>
-        private static readonly char[] SkipChars = new char[]
+        private static readonly HashSet<char> SkipChars = new HashSet<char>()
         {
             ' ', // Normal Space
             '\t', // Horizontal Tab
@@ -56,7 +56,7 @@ namespace HanabiLang.Lexers
         /// <summary>
         /// Reserved keywords
         /// </summary>
-        private static readonly string[] Keywords = new string[]
+        private static readonly HashSet<string> Keywords = new HashSet<string>()
         {
             "if", "else", "for", "while", "define",
             "fn", "let" ,"var", "auto" ,"const",
@@ -650,12 +650,26 @@ namespace HanabiLang.Lexers
                                 {
                                     if (c == 'e' || c == 'E')
                                     {
-                                        isScientific = true;
-                                        break;
-                                    }
+                                        if (isScientific)
+                                            throw new SystemException($"Unexpected scientific notation number: line {lineIndex + 1}");
 
-                                    if (!(c >= '0' && c <= '9'))
-                                        throw new SystemException($"Unexpected base{numberBase} number: line {lineIndex + 1}");
+                                        isFloat = true;
+                                        isScientific = true;
+                                        numberBuilder.Append('e');
+                                        i++;
+
+                                        if (i < line.Length && (line[i] == '+' || line[i] == '-'))
+                                        {
+                                            numberBuilder.Append(line[i]);
+                                            i++;
+                                        }
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        if (!(c >= '0' && c <= '9'))
+                                            throw new SystemException($"Unexpected base{numberBase} number: line {lineIndex + 1}");
+                                    }
                                 }
                                 else if (numberBase == 16)
                                 {
@@ -668,14 +682,10 @@ namespace HanabiLang.Lexers
                             i++;
                         }
 
-                        if (isScientific)
-                        {
-                            // TODO:
-                        }
-
                         i--;
 
                         string number = numberBuilder.ToString();
+
                         if (number.EndsWith("."))
                         {
                             throw new SystemException($"Unexpected number ends with \".\": line {lineIndex + 1}");
@@ -684,6 +694,19 @@ namespace HanabiLang.Lexers
                         bool sign = isPositiveSignedNumber.HasValue ? isPositiveSignedNumber.Value : true;
                         if (isFloat)
                         {
+                            if (isScientific)
+                            {
+                                var scientific = number.Split('e');
+                                if (scientific.Length != 2)
+                                    throw new SystemException($"Unexpected scientific notation number: line {lineIndex + 1}");
+                                if (string.IsNullOrWhiteSpace(scientific[0]) || string.IsNullOrWhiteSpace(scientific[1]))
+                                    throw new SystemException($"Unexpected scientific notation number: line {lineIndex + 1}");
+
+                                if (!double.TryParse(scientific[0], out double firstFactor) || !double.TryParse(scientific[1], out double exponent))
+                                    throw new SystemException($"Unexpected scientific notation number: line {lineIndex + 1}");
+                                number = (firstFactor * Math.Pow(10, exponent)).ToString();
+                            }
+
                             number = (sign ? "+" : "-") + number;
                             try
                             {
@@ -696,7 +719,6 @@ namespace HanabiLang.Lexers
                                 else
                                     throw new OverflowException($"float value: {number} < {double.MinValue}");
                             }
-
                             tokens.Add(new Token(TokenType.FLOAT, number, lineIndex + 1));
                         }
                         else
