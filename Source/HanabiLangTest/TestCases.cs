@@ -517,6 +517,10 @@ Test(12, d:34, b:56, c:78)
         public static void JsonTest()
         {
             string sourceCode = @"
+import ""Type""
+import ""Json""
+import ""decimal""
+
 class Test {
     public let t1 { get; set; }
     public let t2: decimal { get; set; }
@@ -565,6 +569,8 @@ let result1 = a.GetValue(""Test"");
         public static void IterableTest()
         {
             string sourceCode = @"
+import ""Iterable""
+
 class Test: Iterable {
     private let values = null;
     public let Iter => TestIterator.Create(this.values);

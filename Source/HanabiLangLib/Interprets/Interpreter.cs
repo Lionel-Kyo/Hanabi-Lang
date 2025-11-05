@@ -35,23 +35,24 @@ namespace HanabiLang.Interprets
             {
                 this.CurrentScope = new ScriptScope(null, this);
                 this.Path = path.Replace("\\", "/");
-                this.CurrentScope.Variables["Script"] = new ScriptVariable("Script", new ScriptScript(isMain, Arguments));
+                BuildInImports.Classes["Script"] = new ScriptScript(isMain, Arguments);
+                // this.CurrentScope.Variables["Script"] = new ScriptVariable("Script", new ScriptScript(isMain, Arguments));
                 this.CurrentScope.Variables.Add("object", new ScriptVariable(BasicTypes.ObjectClass.Name, BasicTypes.ObjectClass));
-                this.CurrentScope.Variables.Add("Type", new ScriptVariable(BasicTypes.TypeClass.Name, BasicTypes.TypeClass));
-                this.CurrentScope.Variables.Add("Function", new ScriptVariable(BasicTypes.FunctionClass.Name, BasicTypes.FunctionClass));
+                // this.CurrentScope.Variables.Add("Type", new ScriptVariable(BasicTypes.TypeClass.Name, BasicTypes.TypeClass));
+                // this.CurrentScope.Variables.Add("Function", new ScriptVariable(BasicTypes.FunctionClass.Name, BasicTypes.FunctionClass));
                 this.CurrentScope.Variables.Add("str", new ScriptVariable(BasicTypes.Str.Name, BasicTypes.Str));
                 this.CurrentScope.Variables.Add("int", new ScriptVariable(BasicTypes.Int.Name, BasicTypes.Int));
                 this.CurrentScope.Variables.Add("float", new ScriptVariable(BasicTypes.Float.Name, BasicTypes.Float));
-                this.CurrentScope.Variables.Add("decimal", new ScriptVariable(BasicTypes.Decimal.Name, BasicTypes.Decimal));
+                // this.CurrentScope.Variables.Add("decimal", new ScriptVariable(BasicTypes.Decimal.Name, BasicTypes.Decimal));
                 this.CurrentScope.Variables.Add("bool", new ScriptVariable(BasicTypes.Bool.Name, BasicTypes.Bool));
                 this.CurrentScope.Variables.Add("range", new ScriptVariable(BasicTypes.Range.Name, BasicTypes.Range));
                 this.CurrentScope.Variables.Add("slice", new ScriptVariable(BasicTypes.Slice.Name, BasicTypes.Slice));
                 this.CurrentScope.Variables.Add("List", new ScriptVariable(BasicTypes.List.Name, BasicTypes.List));
                 this.CurrentScope.Variables.Add("Dict", new ScriptVariable(BasicTypes.Dict.Name, BasicTypes.Dict));
-                this.CurrentScope.Variables.Add("Iterable", new ScriptVariable(BasicTypes.Iterable.Name, BasicTypes.Iterable));
+                //this.CurrentScope.Variables.Add("Iterable", new ScriptVariable(BasicTypes.Iterable.Name, BasicTypes.Iterable));
                 this.CurrentScope.Variables.Add("Exception", new ScriptVariable(BasicTypes.Exception.Name, BasicTypes.Exception));
-                this.CurrentScope.Variables.Add("FnEvent", new ScriptVariable(BasicTypes.FnEvent.Name, BasicTypes.FnEvent));
-                this.CurrentScope.Variables.Add("Json", new ScriptVariable(BasicTypes.Json.Name, BasicTypes.Json));
+                //this.CurrentScope.Variables.Add("FnEvent", new ScriptVariable(BasicTypes.FnEvent.Name, BasicTypes.FnEvent));
+                //this.CurrentScope.Variables.Add("Json", new ScriptVariable(BasicTypes.Json.Name, BasicTypes.Json));
                 BasicFns.AddBasicFunctions(this.CurrentScope);
             }
             else
@@ -228,65 +229,104 @@ namespace HanabiLang.Interprets
                 return;
             }
 
-            if (fullPathIndex < 0)
-                throw new SystemException($"File {realNode.Path} not found");
-
-            string fullPath = fullPaths[fullPathIndex];
-            string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
-            string extension = System.IO.Path.GetExtension(realNode.Path).ToLower();
-
-            DateTime lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(fullPath);
-            if (extension.Equals(".json"))
+            else if (fullPathIndex >= 0)
             {
-                var tokens = Lexer.Tokenize(System.IO.File.ReadAllLines(fullPath));
-                var parser = new Parser(tokens);
-                var ast = parser.Parse();
-                if (ast.Nodes.Count != 1)
-                    throw new SystemException("Incorrect format of json");
+                string fullPath = fullPaths[fullPathIndex];
+                string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fullPath);
+                string extension = System.IO.Path.GetExtension(realNode.Path).ToLower();
 
-                var jsonValue = InterpretJson(ast.Nodes.First());
-
-                interpretScope.Variables[realNode.AsName ?? fileNameWithoutExtension] = new ScriptVariable(realNode.AsName ?? fileNameWithoutExtension, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
-            }
-            else
-            {
-                Interpreter newInterpreter = null;
-                if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
+                DateTime lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(fullPath);
+                if (extension.Equals(".json"))
                 {
-                    string[] lines = Lexer.ReadScriptToLines(fullPath);
-                    var tokens = Lexer.Tokenize(lines);
+                    var tokens = Lexer.Tokenize(System.IO.File.ReadAllLines(fullPath));
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
-                    //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                    newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                    newInterpreter.Interpret(true, false);
-                    ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
+                    if (ast.Nodes.Count != 1)
+                        throw new SystemException("Incorrect format of json");
+
+                    var jsonValue = InterpretJson(ast.Nodes.First());
+
+                    interpretScope.Variables[realNode.AsName ?? fileNameWithoutExtension] = new ScriptVariable(realNode.AsName ?? fileNameWithoutExtension, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
                 }
                 else
                 {
-                    newInterpreter = scriptInfo.Item2;
-                }
+                    Interpreter newInterpreter = null;
+                    if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
+                    {
+                        string[] lines = Lexer.ReadScriptToLines(fullPath);
+                        var tokens = Lexer.Tokenize(lines);
+                        var parser = new Parser(tokens);
+                        var ast = parser.Parse();
+                        //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                        newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                        newInterpreter.Interpret(true, false);
+                        ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
+                    }
+                    else
+                    {
+                        newInterpreter = scriptInfo.Item2;
+                    }
 
+                    // Import as variable
+                    if (realNode.Imports == null)
+                    {
+                        if (string.IsNullOrEmpty(realNode.AsName))
+                            interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(
+                                fileNameWithoutExtension,
+                                new ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
+                                    newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
+                            );
+                        else
+                            interpretScope.Variables[realNode.AsName] = new ScriptVariable(
+                                realNode.AsName,
+                                new ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
+                                    newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
+                            );
+                    }
+                    // Import all
+                    else if (realNode.Imports.Count <= 0)
+                    {
+                        foreach (var kv in newInterpreter.CurrentScope.Variables)
+                        {
+                            if (kv.Value.Level != AccessibilityLevel.Public)
+                                continue;
+                            interpretScope.Variables[kv.Key] = kv.Value;
+                        }
+                    }
+                    // Import some
+                    else
+                    {
+                        foreach (var item in realNode.Imports)
+                        {
+                            if (interpretScope.TryGetValue(item.Item1, out _))
+                                throw new SystemException($"Import failed, {item.Item1} exists");
+
+                            if (newInterpreter.CurrentScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
+                            {
+                                if (scriptType.Level != AccessibilityLevel.Public)
+                                    throw new SystemException($"Import failed, {item.Item1} is not public");
+                                interpretScope.Variables[item.Item2 ?? scriptType.Name] = (ScriptVariable)scriptType;
+                            }
+                            else
+                            {
+                                throw new SystemException($"{item.Item1} is not defined in {realNode.Path}");
+                            }
+                        }
+                    }
+                }
+            }
+
+            else if (BuildInImports.Classes.TryGetValue(realNode.Path, out var buildInClassImport))
+            {
                 // Import as variable
                 if (realNode.Imports == null)
                 {
-                    if (string.IsNullOrEmpty(realNode.AsName))
-                        interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(
-                            fileNameWithoutExtension,
-                            new ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
-                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
-                        );
-                    else
-                        interpretScope.Variables[realNode.AsName] = new ScriptVariable(
-                            realNode.AsName,
-                            new ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
-                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
-                        );
+                    interpretScope.Variables[buildInClassImport.Name] = new ScriptVariable(buildInClassImport.Name, buildInClassImport);
                 }
                 // Import all
                 else if (realNode.Imports.Count <= 0)
                 {
-                    foreach (var kv in newInterpreter.CurrentScope.Variables)
+                    foreach (var kv in buildInClassImport.Scope.Variables)
                     {
                         if (kv.Value.Level != AccessibilityLevel.Public)
                             continue;
@@ -301,7 +341,7 @@ namespace HanabiLang.Interprets
                         if (interpretScope.TryGetValue(item.Item1, out _))
                             throw new SystemException($"Import failed, {item.Item1} exists");
 
-                        if (newInterpreter.CurrentScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
+                        if (buildInClassImport.Scope.TryGetValue(item.Item1, out ScriptVariable scriptType))
                         {
                             if (scriptType.Level != AccessibilityLevel.Public)
                                 throw new SystemException($"Import failed, {item.Item1} is not public");
@@ -313,6 +353,11 @@ namespace HanabiLang.Interprets
                         }
                     }
                 }
+            }
+
+            else
+            {
+                throw new SystemException($"{realNode.Path} is not a valid import.");
             }
         }
 
