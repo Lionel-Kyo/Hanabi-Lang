@@ -194,7 +194,10 @@ namespace HanabiLang.Interprets
                 // Import as variable
                 if (realNode.Imports == null)
                 {
-                    interpretScope.Variables[className] = new ScriptVariable(className, scriptClass);
+                    if (string.IsNullOrEmpty(realNode.AsName))
+                        interpretScope.Variables[className] = new ScriptVariable(className, scriptClass);
+                    else
+                        interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, scriptClass);
                 }
                 // Import all
                 else if (realNode.Imports.Count <= 0)
@@ -211,14 +214,15 @@ namespace HanabiLang.Interprets
                 {
                     foreach (var item in realNode.Imports)
                     {
-                        if (interpretScope.TryGetValue(item.Item1, out _))
-                            throw new SystemException($"Import failed, {item.Item1} exists");
+                        string importedName = item.Item2 ?? item.Item1;
+                        if (interpretScope.TryGetValue(importedName, out _))
+                            throw new SystemException($"Import failed, {importedName} exists");
 
                         if (scriptScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
                         {
                             if (scriptType.Level != AccessibilityLevel.Public)
                                 throw new SystemException($"Import failed, {item.Item1} is not public");
-                            interpretScope.Variables[item.Item2 ?? scriptType.Name] = (ScriptVariable)scriptType;
+                            interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                         }
                         else
                         {
@@ -298,14 +302,15 @@ namespace HanabiLang.Interprets
                     {
                         foreach (var item in realNode.Imports)
                         {
-                            if (interpretScope.TryGetValue(item.Item1, out _))
-                                throw new SystemException($"Import failed, {item.Item1} exists");
+                            string importedName = item.Item2 ?? item.Item1;
+                            if (interpretScope.TryGetValue(importedName, out _))
+                                throw new SystemException($"Import failed, {importedName} exists");
 
                             if (newInterpreter.CurrentScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
                             {
                                 if (scriptType.Level != AccessibilityLevel.Public)
                                     throw new SystemException($"Import failed, {item.Item1} is not public");
-                                interpretScope.Variables[item.Item2 ?? scriptType.Name] = (ScriptVariable)scriptType;
+                                interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                             }
                             else
                             {
@@ -321,7 +326,10 @@ namespace HanabiLang.Interprets
                 // Import as variable
                 if (realNode.Imports == null)
                 {
-                    interpretScope.Variables[buildInClassImport.Name] = new ScriptVariable(buildInClassImport.Name, buildInClassImport);
+                    if (string.IsNullOrEmpty(realNode.AsName))
+                        interpretScope.Variables[buildInClassImport.Name] = new ScriptVariable(buildInClassImport.Name, buildInClassImport);
+                    else
+                        interpretScope.Variables[realNode.AsName] = new ScriptVariable(realNode.AsName, buildInClassImport);
                 }
                 // Import all
                 else if (realNode.Imports.Count <= 0)
@@ -338,14 +346,15 @@ namespace HanabiLang.Interprets
                 {
                     foreach (var item in realNode.Imports)
                     {
-                        if (interpretScope.TryGetValue(item.Item1, out _))
+                        string importedName = item.Item2 ?? item.Item1;
+                        if (interpretScope.TryGetValue(importedName, out _))
                             throw new SystemException($"Import failed, {item.Item1} exists");
 
                         if (buildInClassImport.Scope.TryGetValue(item.Item1, out ScriptVariable scriptType))
                         {
                             if (scriptType.Level != AccessibilityLevel.Public)
                                 throw new SystemException($"Import failed, {item.Item1} is not public");
-                            interpretScope.Variables[item.Item2 ?? scriptType.Name] = (ScriptVariable)scriptType;
+                            interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                         }
                         else
                         {

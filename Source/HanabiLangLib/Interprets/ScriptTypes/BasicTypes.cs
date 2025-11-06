@@ -32,5 +32,6 @@ namespace HanabiLang.Interprets.ScriptTypes
         public static readonly ScriptEnum Enum = new ScriptEnum();
         public static readonly ScriptFnEvent FnEvent = new ScriptFnEvent();
         public static readonly ScriptJson Json = new ScriptJson();
+        public static readonly ScriptDateTime DateTime = new ScriptDateTime();
     }
 }

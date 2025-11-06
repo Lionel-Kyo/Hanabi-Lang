@@ -964,9 +964,10 @@ namespace HanabiLang.Parses
                     }
                     else
                     {
-                        string importItem = this.CurrentToken.Raw;
-                        if (imports.FindIndex(x => x.Item1 == this.CurrentToken.Raw) >= 0)
-                            throw new ParseException($"import {this.CurrentToken.Raw} is exists", this.CurrentToken);
+                        var token = this.CurrentToken;
+                        string importItem = token.Raw;
+                        if (imports.FindIndex(x => x.Item1 == token.Raw) >= 0)
+                            throw new ParseException($"import {token.Raw} is exists", token);
                         this.Expect(TokenType.IDENTIFIER);
                         string itemAsName = null;
                         if (this.HasToken && this.CurrentToken.Raw == "as")
@@ -975,7 +976,11 @@ namespace HanabiLang.Parses
                             this.Expect(TokenType.IDENTIFIER);
                             itemAsName = this.LastToken.Raw;
                             if (imports.FindIndex(x => x.Item2 == this.CurrentToken.Raw) >= 0)
-                                throw new ParseException($"import as {this.CurrentToken.Raw} is exists", this.CurrentToken);
+                                throw new ParseException($"import as {this.CurrentToken.Raw} is exists", token);
+                        }
+                        else
+                        {
+                            throw new ParseException($"cannot import a identifier without as", token);
                         }
                         imports.Add(Tuple.Create(importItem, itemAsName));
                     }

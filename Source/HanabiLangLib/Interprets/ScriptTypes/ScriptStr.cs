@@ -6,7 +6,6 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using static HanabiLang.Interprets.ScriptTypes.ScriptRange;
 
 namespace HanabiLang.Interprets.ScriptTypes
 {
@@ -264,7 +263,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).PadRight(totalLength, paddingChar[0]));
             });
 
-            this.AddFunction("FromChar", new List<FnParameter>()
+            this.AddFunction("FromInt", new List<FnParameter>()
             {
                 new FnParameter("character", BasicTypes.Int, null, false),
             }, args =>
@@ -273,7 +272,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 return new ScriptValue((char)character);
             }, true);
 
-            this.AddFunction("ToChar", new List<FnParameter>()
+            this.AddFunction("ToInt", new List<FnParameter>()
             {
                 new FnParameter("this"),
             }, args =>
@@ -281,7 +280,7 @@ namespace HanabiLang.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 string str = AsCSharp(args[0].TryObject);
                 if (str.Length <= 0)
-                    throw new IndexOutOfRangeException("Empty string cannot convert to char");
+                    throw new IndexOutOfRangeException("Empty string cannot convert to int");
                 return new ScriptValue((long)str[0]);
             }, false);
 
