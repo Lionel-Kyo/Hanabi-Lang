@@ -19,7 +19,7 @@ namespace HanabiLang.Interprets
             Classes["decimal"] = BasicTypes.Decimal;
             Classes["Iterable"] = BasicTypes.Iterable;
             Classes["FnEvent"] = BasicTypes.FnEvent;
-            Classes["Json"] = BasicTypes.Json;
+            Classes["Json5"] = BasicTypes.Json5;
             Classes["DateTime"] = BasicTypes.DateTime;
         }
     }

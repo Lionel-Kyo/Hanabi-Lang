@@ -13,6 +13,7 @@ using System.Xml.Linq;
 using System.Reflection;
 using HanabiLangLib.Parses.Nodes;
 using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Interprets.Json5Converter;
 
 namespace HanabiLang.Interprets
 {
@@ -824,9 +825,9 @@ namespace HanabiLang.Interprets
                     var result = resultRef.Ref;
                     string _temp;
                     if (result.IsClassTypeOf(BasicTypes.Str))
-                        Console.WriteLine(ScriptJson.StringToJsonString(result.ToString(), false));
+                        Console.WriteLine(Json5Serializer.QuoteString(result.ToString(), '\"', false));
                     else
-                        Console.WriteLine((_temp = ScriptJson.StringToJsonString(result.ToString(), false)).Substring(1, _temp.Length - 2));
+                        Console.WriteLine((_temp = Json5Serializer.QuoteString(result.ToString(), '\"', false)).Substring(1, _temp.Length - 2));
                 }
                 return resultRef;
             }
