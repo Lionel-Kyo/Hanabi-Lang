@@ -20,6 +20,7 @@ namespace HanabiLangLib.Interprets.Json5Converter
         private readonly bool _infinityAsNull;
         private readonly bool _trailingComma;
         private readonly bool _ensureAscii;
+        private readonly bool _allowJson5EscapeSequences;
         private readonly string _doubleFormat;
 
         public Json5Serializer(
@@ -42,8 +43,9 @@ namespace HanabiLangLib.Interprets.Json5Converter
             _nanAsNull = nanAsNull;
             _infinityAsNull = infinityAsNull;
             _trailingComma = trailingComma;
-            _ensureAscii = ensureAscii;
             _doubleFormat = allowScientific ? "G" : ("0.0" + new string('#', 30));
+            _allowJson5EscapeSequences = allowJson5EscapeSequences;
+            _ensureAscii = ensureAscii;
         }
 
         public string Serialize(ScriptValue node)
@@ -67,7 +69,7 @@ namespace HanabiLangLib.Interprets.Json5Converter
             string result;
 
             if (obj.IsTypeOrSubOf(BasicTypes.Str))
-                result = QuoteString(ScriptStr.AsCSharp(obj), _quoteStyle, _ensureAscii);
+                result = QuoteString(ScriptStr.AsCSharp(obj), _quoteStyle, _ensureAscii, _allowJson5EscapeSequences);
             else if (obj.IsTypeOrSubOf(BasicTypes.Int))
                 result = ScriptInt.AsCSharp(obj).ToString(CultureInfo.InvariantCulture);
             else if (obj.IsTypeOrSubOf(BasicTypes.Float))
@@ -200,7 +202,7 @@ namespace HanabiLangLib.Interprets.Json5Converter
         private string SerializeKey(string key)
         {
             if (_quoteAllKeys || !IsValidIdentifier(key))
-                return QuoteString(key, _quoteStyle, _ensureAscii);
+                return QuoteString(key, _quoteStyle, _ensureAscii, _allowJson5EscapeSequences);
             return key;
         }
 
@@ -209,19 +211,16 @@ namespace HanabiLangLib.Interprets.Json5Converter
             if (string.IsNullOrEmpty(key))
                 return false;
 
-            if (!(char.IsLetter(key[0]) || key[0] == '_' || key[0] == '$' || CharUnicodeInfo.GetUnicodeCategory(key[0]) == UnicodeCategory.LetterNumber))
-                return false;
-
-            for (int i = 1; i < key.Length; i++)
+            for (int i = 0; i < key.Length; i++)
             {
                 char c = key[i];
-                if (!(char.IsLetterOrDigit(c) || c == '_' || c == '$'))
+                if (!(char.IsLetter(c) || c == '_' || c == '$' || CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.LetterNumber))
                     return false;
             }
             return true;
         }
 
-        public static string QuoteString(string value, char quoteStyle, bool ensureAscii)
+        public static string QuoteString(string value, char quoteStyle, bool ensureAscii, bool allowJson5EscapeSequences)
         {
             var result = new StringBuilder();
             result.Append(quoteStyle);
@@ -240,7 +239,9 @@ namespace HanabiLangLib.Interprets.Json5Converter
                     // case '\v': result.Append("\\v"); break; // JSON5 Only
                     // case '\0': result.Append("\\0"); break; // JSON5 Only
                     default:
-                        if (ensureAscii && c > 0x7F)
+                        if (allowJson5EscapeSequences && (c == '\v' || c == '\0'))
+                           result.Append(c == '\v' ? "\\v" : "\\0");
+                        else if (ensureAscii && c > 0x7F)
                             result.Append("\\u" + ((int)c).ToString("x4"));
                         else if (char.IsControl(c) || char.IsLowSurrogate(c) || char.IsHighSurrogate(c))
                             result.Append("\\u" + ((int)c).ToString("x4"));
