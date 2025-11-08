@@ -1,13 +1,13 @@
-﻿using HanabiLang.Parses;
+﻿using HanabiLangLib.Parses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Parses.Nodes;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptClass : ScriptType
     {

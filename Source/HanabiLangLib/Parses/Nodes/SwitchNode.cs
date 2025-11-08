@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HanabiLang.Parses.Nodes
+namespace HanabiLangLib.Parses.Nodes
 {
     class SwitchNode : AstNode, IStatementNode
     {

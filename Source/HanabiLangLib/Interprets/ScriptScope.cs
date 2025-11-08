@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Interprets.ScriptTypes;
+using HanabiLangLib.Interprets.ScriptTypes;
 
-namespace HanabiLang.Interprets
+namespace HanabiLangLib.Interprets
 {
     public class ScriptScope
     {

@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Parses.Nodes;
 using HanabiLangLib.Interprets.ScriptTypes;
 
-namespace HanabiLang.Interprets
+namespace HanabiLangLib.Interprets
 {
     public class ScriptValue : IComparable<ScriptValue>
     {

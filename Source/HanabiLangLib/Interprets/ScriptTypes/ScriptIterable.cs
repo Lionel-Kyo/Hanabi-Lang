@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static HanabiLang.Interprets.ScriptTypes.ScriptRange;
+using static HanabiLangLib.Interprets.ScriptTypes.ScriptRange;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptIterable : ScriptClass
     {

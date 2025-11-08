@@ -1,5 +1,5 @@
-﻿using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Interprets;
+﻿using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Interprets;
 using System;
 using System.Collections.Generic;
 using System.Text;

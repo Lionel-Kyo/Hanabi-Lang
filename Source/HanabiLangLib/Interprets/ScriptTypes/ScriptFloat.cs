@@ -5,7 +5,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptFloat : ScriptClass
     {

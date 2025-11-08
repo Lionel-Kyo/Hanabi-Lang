@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HanabiLang.Lexers
+namespace HanabiLangLib.Lexers
 {
 
     internal class InterpolatedStringToken: Token

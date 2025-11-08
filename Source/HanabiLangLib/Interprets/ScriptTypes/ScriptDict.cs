@@ -1,4 +1,4 @@
-﻿using HanabiLang.Parses;
+﻿using HanabiLangLib.Parses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptDict : ScriptClass
     {

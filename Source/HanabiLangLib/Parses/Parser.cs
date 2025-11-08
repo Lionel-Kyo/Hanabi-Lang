@@ -6,12 +6,12 @@ using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Interprets.Exceptions;
-using HanabiLang.Lexers;
-using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Interprets.Exceptions;
+using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses.Nodes;
 using HanabiLangLib.Parses.Nodes;
 
-namespace HanabiLang.Parses
+namespace HanabiLangLib.Parses
 {
     public class Parser
     {

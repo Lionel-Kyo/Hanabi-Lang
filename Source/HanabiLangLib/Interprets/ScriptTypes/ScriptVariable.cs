@@ -1,12 +1,12 @@
-﻿using HanabiLang.Lexers;
-using HanabiLang.Parses;
+﻿using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptVariable : ScriptType
     {

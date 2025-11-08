@@ -1,7 +1,7 @@
-﻿using HanabiLang.Interprets;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Lexers;
-using HanabiLang.Parses;
+﻿using HanabiLangLib.Interprets;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses;
 using System.Diagnostics;
 using System.Text;
 

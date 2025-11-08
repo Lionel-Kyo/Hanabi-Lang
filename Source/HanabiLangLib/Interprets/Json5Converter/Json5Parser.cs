@@ -1,6 +1,6 @@
-﻿using HanabiLang;
-using HanabiLang.Interprets;
-using HanabiLang.Interprets.ScriptTypes;
+﻿using HanabiLangLib;
+using HanabiLangLib.Interprets;
+using HanabiLangLib.Interprets.ScriptTypes;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -116,7 +116,7 @@ namespace HanabiLangLib.Interprets.Json5Converter
         private ScriptValue ParseObject(ScriptClass targetType)
         {
             Consume(Json5TokenType.LeftBrace);
-            var obj = targetType == null ? BasicTypes.Dict.Create() : (targetType.Call(null, new List<HanabiLang.Parses.Nodes.AstNode>(), new Dictionary<string, HanabiLang.Parses.Nodes.AstNode>()).TryObject);
+            var obj = targetType == null ? BasicTypes.Dict.Create() : (targetType.Call(null, new List<HanabiLangLib.Parses.Nodes.AstNode>(), new Dictionary<string, HanabiLangLib.Parses.Nodes.AstNode>()).TryObject);
             var scriptValue = new ScriptValue(obj);
             var dictProperties = targetType == null ? ScriptDict.AsCSharp(obj) : null;
             // empty object

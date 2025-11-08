@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Interprets.Exceptions;
+using HanabiLangLib.Interprets.Exceptions;
 using HanabiLangLib.Interprets.ScriptTypes;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public static class BasicTypes
     {

@@ -1,8 +1,8 @@
-﻿using HanabiLang.Interprets;
-using HanabiLang.Interprets.Exceptions;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Lexers;
-using HanabiLang.Parses;
+﻿using HanabiLangLib.Interprets;
+using HanabiLangLib.Interprets.Exceptions;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses;
 using System;
 using System.Collections.Generic;
 using System.Linq;

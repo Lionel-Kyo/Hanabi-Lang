@@ -1,13 +1,13 @@
-﻿using HanabiLang.Parses;
+﻿using HanabiLangLib.Parses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Interprets.ScriptTypes;
+using HanabiLangLib.Interprets.ScriptTypes;
 
-namespace HanabiLang.Interprets.Exceptions
+namespace HanabiLangLib.Interprets.Exceptions
 {
     public class ScriptException : ScriptClass
     {

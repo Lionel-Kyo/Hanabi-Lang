@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
-using HanabiLang.Parses.Nodes;
-using HanabiLang.Interprets.ScriptTypes;
+using HanabiLangLib.Parses.Nodes;
+using HanabiLangLib.Interprets.ScriptTypes;
 using System.Linq.Expressions;
 using System.Collections;
 
-namespace HanabiLang.Interprets
+namespace HanabiLangLib.Interprets
 {
     class BuildInClasses
     {

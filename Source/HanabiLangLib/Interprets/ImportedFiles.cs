@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Interprets.ScriptTypes;
+using HanabiLangLib.Interprets.ScriptTypes;
 
-namespace HanabiLang.Interprets
+namespace HanabiLangLib.Interprets
 {
     public static class ImportedItems
     {

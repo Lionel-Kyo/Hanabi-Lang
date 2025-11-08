@@ -1,4 +1,4 @@
-﻿using HanabiLang.Parses;
+﻿using HanabiLangLib.Parses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,9 +7,9 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using static HanabiLang.Interprets.ScriptTypes.ScriptRange;
+using static HanabiLangLib.Interprets.ScriptTypes.ScriptRange;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptRange : ScriptClass
     {

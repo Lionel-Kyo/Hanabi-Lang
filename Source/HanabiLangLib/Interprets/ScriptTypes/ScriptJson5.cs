@@ -1,14 +1,14 @@
-﻿using HanabiLang.Interprets;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Lexers;
-using HanabiLang.Parses;
+﻿using HanabiLangLib.Interprets;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses;
 using HanabiLangLib.Interprets.Json5Converter;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptJson5 : ScriptClass
     {

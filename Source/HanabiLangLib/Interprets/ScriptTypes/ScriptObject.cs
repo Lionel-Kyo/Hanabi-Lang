@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Parses.Nodes;
 
-namespace HanabiLang.Interprets.ScriptTypes
+namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptObject : ScriptType
     {

@@ -3,19 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Parses;
-using HanabiLang.Lexers;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Interprets.Exceptions;
-using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Parses;
+using HanabiLangLib.Lexers;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Interprets.Exceptions;
+using HanabiLangLib.Parses.Nodes;
 using System.Threading;
 using System.Xml.Linq;
 using System.Reflection;
-using HanabiLangLib.Parses.Nodes;
-using HanabiLangLib.Interprets.ScriptTypes;
 using HanabiLangLib.Interprets.Json5Converter;
 
-namespace HanabiLang.Interprets
+namespace HanabiLangLib.Interprets
 {
     public class Interpreter
     {

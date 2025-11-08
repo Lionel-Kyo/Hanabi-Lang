@@ -1,6 +1,6 @@
-﻿using HanabiLang.Interprets;
-using HanabiLang.Interprets.ScriptTypes;
-using HanabiLang.Parses.Nodes;
+﻿using HanabiLangLib.Interprets;
+using HanabiLangLib.Interprets.ScriptTypes;
+using HanabiLangLib.Parses.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,12 +1,12 @@
-﻿using HanabiLang.Lexers;
-using HanabiLang.Parses.Nodes;
+﻿using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HanabiLang.Interprets.Exceptions
+namespace HanabiLangLib.Interprets.Exceptions
 {
     internal class InterpretException : SystemException
     {

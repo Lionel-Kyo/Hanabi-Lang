@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HanabiLang.Parses.Nodes;
+using HanabiLangLib.Parses.Nodes;
 
-namespace HanabiLang.Parses
+namespace HanabiLangLib.Parses
 {
     public class AbstractSyntaxTree
     {

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.ComponentModel;
 
-namespace HanabiLang.Lexers
+namespace HanabiLangLib.Lexers
 {
     public static class Lexer
     {

@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using HanabiLang.Lexers;
-using HanabiLang.Parses;
-using HanabiLang.Interprets;
+using HanabiLangLib.Lexers;
+using HanabiLangLib.Parses;
+using HanabiLangLib.Interprets;
 
 
 Console.InputEncoding = Encoding.UTF8;
