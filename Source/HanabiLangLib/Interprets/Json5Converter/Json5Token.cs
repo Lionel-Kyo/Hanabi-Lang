@@ -8,8 +8,8 @@ namespace HanabiLangLib.Interprets.Json5Converter
     {
         Identifier,
         String,
-        Int64,
-        Float64,
+        Integer,
+        Float,
         Boolean,
         Null,
         LeftBrace,

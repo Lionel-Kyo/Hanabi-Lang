@@ -49,9 +49,9 @@ namespace HanabiLangLib.Interprets.Json5Converter
                 case Json5TokenType.LeftBracket: return ParseArray();
                 case Json5TokenType.String:
                     return new ScriptValue(Consume(Json5TokenType.String).Text);
-                case Json5TokenType.Int64:
+                case Json5TokenType.Integer:
                     {
-                        var i64Token = Consume(Json5TokenType.Int64);
+                        var i64Token = Consume(Json5TokenType.Integer);
                         var i64Text = i64Token.Text;
                         var isPositive = i64Text.Length > 0 && i64Text[0] == '-' ? false : true;
                         var i64TrimSignText = i64Text.TrimStart('+', '-');
@@ -80,9 +80,9 @@ namespace HanabiLangLib.Interprets.Json5Converter
                             value = -value;
                         return new ScriptValue(value);
                     }
-                case Json5TokenType.Float64:
+                case Json5TokenType.Float:
                     {
-                        var f64Token = Consume(Json5TokenType.Float64);
+                        var f64Token = Consume(Json5TokenType.Float);
                         var f64Text = f64Token.Text;
                         var isPositive = f64Text.Length > 0 && f64Text[0] == '-' ? false : true;
                         var i64TrimSignText = f64Text.TrimStart('+', '-');

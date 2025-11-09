@@ -51,7 +51,7 @@ namespace HanabiLangLib.Interprets.Json5Converter
                             else if (id == "null")
                                 tokens.Add(new Json5Token(Json5TokenType.Null, id, _pos, _line));
                             else if (id == "NaN" || id == "Infinity")
-                                tokens.Add(new Json5Token(Json5TokenType.Float64, id, _pos, _line));
+                                tokens.Add(new Json5Token(Json5TokenType.Float, id, _pos, _line));
                             else
                                 tokens.Add(new Json5Token(Json5TokenType.Identifier, id, _pos, _line));
                             continue;
@@ -259,12 +259,12 @@ namespace HanabiLangLib.Interprets.Json5Converter
             if (_pos + 8 < _input.Length && _input.Substring(_pos, 8) == "Infinity")
             {
                 _pos += 8;
-                return new Json5Token(Json5TokenType.Float64, _input.Substring(start, _pos - start), _pos, _line);
+                return new Json5Token(Json5TokenType.Float, _input.Substring(start, _pos - start), _pos, _line);
             }
             else if (_pos + 3 < _input.Length && _input.Substring(_pos, 3) == "NaN")
             {
                 _pos += 3;
-                return new Json5Token(Json5TokenType.Float64, _input.Substring(start, _pos - start), _pos, _line);
+                return new Json5Token(Json5TokenType.Float, _input.Substring(start, _pos - start), _pos, _line);
             }
 
             // base
@@ -288,7 +288,7 @@ namespace HanabiLangLib.Interprets.Json5Converter
                     if (_pos - basedNumberStartIndex <= 0)
                         throw new FormatException($"Invalid {numberBaseChar}-based literal at line {startLine}, position {start}");
 
-                    return new Json5Token(Json5TokenType.Int64, _input.Substring(start, _pos - start), _pos, _line);
+                    return new Json5Token(Json5TokenType.Integer, _input.Substring(start, _pos - start), _pos, _line);
                 }
             }
 
@@ -332,11 +332,11 @@ namespace HanabiLangLib.Interprets.Json5Converter
 
             if (isFloat)
             {
-                return new Json5Token(Json5TokenType.Float64, literal, _pos, _line);
+                return new Json5Token(Json5TokenType.Float, literal, _pos, _line);
             }
             else
             {
-                return new Json5Token(Json5TokenType.Int64, literal, _pos, _line);
+                return new Json5Token(Json5TokenType.Integer, literal, _pos, _line);
             }
         }
 
