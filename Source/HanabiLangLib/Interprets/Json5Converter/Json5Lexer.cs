@@ -332,13 +332,11 @@ namespace HanabiLangLib.Interprets.Json5Converter
 
             if (isFloat)
             {
-                double value = double.Parse(literal, NumberStyles.Float, CultureInfo.InvariantCulture);
-                return new Json5Token(Json5TokenType.Float64, value.ToString(), _pos, _line);
+                return new Json5Token(Json5TokenType.Float64, literal, _pos, _line);
             }
             else
             {
-                long value = long.Parse(literal, NumberStyles.Integer, CultureInfo.InvariantCulture);
-                return new Json5Token(Json5TokenType.Int64, value.ToString(), _pos, _line);
+                return new Json5Token(Json5TokenType.Int64, literal, _pos, _line);
             }
         }
 
