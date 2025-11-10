@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using HanabiLangLib.Interprets.Exceptions;
 using HanabiLangLib.Lexers;
 using HanabiLangLib.Parses.Nodes;
-using HanabiLangLib.Parses.Nodes;
 
 namespace HanabiLangLib.Parses
 {
@@ -977,10 +976,6 @@ namespace HanabiLangLib.Parses
                             itemAsName = this.LastToken.Raw;
                             if (imports.FindIndex(x => x.Item2 == this.CurrentToken.Raw) >= 0)
                                 throw new ParseException($"import as {this.CurrentToken.Raw} is exists", token);
-                        }
-                        else
-                        {
-                            throw new ParseException($"cannot import a identifier without as", token);
                         }
                         imports.Add(Tuple.Create(importItem, itemAsName));
                     }

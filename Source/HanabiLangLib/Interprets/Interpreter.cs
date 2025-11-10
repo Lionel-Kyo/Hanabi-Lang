@@ -213,19 +213,20 @@ namespace HanabiLangLib.Interprets
                 {
                     foreach (var item in realNode.Imports)
                     {
+                        string toBeImportName = item.Item1;
                         string importedName = item.Item2 ?? item.Item1;
                         if (interpretScope.TryGetValue(importedName, out _))
                             throw new SystemException($"Import failed, {importedName} exists");
 
-                        if (scriptScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
+                        if (scriptScope.TryGetValue(toBeImportName, out ScriptVariable scriptType))
                         {
                             if (scriptType.Level != AccessibilityLevel.Public)
-                                throw new SystemException($"Import failed, {item.Item1} is not public");
+                                throw new SystemException($"Import failed, {toBeImportName} is not public");
                             interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                         }
                         else
                         {
-                            throw new SystemException($"{item.Item1} is not defined in {realNode.Path}");
+                            throw new SystemException($"{toBeImportName} is not defined in {realNode.Path}");
                         }
                     }
                 }
@@ -301,19 +302,20 @@ namespace HanabiLangLib.Interprets
                     {
                         foreach (var item in realNode.Imports)
                         {
+                            string toBeImportName = item.Item1;
                             string importedName = item.Item2 ?? item.Item1;
                             if (interpretScope.TryGetValue(importedName, out _))
                                 throw new SystemException($"Import failed, {importedName} exists");
 
-                            if (newInterpreter.CurrentScope.TryGetValue(item.Item1, out ScriptVariable scriptType))
+                            if (newInterpreter.CurrentScope.TryGetValue(toBeImportName, out ScriptVariable scriptType))
                             {
                                 if (scriptType.Level != AccessibilityLevel.Public)
-                                    throw new SystemException($"Import failed, {item.Item1} is not public");
+                                    throw new SystemException($"Import failed, {toBeImportName} is not public");
                                 interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                             }
                             else
                             {
-                                throw new SystemException($"{item.Item1} is not defined in {realNode.Path}");
+                                throw new SystemException($"{toBeImportName} is not defined in {realNode.Path}");
                             }
                         }
                     }
@@ -345,19 +347,20 @@ namespace HanabiLangLib.Interprets
                 {
                     foreach (var item in realNode.Imports)
                     {
+                        string toBeImportName = item.Item1;
                         string importedName = item.Item2 ?? item.Item1;
                         if (interpretScope.TryGetValue(importedName, out _))
                             throw new SystemException($"Import failed, {item.Item1} exists");
 
-                        if (buildInClassImport.Scope.TryGetValue(item.Item1, out ScriptVariable scriptType))
+                        if (buildInClassImport.Scope.TryGetValue(toBeImportName, out ScriptVariable scriptType))
                         {
                             if (scriptType.Level != AccessibilityLevel.Public)
-                                throw new SystemException($"Import failed, {item.Item1} is not public");
+                                throw new SystemException($"Import failed, {toBeImportName} is not public");
                             interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                         }
                         else
                         {
-                            throw new SystemException($"{item.Item1} is not defined in {realNode.Path}");
+                            throw new SystemException($"{toBeImportName} is not defined in {realNode.Path}");
                         }
                     }
                 }
