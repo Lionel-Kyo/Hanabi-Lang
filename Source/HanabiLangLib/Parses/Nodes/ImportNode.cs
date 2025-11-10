@@ -10,7 +10,8 @@ namespace HanabiLangLib.Parses.Nodes
     {
         public string Path { get; private set; }
         /// <summary>
-        /// null = import as a variable, Length 0 = import all, Length > 0 = import some
+        /// null = import as a variable, Length 0 = import all, Length > 0 = import some.
+        /// Item1: Member Name, Item2: Renamed Member Name (as)
         /// </summary>
         public List<Tuple<string, string>> Imports { get; private set; }
         public string AsName { get; private set; }
