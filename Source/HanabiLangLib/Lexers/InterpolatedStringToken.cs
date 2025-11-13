@@ -11,6 +11,14 @@ namespace HanabiLangLib.Lexers
     {
         public List<string> Texts { get; private set; }
         public List<List<Token>> InterpolatedTokens { get; private set; }
+
+        public InterpolatedStringToken(TokenType type, string raw, int pos, int line, List<string> texts, List<List<Token>> interpolatedTokens)
+            : base(type, raw, pos, line)
+        {
+            this.Texts = texts;
+            this.InterpolatedTokens = interpolatedTokens;
+        }
+
         public InterpolatedStringToken(TokenType type, string raw, int line, List<string> texts, List<List<Token>> interpolatedTokens)
             : base(type, raw, line)
         {

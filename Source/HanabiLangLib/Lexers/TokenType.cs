@@ -36,6 +36,7 @@ namespace HanabiLangLib.Lexers
         NULL,
         TRUE,
         FALSE,
-        EQUALS
+        EQUALS,
+        EOF,
     }
 }

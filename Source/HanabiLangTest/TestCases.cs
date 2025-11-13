@@ -63,7 +63,8 @@ namespace HanabiLangTest
 
         private static Dictionary<string, ScriptValue> Interpret(string code, out Interpreter interpreter, params string[] values)
         {
-            var tokens = Lexer.Tokenize(code.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None));
+            // var _tokens = Lexer.Tokenize(code.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None));
+            var tokens = new NewLexer(code).Tokenize();
             var parser = new Parser(tokens);
             var ast = parser.Parse();
 

@@ -2,6 +2,7 @@
 using HanabiLangLib.Lexers;
 using HanabiLangLib.Parses;
 using HanabiLangLib.Interprets;
+using System.IO;
 
 
 Console.InputEncoding = Encoding.UTF8;
@@ -50,7 +51,8 @@ void Start()
         List<Token>? tokens = null;
         try
         {
-            tokens = Lexer.Tokenize(lines);
+            //tokens = Lexer.Tokenize(lines);
+            tokens = new NewLexer(line).Tokenize();
             //Console.WriteLine(string.Join("\n", tokens));
         }
         catch (Exception ex)

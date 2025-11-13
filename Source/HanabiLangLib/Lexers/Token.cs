@@ -11,7 +11,17 @@ namespace HanabiLangLib.Lexers
     {
         public TokenType Type { get; private set; }
         public string Raw { get; private set; }
+        public int Pos { get; private set; }
         public int Line { get; private set; }
+
+        public Token(TokenType type, string raw, int pos, int line)
+        {
+            this.Type = type;
+            this.Raw = raw;
+            this.Pos = pos;
+            this.Line = line;
+        }
+
         public Token(TokenType type, string raw, int line)
         {
             this.Type = type;

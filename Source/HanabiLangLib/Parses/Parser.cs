@@ -31,7 +31,7 @@ namespace HanabiLangLib.Parses
         public Parser(IEnumerable<Token> tokens)
         {
             this.nodes = new List<AstNode>();
-            this.tokens = tokens.ToList();
+            this.tokens = (tokens is List<Token>) ? (List<Token>)tokens : tokens.ToList();
             this.parseScopes = new Stack<ParseScope>();
         }
 
