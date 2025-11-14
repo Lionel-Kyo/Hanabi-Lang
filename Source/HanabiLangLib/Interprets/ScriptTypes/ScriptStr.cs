@@ -498,11 +498,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             return result.ToString();
         }
 
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            return "\"" + (string)_this.BuildInObject +"\"";
-        }
-
         public static string AsCSharp(ScriptObject _this)
         {
             return (string)_this.BuildInObject;

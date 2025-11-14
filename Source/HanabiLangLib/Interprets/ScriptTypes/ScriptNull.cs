@@ -46,7 +46,5 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(BasicTypes.Str.Create("null"));
             });
         }
-
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0) => "null";
     }
 }

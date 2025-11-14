@@ -336,51 +336,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }
         }
 
-        public virtual string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            StringBuilder result = new StringBuilder();
-            //result.Append(' ', currentIndent);
-            result.Append('{');
-            if (basicIndent != 0)
-            {
-                result.AppendLine();
-                currentIndent += 2;
-            }
-            int count = 0;
-            foreach (var item in Scope.Variables)
-            {
-                if (item.Key.Equals("this") || item.Key.Equals("super"))
-                {
-                    count++;
-                    continue;
-                }
-
-                ScriptType scriptType = item.Value.Value.Value;
-                if (!(scriptType is ScriptObject))
-                    throw new SystemException($"{scriptType} is not a object");
-                ScriptObject scriptObject = (ScriptObject)scriptType;
-                result.Append(' ', currentIndent);
-
-                result.Append($"\"{item.Key}\": {scriptObject.ClassType.ToJsonString(scriptObject, basicIndent, currentIndent)}");
-                if (count < Scope.Variables.Count - 1)
-                {
-                    result.Append(", ");
-                    if (basicIndent != 0)
-                        result.AppendLine();
-                }
-                count++;
-            }
-            if (basicIndent != 0)
-            {
-                currentIndent -= 2;
-                result.Append(' ', currentIndent);
-                result.AppendLine();
-            }
-            result.Append(' ', currentIndent);
-            result.Append('}');
-            return result.ToString();
-        }
-
         public override string ToString()
         {
             return $"<class: {this.Name}>";

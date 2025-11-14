@@ -206,12 +206,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             return new Range(newStart, newStop, newStep);
         }
 
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            var value = (Range)_this.BuildInObject;
-            return $"[{value.Start}, {value.End}, {value.Step}]";
-        }
-
         public static Range AsCSharp(ScriptObject _this)
         {
             return (Range)_this.BuildInObject;

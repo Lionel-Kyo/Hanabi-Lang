@@ -824,11 +824,10 @@ namespace HanabiLangLib.Interprets
                 if (isPrintExpression)
                 {
                     var result = resultRef.Ref;
-                    string _temp;
                     if (result.IsClassTypeOf(BasicTypes.Str))
                         Console.WriteLine(Json5Serializer.QuoteString(result.ToString(), '\"', false, true));
                     else
-                        Console.WriteLine((_temp = Json5Serializer.QuoteString(result.ToString(), '\"', false, true)).Substring(1, _temp.Length - 2));
+                        Console.WriteLine(result.ToString());
                 }
                 return resultRef;
             }

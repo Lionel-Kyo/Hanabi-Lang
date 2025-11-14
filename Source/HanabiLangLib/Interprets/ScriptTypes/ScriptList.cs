@@ -1,4 +1,5 @@
-﻿using HanabiLangLib.Parses;
+﻿using HanabiLangLib.Interprets.Json5Converter;
+using HanabiLangLib.Parses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace HanabiLangLib.Interprets.ScriptTypes
 {
@@ -551,7 +553,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(ToStr(_this));
+                return new ScriptValue(ToStr(_this, null));
             });
         }
 
@@ -674,40 +676,51 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             return result.ToString();
         }
 
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
+        public static string ToStr(ScriptObject _this, string indent = null)
         {
+            return ToStr(_this, indent, 0, new HashSet<ScriptValue>(new HashSet<ScriptValue>(ReferenceEqualityComparer.Instance)));
+        }
+
+        public static string ToStr(ScriptObject _this, string indent, int level, HashSet<ScriptValue> visited)
+        {
+            var list = AsCSharp(_this);
             StringBuilder result = new StringBuilder();
+            if (list.Count <= 0)
+                return "[]";
+
             result.Append('[');
-            if (basicIndent != 0)
-            {
+            if (indent != null)
                 result.AppendLine();
-                currentIndent += 2;
-            }
+
             int count = 0;
             foreach (var item in AsCSharp(_this))
             {
-                if (!item.IsObject)
-                    throw new SystemException("list item contain not object");
-
-                ScriptObject itemObject = (ScriptObject)item.Value;
-                result.Append(' ', currentIndent);
-                result.Append($"{itemObject.ClassType.ToJsonString(itemObject, basicIndent, currentIndent)}");
-
-                if (count < (AsCSharp(_this)).Count - 1)
+                var _object = item.TryObject;
+                if (visited.Contains(item))
                 {
-                    result.Append(", ");
-                    if (basicIndent != 0)
-                        result.AppendLine();
+                    result.Append("[...]");
                 }
+                else
+                {
+                    visited.Add(item);
+                    if (_object?.IsTypeOrSubOf(BasicTypes.Str) ?? false)
+                        result.Append(Json5Serializer.QuoteString(ScriptStr.AsCSharp(_object), '"', false, true));
+                    else if (_object?.IsTypeOrSubOf(BasicTypes.List) ?? false)
+                        result.Append(ToStr(_object, indent, level + 1, visited));
+                    else if (_object?.IsTypeOrSubOf(BasicTypes.Dict) ?? false)
+                        result.Append(ScriptDict.ToStr(_object, indent, level + 1, visited));
+                    else
+                        result.Append(item.ToString());
+                    visited.Remove(item);
+                }
+
                 count++;
+                if (count < list.Count)
+                    result.Append(", ");
+                if (indent != null)
+                    result.AppendLine();
             }
-            if (basicIndent != 0)
-            {
-                currentIndent -= 2;
-                result.Append(' ', currentIndent);
-                result.AppendLine();
-            }
-            result.Append(' ', currentIndent);
+            result.Append(ScriptDict.GetIndent(indent, level));
             result.Append(']');
             return result.ToString();
         }

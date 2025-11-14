@@ -63,7 +63,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(this.ToJsonString(_this));
+                return new ScriptValue($"[{AsCSharp(_this).Key}, {AsCSharp(_this).Value}]");
             });
         }
 
@@ -107,12 +107,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
         public override ScriptObject Create() => new ScriptObject(this, new KeyValuePair<ScriptValue, ScriptValue>());
         public ScriptObject Create(KeyValuePair<ScriptValue, ScriptValue> value) => new ScriptObject(this, value);
-
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            KeyValuePair<ScriptValue, ScriptValue> kvValue = AsCSharp(_this);
-            return $"[{kvValue.Key}, {kvValue.Value}]";
-        }
 
         public static KeyValuePair<ScriptValue, ScriptValue> AsCSharp(ScriptObject _this)
         {

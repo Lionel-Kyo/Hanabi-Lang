@@ -1,4 +1,5 @@
-﻿using HanabiLangLib.Parses;
+﻿using HanabiLangLib.Interprets.Json5Converter;
+using HanabiLangLib.Parses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -152,7 +153,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
-                return new ScriptValue(BasicTypes.Str.Create(ToJsonString(_this, 0)));
+                return new ScriptValue(BasicTypes.Str.Create(ToStr(_this, null)));
             });
         }
 
@@ -194,10 +195,10 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 if (a.Count != b.Count)
                     return false;
 
-                foreach (var lri in a.Zip(b, (l, r) => Tuple.Create(l,r)).Select((lr, i) => Tuple.Create(lr.Item1, lr.Item2, i)))
+                foreach (var (l, r) in a.Zip(b, (l, r) => (l, r)))
                 {
-                    if (ScriptBool.AsCSharp(ScriptValue.NotEquals(lri.Item1.Key, lri.Item2.Key).TryObject) ||
-                        ScriptBool.AsCSharp(ScriptValue.NotEquals(lri.Item1.Value, lri.Item2.Value).TryObject))
+                    if (ScriptBool.AsCSharp(ScriptValue.NotEquals(l.Key, r.Key).TryObject) ||
+                        ScriptBool.AsCSharp(ScriptValue.NotEquals(l.Value, r.Value).TryObject))
                         return false;
                 }
                 return true;
@@ -205,44 +206,88 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             return false;
         }
 
-        private string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
+        public static string ToStr(ScriptObject _this, string indent = null)
         {
-            StringBuilder result = new StringBuilder();
-            //result.Append(' ', currentIndent);
-            result.Append('{');
-            if (basicIndent != 0)
-            {
-                result.AppendLine();
-                currentIndent += 2;
-            }
-            int count = 0;
-            foreach (var item in AsCSharp(_this))
-            {
-                if (!(item.Key.IsObject && item.Value.IsObject))
-                    throw new SystemException("Cannot convert Dict to str, Key not object or Value is not object");
+            return ToStr(_this, indent, 0, new HashSet<ScriptValue>(new HashSet<ScriptValue>(ReferenceEqualityComparer.Instance)));
+        }
 
-                ScriptObject keyObject = (ScriptObject)item.Key.Value;
-                ScriptObject valueObject = (ScriptObject)item.Value.Value;
-                result.Append(' ', currentIndent);
-                result.Append($"{keyObject.ClassType.ToJsonString(keyObject, basicIndent, currentIndent)}");
-                result.Append(": ");
-                result.Append($"{valueObject.ClassType.ToJsonString(valueObject, basicIndent, currentIndent)}");
-                if (count < AsCSharp(_this).Count - 1)
-                {
-                    result.Append(", ");
-                    if (basicIndent != 0)
-                        result.AppendLine();
-                }
-                count++;
-            }
-            if (basicIndent != 0)
-            {
-                currentIndent -= 2;
-                result.Append(' ', currentIndent);
+        public static string ToStr(ScriptObject _this, string indent, int level, HashSet<ScriptValue> visited)
+        {
+            var dict = AsCSharp(_this);
+            if (dict.Count == 0)
+                return "{}";
+
+            var result = new StringBuilder();
+            result.Append('{');
+            if (indent != null)
                 result.AppendLine();
+
+            int count = 0;
+            foreach (var kv in dict)
+            {
+                result.Append(GetIndent(indent, level + 1));
+                var keyObject = kv.Key.TryObject;
+                if (visited.Contains(kv.Key))
+                {
+                    result.Append("{...}");
+                }
+                else
+                {
+                    visited.Add(kv.Key);
+                    if (keyObject?.IsTypeOrSubOf(BasicTypes.Str) ?? false)
+                        result.Append(Json5Serializer.QuoteString(ScriptStr.AsCSharp(keyObject), '"', false, true));
+                    else if (keyObject?.IsTypeOrSubOf(BasicTypes.List) ?? false)
+                        result.Append(ScriptList.ToStr(keyObject, indent, level + 1, visited));
+                    else if (keyObject?.IsTypeOrSubOf(BasicTypes.Dict) ?? false)
+                        result.Append(ToStr(keyObject, indent, level + 1, visited));
+                    else
+                        result.Append(keyObject.ToString());
+                    visited.Remove(kv.Key);
+                }
+
+                result.Append(": ");
+                var valueObject = kv.Value.TryObject;
+                if (visited.Contains(kv.Value))
+                {
+                    result.Append("{...}");
+                }
+                else
+                {
+                    visited.Add(kv.Value);
+                    if (valueObject?.IsTypeOrSubOf(BasicTypes.Str) ?? false)
+                        result.Append(Json5Serializer.QuoteString(ScriptStr.AsCSharp(valueObject), '"', false, true));
+                    else if (valueObject?.IsTypeOrSubOf(BasicTypes.List) ?? false)
+                        result.Append(ScriptList.ToStr(valueObject, indent, level + 1, visited));
+                    else if (valueObject?.IsTypeOrSubOf(BasicTypes.Dict) ?? false)
+                        result.Append(ToStr(valueObject, indent, level + 1, visited));
+                    else
+                        result.Append(valueObject.ToString());
+                    visited.Remove(kv.Value);
+                }
+
+                count++;
+                if (count < dict.Count)
+                    result.Append(", ");
+                if (indent != null)
+                    result.AppendLine();
             }
-            result.Append(' ', currentIndent);
+
+            result.Append(GetIndent(indent, level));
             result.Append('}');
+            return result.ToString();
+        }
+
+        public static string GetIndent(string indent, int level)
+        {
+            if (indent == null || indent.Length <= 0 || level <= 0)
+                return "";
+
+            if (level == 1)
+                return indent;
+
+            var result = new StringBuilder(indent.Length * level);
+            for (int i = 0; i < level; i++)
+                result.Append(indent);
             return result.ToString();
         }
 
