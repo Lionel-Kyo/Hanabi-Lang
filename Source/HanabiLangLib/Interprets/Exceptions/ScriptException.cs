@@ -46,6 +46,15 @@ namespace HanabiLangLib.Interprets.Exceptions
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 return new ScriptValue(((Exception)((ScriptObject)args[0].Value).BuildInObject).Message);
             }, null, false, null);
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create($"{_this.ClassType.Name}: {((Exception)_this.BuildInObject).Message}"));
+            });
         }
         public override ScriptObject Create() 
         { 
@@ -61,11 +70,5 @@ namespace HanabiLangLib.Interprets.Exceptions
         }
 
         public ScriptObject Create(Exception ex) => new ScriptObject(this, ex);
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"{_this.ClassType.Name}: {((Exception)_this.BuildInObject).Message}");
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            return (string)this.ToStr(_this).BuildInObject;
-        }
     }
 }

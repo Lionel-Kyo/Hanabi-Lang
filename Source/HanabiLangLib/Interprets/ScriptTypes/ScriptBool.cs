@@ -52,6 +52,14 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return ScriptValue.Null;
             });
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create(AsCSharp(_this) ? "true" : "false"));
+            });
         }
 
         private void InitializeOperators()
@@ -204,12 +212,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
         public static ScriptObject True => BasicTypes.Bool.Create(true);
         public static ScriptObject False => BasicTypes.Bool.Create(false);
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create((bool)_this.BuildInObject ? "true" : "false");
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            return (string)this.ToStr(_this).BuildInObject;
-        }
 
         public static bool AsCSharp(ScriptObject _this)
         {

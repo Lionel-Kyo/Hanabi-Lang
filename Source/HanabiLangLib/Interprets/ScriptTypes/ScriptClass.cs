@@ -34,7 +34,10 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public static readonly string OPEARTOR_EQUALS = "__OP_EQUALS__";
         public static readonly string OPEARTOR_NOT_EQUALS = "__OP_NOT_EQUALS__";
 
-        public static readonly string TO_STR_FN_NAME = "ToStr";
+        public static readonly string TO_STR = "ToStr";
+        public static readonly string GET_INDEXER = "__GET_INDEXER__";
+        public static readonly string SET_INDEXER = "__SET_INDEXER__";
+        public static readonly string GET_ITERATOR = "__ITER__";
 
         public string ConstructorName => $"{this.Name}::New";
         public string Name { get; private set; }
@@ -333,13 +336,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }
         }
 
-        public virtual ScriptObject ToStr(ScriptObject _this)
-        {
-            if (_this.BuildInObject != null)
-                return BasicTypes.Str.Create(_this.BuildInObject.ToString());
-            return BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>");
-        }
-
         public virtual string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
             StringBuilder result = new StringBuilder();
@@ -384,20 +380,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             result.Append('}');
             return result.ToString();
         }
-
-        /*public override string ToString()
-        {
-            if (this.Scope.Functions.TryGetValue("ToStr", out ScriptFn fn))
-            {
-                if (!fn.IsBuildIn)
-                {
-                    var obj = (ScriptObject)fn.Call(Scope).Value;
-                    if (obj.ClassType is ScriptStr)
-                        return (string)obj.BuildInObject;
-                }
-            }
-            return this.ToJsonString(0);
-        }*/
 
         public override string ToString()
         {

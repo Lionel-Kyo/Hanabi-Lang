@@ -544,6 +544,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return ScriptValue.Null;
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(ToStr(_this));
+            });
         }
 
         private void InitializeOperators()
@@ -646,7 +655,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             return false;
         }
 
-        public override ScriptObject ToStr(ScriptObject _this)
+        public static string ToStr(ScriptObject _this)
         {
             StringBuilder result = new StringBuilder();
             result.Append('[');
@@ -662,7 +671,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             if (result.Length >= 2)
                 result.Remove(result.Length - 2, 2);
             result.Append(']');
-            return BasicTypes.Str.Create(result.ToString());
+            return result.ToString();
         }
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)

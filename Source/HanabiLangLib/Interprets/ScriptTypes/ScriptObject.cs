@@ -52,12 +52,12 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
         public override string ToString()
         {
-            if (this.ClassType.TryGetValue("ToStr", out ScriptVariable fns) && fns.Value.IsFunction)
+            if (this.ClassType.TryGetValue(ScriptClass.TO_STR, out ScriptVariable fns) && fns.Value.IsFunction)
             {
                 var _fns  = fns.Value.TryFunction;
-                return ScriptStr.AsCSharp((ScriptObject)_fns.Call(this).Value);
+                return ScriptStr.AsCSharp(_fns.Call(this).TryObject);
             }
-            return ScriptStr.AsCSharp(ClassType.ToStr(this));
+            return $"<object: {this.ClassType.Name}>";
         }
 
         public override int GetHashCode()

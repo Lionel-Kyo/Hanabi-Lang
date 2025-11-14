@@ -337,6 +337,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return new ScriptValue(value[ScriptInt.ValidateToInt32(ScriptRange.GetModuloIndex(index, value.Length))]);
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(_this);
+            });
         }
 
         private void InitializeOperators()
@@ -488,8 +497,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }
             return result.ToString();
         }
-
-        public override ScriptObject ToStr(ScriptObject _this) => _this;
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {

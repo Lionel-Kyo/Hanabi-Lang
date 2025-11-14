@@ -589,6 +589,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 throw new ArgumentException("Only slice is allowed for iterable indexer");
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>"));
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, (IEnumerable<ScriptValue>)new List<ScriptValue>());
@@ -667,11 +676,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 }
             }
             return result;
-        }
-
-        public override ScriptObject ToStr(ScriptObject _this)
-        {
-            return BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>");
         }
 
         public static IEnumerable<ScriptValue> AsCSharp(ScriptObject _this)

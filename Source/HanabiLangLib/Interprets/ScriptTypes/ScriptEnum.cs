@@ -24,12 +24,13 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return GetEnumValue(_this);
             }, null, false, null);
 
-            this.AddFunction("ToStr", new List<FnParameter>()
+            this.AddFunction(TO_STR, new List<FnParameter>()
             {
-                new FnParameter("this"),
+                new FnParameter("this")
             }, args =>
             {
-                return new ScriptValue(this.ToStr(args[0].TryObject));
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create($"<enum {_this.ClassType.Name}.{GetEnumName(_this)}: {GetEnumValue(_this)}>"));
             });
 
             //this.AddFunction("FromName", new List<FnParameter>()
@@ -107,8 +108,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }
             return false;
         }
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"<enum {_this.ClassType.Name}.{GetEnumName(_this)}: {GetEnumValue(_this)}>");
 
         public static string GetEnumName(ScriptObject _this)
         {

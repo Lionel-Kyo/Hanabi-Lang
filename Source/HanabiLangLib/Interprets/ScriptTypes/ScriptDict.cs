@@ -145,6 +145,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 AsCSharp(_this)[key] = args[2];
                 return ScriptValue.Null;
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create(ToJsonString(_this, 0)));
+            });
         }
 
         private void InitializeOperators()
@@ -196,7 +205,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             return false;
         }
 
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
+        private string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {
             StringBuilder result = new StringBuilder();
             //result.Append(' ', currentIndent);
@@ -236,8 +245,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             result.Append('}');
             return result.ToString();
         }
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this, 0));
 
         public static Dictionary<ScriptValue, ScriptValue> AsCSharp(ScriptObject _this)
         {

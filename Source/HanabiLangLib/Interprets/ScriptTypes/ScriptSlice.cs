@@ -49,6 +49,16 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return new ScriptValue(Create(Slice.FillNullValues(length, slice.Start, slice.End, slice.Step)));
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var slice = AsCSharp(_this);
+                return new ScriptValue(BasicTypes.Str.Create($"slice({slice.Start?.ToString() ?? "null"}, {slice.End?.ToString() ?? "null"}, {slice.Step?.ToString() ?? "null"})"));
+            });
         }
 
         private void InitializeOperators()
@@ -90,12 +100,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public override ScriptObject Create() => new ScriptObject(this, new Slice(null, null, null));
 
         public ScriptObject Create(Slice range) => new ScriptObject(this, range);
-
-        public override ScriptObject ToStr(ScriptObject _this)
-        {
-            var value = AsCSharp(_this);
-            return BasicTypes.Str.Create($"slice({value.Start?.ToString() ?? "null"}, {value.End?.ToString() ?? "null"}, {value.Step?.ToString() ?? "null"})");
-        }
 
         public static Slice AsCSharp(ScriptObject _this)
         {

@@ -32,15 +32,19 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 return new ScriptValue(BasicTypes.Iterable.Create(AsCSharp(_this)));
             }, null, false, null);
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue($"<object: {_this.ClassType.Name}>");
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, (IEnumerable<ScriptValue>)new List<ScriptValue>());
         public ScriptObject Create(IEnumerable<ScriptValue> value) => new ScriptObject(this, value);
-
-        public override ScriptObject ToStr(ScriptObject _this)
-        {
-            return BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>");
-        }
 
         public static IEnumerable<ScriptValue> AsCSharp(ScriptObject _this)
         {

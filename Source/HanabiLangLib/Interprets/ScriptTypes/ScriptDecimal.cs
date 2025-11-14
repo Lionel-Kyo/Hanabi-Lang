@@ -377,6 +377,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                     return new ScriptValue(AsCSharp(_this) != AsCSharp(_other));
                 return new ScriptValue(true);
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create(AsCSharp(_this).ToString()));
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, (decimal)0);
@@ -395,12 +404,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public static long Modulo(long k, long n) => ((k %= n) < 0) ? k + n : k;
         public static double Modulo(double k, double n) => ((k %= n) < 0) ? k + n : k;
         public static decimal Modulo(decimal k, decimal n) => ((k %= n) < 0) ? k + n : k;
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(_this.BuildInObject.ToString());
-        public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
-        {
-            return (string)this.ToStr(_this).BuildInObject;
-        }
 
         public static decimal AsCSharp(ScriptObject _this)
         {

@@ -117,6 +117,16 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return new ScriptValue(Index(range, index));
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var range = AsCSharp(_this);
+                return new ScriptValue(BasicTypes.Str.Create($"range({range.Start}, {range.End}, {range.Step})"));
+            });
         }
 
         private void InitializeOperators()
@@ -194,12 +204,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             long newStep = range.Step * adjusted.Step.Value;
 
             return new Range(newStart, newStop, newStep);
-        }
-
-        public override ScriptObject ToStr(ScriptObject _this)
-        {
-            var value = AsCSharp(_this);
-            return BasicTypes.Str.Create($"range({value.Start}, {value.End}, {value.Step})");
         }
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)

@@ -26,15 +26,19 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 Exception exception = AsCSharp(_this).Item2;
                 return exception == null ? new ScriptValue() : new ScriptValue(BasicTypes.Exception.Create(exception));
             }, null, false, null);
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create("<object: CatchedExpression>"));
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, new Tuple<ScriptValue, Exception>(null, null));
         public ScriptObject Create(ScriptValue result, Exception exception) => new ScriptObject(this, Tuple.Create(result, exception));
-
-        public override ScriptObject ToStr(ScriptObject _this)
-        {
-            return BasicTypes.Str.Create($"<object: CatchedExpression>");
-        }
 
         public static Tuple<ScriptValue, Exception> AsCSharp(ScriptObject _this)
         {

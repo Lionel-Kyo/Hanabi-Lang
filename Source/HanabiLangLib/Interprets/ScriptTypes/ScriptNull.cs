@@ -38,16 +38,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(true);
             });
 
-            this.AddFunction(TO_STR_FN_NAME, new List<FnParameter>()
+            this.AddFunction(TO_STR, new List<FnParameter>()
             {
                 new FnParameter("this"),
             }, args =>
             {
-                return new ScriptValue("null");
+                return new ScriptValue(BasicTypes.Str.Create("null"));
             });
         }
 
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create("null");
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0) => "null";
     }
 }

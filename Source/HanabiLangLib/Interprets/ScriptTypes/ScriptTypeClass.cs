@@ -78,6 +78,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
 
             this.AddVariable("Value", args => new ScriptValue((ScriptClass)((ScriptObject)args[0].Value).BuildInObject), null, false, null);
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue($"<Type: {AsCSharp(_this).Name}>");
+            });
         }
 
         private void InitializeOperators()
@@ -113,8 +122,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }
             return false;
         }
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"<Type: {((ScriptClass)_this.BuildInObject).Name}>");
 
         public static ScriptClass AsCSharp(ScriptObject _this)
         {

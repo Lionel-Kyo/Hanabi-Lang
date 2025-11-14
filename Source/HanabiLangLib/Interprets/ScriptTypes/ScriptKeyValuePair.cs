@@ -56,6 +56,15 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return index == 0 ? kvValue.Key : kvValue.Value;
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(this.ToJsonString(_this));
+            });
         }
 
         private void InitializeOperators()
@@ -104,8 +113,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             KeyValuePair<ScriptValue, ScriptValue> kvValue = AsCSharp(_this);
             return $"[{kvValue.Key}, {kvValue.Value}]";
         }
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create(this.ToJsonString(_this));
 
         public static KeyValuePair<ScriptValue, ScriptValue> AsCSharp(ScriptObject _this)
         {

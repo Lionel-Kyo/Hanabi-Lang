@@ -101,13 +101,20 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 Call(_this, false, _args.ToArray());
                 return ScriptValue.Null;
             });
+
+            this.AddFunction(TO_STR, new List<FnParameter>()
+            {
+                new FnParameter("this")
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                return new ScriptValue(BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>"));
+            });
         }
 
         public override ScriptObject Create() => new ScriptObject(this, new HashSet<ScriptFns>());
 
         public ScriptObject Create(IEnumerable<ScriptFns> fns) => new ScriptObject(this, new HashSet<ScriptFns>(fns));
-
-        public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"<object: {_this.ClassType.Name}>");
 
         public static int Length(ScriptObject _this)
         {
