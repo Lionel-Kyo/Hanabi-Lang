@@ -80,13 +80,38 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             this.AddVariable("Value", args => new ScriptValue((ScriptClass)((ScriptObject)args[0].Value).BuildInObject), null, false, null);
         }
 
-        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
+        private void InitializeOperators()
         {
-            if (value.ClassType is ScriptTypeClass)
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
             {
-                return BasicTypes.Bool.Create(_this.BuildInObject == value.BuildInObject);
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(OperatorEquals(args[0], args[1]));
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(!OperatorEquals(args[0], args[1]));
+            });
+        }
+
+        private bool OperatorEquals(ScriptValue value1, ScriptValue value2)
+        {
+            ScriptObject _this = value1.TryObject;
+            ScriptObject _other = value2.TryObject;
+            if (_other.IsTypeOrSubOf(BasicTypes.TypeClass))
+            {
+                if (object.ReferenceEquals(_this, _other))
+                    return true;
+
+                return AsCSharp(_this) == AsCSharp(_other);
             }
-            return base.Equals(_this, value);
+            return false;
         }
 
         public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"<Type: {((ScriptClass)_this.BuildInObject).Name}>");

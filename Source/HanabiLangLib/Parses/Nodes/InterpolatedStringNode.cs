@@ -6,23 +6,29 @@ using System.Threading.Tasks;
 
 namespace HanabiLangLib.Parses.Nodes
 {
-    class InterpolatedString : AstNode, IExpressionNode
+    class InterpolatedStringNode : AstNode, IExpressionNode
     {
-        public List<string> Values { get; private set; }
+        public List<string> Texts { get; private set; }
         private Queue<AstNode> interpolatedNodes;
-        public Queue<AstNode> InterpolatedNodes => new Queue<AstNode>(interpolatedNodes);
 
-        public InterpolatedString(List<string> values, Queue<AstNode> interpolatedNodes)
+        public InterpolatedStringNode(List<string> values, Queue<AstNode> interpolatedNodes, int pos, int line)
         {
-            this.Values = values;
+            this.Texts = values;
             this.interpolatedNodes = interpolatedNodes;
+            this.Pos = pos;
+            this.Line = line;
+        }
+
+        public Queue<AstNode> CloneInterpolatedNodes()
+        {
+            return new Queue<AstNode>(interpolatedNodes);
         }
 
         public override string ToString()
         {
             StringBuilder result = new StringBuilder();
             result.Append($"{this.NodeName}(");
-            foreach(var value in Values)
+            foreach(var value in Texts)
             {
                 if (value == null)
                     result.Append("{}");

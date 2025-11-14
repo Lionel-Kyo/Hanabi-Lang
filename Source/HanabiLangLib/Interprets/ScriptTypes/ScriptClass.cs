@@ -11,6 +11,31 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 {
     public class ScriptClass : ScriptType
     {
+        public static readonly string OPEARTOR_BIT_NOT = "__OP_BIT_NOT__";
+        public static readonly string OPEARTOR_BIT_AND = "__OP_BIT_AND__";
+        public static readonly string OPEARTOR_BIT_OR = "__OP_BIT_OR__";
+        public static readonly string OPEARTOR_BIT_XOR = "__OP_BIT_XOR__";
+        public static readonly string OPEARTOR_BIT_LEFT_SHIFT = "__OP_BIT_LEFT_SHIFT__";
+        public static readonly string OPEARTOR_BIT_RIGHT_SHIFT = "__OP_BIT_RIGHT_SHIFT__";
+        public static readonly string OPEARTOR_NOT = "__OP_NOT__";
+        public static readonly string OPEARTOR_AND = "__OP_AND__";
+        public static readonly string OPEARTOR_OR = "__OP_OR__";
+        public static readonly string OPEARTOR_POSITIVE = "__OP_POSITIVE__";
+        public static readonly string OPEARTOR_NEGATIVE = "__OP_NEGATIVE__";
+        public static readonly string OPEARTOR_ADD = "__OP_ADD__";
+        public static readonly string OPEARTOR_MINUS = "__OP_MINUS__";
+        public static readonly string OPEARTOR_MULTIPLY = "__OP_MULTIPLY__";
+        public static readonly string OPEARTOR_DIVIDE = "__OP_DIVIDE__";
+        public static readonly string OPEARTOR_MUDULO = "__OP_MUDULO__";
+        public static readonly string OPEARTOR_LARGER = "__OP_LARGER__";
+        public static readonly string OPEARTOR_LARGER_EQUALS = "__OP_LARGER_EQUALS__";
+        public static readonly string OPEARTOR_LESS = "__OP_LESS__";
+        public static readonly string OPEARTOR_LESS_EQUALS = "__OP_LESS_EQUALS__";
+        public static readonly string OPEARTOR_EQUALS = "__OP_EQUALS__";
+        public static readonly string OPEARTOR_NOT_EQUALS = "__OP_NOT_EQUALS__";
+
+        public static readonly string TO_STR_FN_NAME = "ToStr";
+
         public string ConstructorName => $"{this.Name}::New";
         public string Name { get; private set; }
 
@@ -306,97 +331,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 else
                     this.Body.Add(variable); 
             }
-        }
-
-        public virtual ScriptObject Not(ScriptObject left)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("!", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left).Value;
-            throw new SystemException("Operator ! is not implemented");
-        }
-        public virtual ScriptObject Positive(ScriptObject left)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("^+", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left).Value;
-            throw new SystemException("Operator + is not implemented");
-        }
-        public virtual ScriptObject Negative(ScriptObject left)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("^-", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left).Value;
-            throw new SystemException("Operator - is not implemented");
-        }
-        public virtual ScriptObject Add(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("+", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator + is not implemented");
-        }
-        public virtual ScriptObject Minus(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("-", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator - is not implemented");
-        }
-        public virtual ScriptObject Multiply(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("*", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator * is not implemented");
-        }
-        public virtual ScriptObject Divide(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("/", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator / is not implemented");
-        }
-        public virtual ScriptObject Modulo(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("%", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator ! is not implemented");
-        }
-        public virtual ScriptObject Larger(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue(">", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator > is not implemented");
-        }
-        public virtual ScriptObject LargerEquals(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue(">=", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator >= is not implemented");
-        }
-        public virtual ScriptObject Less(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("<", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator < is not implemented");
-        }
-        public virtual ScriptObject LessEquals(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("<=", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator <= is not implemented");
-        }
-        public virtual ScriptObject And(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("&&", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator && is not implemented");
-        }
-        public virtual ScriptObject Or(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("||", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            throw new SystemException("Operator || is not implemented");
-        }
-        public virtual ScriptObject Equals(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType.Scope.Variables.TryGetValue("==", out var fn) && fn.Value.IsFunction)
-                return (ScriptObject)fn.Value.TryFunction.Call(left, new ScriptValue(right)).Value;
-            return BasicTypes.Bool.Create(base.Equals(right));
         }
 
         public virtual ScriptObject ToStr(ScriptObject _this)

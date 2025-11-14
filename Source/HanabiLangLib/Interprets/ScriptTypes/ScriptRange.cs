@@ -16,6 +16,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptRange() :
             base("Range", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
+            this.InitializeOperators();
+
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("this"),
@@ -117,6 +119,42 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
         }
 
+        private void InitializeOperators()
+        {
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(OperatorEquals(args[0], args[1]));
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(!OperatorEquals(args[0], args[1]));
+            });
+        }
+
+        private bool OperatorEquals(ScriptValue value1, ScriptValue value2)
+        {
+            ScriptObject _this = value1.TryObject;
+            ScriptObject _other = value2.TryObject;
+            if (_other.IsTypeOrSubOf(BasicTypes.Range))
+            {
+                if (object.ReferenceEquals(_this, _other))
+                    return true;
+
+                var a = AsCSharp(_this);
+                var b = AsCSharp(_other);
+                return a.Start == b.Start && a.End == b.End && a.Step == b.Step;
+            }
+            return false;
+        }
+
         public override ScriptObject Create() => new ScriptObject(this, new Range(0, 0, 0));
 
         public ScriptObject Create(Range range) => new ScriptObject(this, range);
@@ -156,17 +194,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             long newStep = range.Step * adjusted.Step.Value;
 
             return new Range(newStart, newStop, newStep);
-        }
-
-        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
-        {
-            if (value.ClassType is ScriptRange)
-            {
-                var a = AsCSharp(_this);
-                var b = AsCSharp(value);
-                return BasicTypes.Bool.Create(a.Start == b.Start && a.End == b.End && a.Step == b.Step);
-            }
-            return BasicTypes.Bool.Create(false);
         }
 
         public override ScriptObject ToStr(ScriptObject _this)

@@ -10,9 +10,11 @@ namespace HanabiLangLib.Parses.Nodes
     {
         public string Name { get; private set; }
 
-        public VariableReferenceNode(string name)
+        public VariableReferenceNode(string name, int pos, int line)
         {
             this.Name = name;
+            this.Pos = pos;
+            this.Line = line;
         }
 
         public override string ToString()

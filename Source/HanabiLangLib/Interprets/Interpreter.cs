@@ -1485,20 +1485,10 @@ namespace HanabiLangLib.Interprets
 
         public static ValueReference InterpretJson(AstNode node)
         {
-            if (node is IntNode)
+            if (node is ConstValueNode)
             {
-                var realNode = (IntNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
-            }
-            else if (node is FloatNode)
-            {
-                var realNode = (FloatNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
-            }
-            else if (node is StringNode)
-            {
-                var realNode = (StringNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
+                var realNode = (ConstValueNode)node;
+                return new ValueReference(realNode.Value);
             }
             else if (node is UnaryNode)
             {
@@ -1506,9 +1496,9 @@ namespace HanabiLangLib.Interprets
                 ScriptValue value = InterpretJson(realNode.Node).Ref;
 
                 if (realNode.Operator == "+")
-                    return new ValueReference(+value);
+                    return new ValueReference(ScriptValue.Positive(value));
                 else if (realNode.Operator == "-")
-                    return new ValueReference(-value);
+                    return new ValueReference(ScriptValue.Negative(value));
                 else
                     throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
             }
@@ -1529,6 +1519,11 @@ namespace HanabiLangLib.Interprets
 
                 return new ValueReference(new ScriptValue(values));
             }
+            else if (node is InterpretedListNode)
+            {
+                var realNode = (InterpretedListNode)node;
+                return new ValueReference(realNode.CloneValue());
+            }
             else if (node is DictNode)
             {
                 var realNode = (DictNode)node;
@@ -1544,14 +1539,10 @@ namespace HanabiLangLib.Interprets
 
                 return new ValueReference(new ScriptValue(keyValues));
             }
-            else if (node is NullNode)
+            else if (node is InterpretedDictNode)
             {
-                return new ValueReference(ScriptValue.Null);
-            }
-            else if (node is BooleanNode)
-            {
-                var realNode = (BooleanNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
+                var realNode = (InterpretedDictNode)node;
+                return new ValueReference(realNode.CloneValue());
             }
             throw new SystemException($"Unexpected Node: {node.NodeName}");
         }
@@ -1617,62 +1608,115 @@ namespace HanabiLangLib.Interprets
 
                 ScriptValue right = null;
 
-                if (_operater == "&&")
+                //if (_operater == "&&")
+                //{
+                //    // Short-Circuit Evaluation
+                //    // Left operand is false, the entire expression will always be false.
+                //    ScriptObject leftObj = left.TryObject;
+                //    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && !ScriptBool.AsCSharp(leftObj))
+                //        return new ValueReference(new ScriptValue(false));
+                //    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                //    return new ValueReference(ScriptValue.And(left, right));
+                //}
+                //else if (_operater == "||")
+                //{
+                //    // Short-Circuit Evaluation
+                //    // Left operand is true, the entire expression will always be true.
+                //    ScriptObject leftObj = left.TryObject;
+                //    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && ScriptBool.AsCSharp(leftObj))
+                //        return new ValueReference(new ScriptValue(true));
+                //    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                //    return new ValueReference(ScriptValue.Or(left, right));
+                //}
+
+                //right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                //if (_operater == "+") return new ValueReference(left + right);
+                //else if (_operater == "-") return new ValueReference(left - right);
+                //else if (_operater == "*") return new ValueReference(left * right);
+                //else if (_operater == "/") return new ValueReference(left / right);
+                //else if (_operater == "%") return new ValueReference(left % right);
+                //else if (_operater == "==") return new ValueReference(new ScriptValue(left.Equals(right)));
+                //else if (_operater == "!=") return new ValueReference(new ScriptValue(!left.Equals(right)));
+                //else if (_operater == "<") return new ValueReference(left < right);
+                //else if (_operater == ">") return new ValueReference(left > right);
+                //else if (_operater == "<=") return new ValueReference(left <= right);
+                //else if (_operater == ">=") return new ValueReference(left >= right);
+                //else throw new SystemException("Unknown operator " + _operater);
+
+                // // Short-Circuit Evaluation
+                switch (_operater)
                 {
-                    // Short-Circuit Evaluation
-                    // Left operand is false, the entire expression will always be false.
-                    ScriptObject leftObj = left.TryObject;
-                    if (leftObj != null && leftObj.ClassType is ScriptBool && !ScriptBool.AsCSharp(leftObj))
-                        return new ValueReference(new ScriptValue(false));
-                    right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                    return new ValueReference(ScriptValue.And(left, right));
-                }
-                else if (_operater == "||")
-                {
-                    // Short-Circuit Evaluation
-                    // Left operand is true, the entire expression will always be true.
-                    ScriptObject leftObj = left.TryObject;
-                    if (leftObj != null && leftObj.ClassType is ScriptBool && ScriptBool.AsCSharp(leftObj))
-                        return new ValueReference(new ScriptValue(true));
-                    right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                    return new ValueReference(ScriptValue.Or(left, right));
+                    case "&&":
+                        {
+                            // Left operand is false, the entire expression will always be false.
+                            ScriptObject leftObj = left.TryObject;
+                            if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && !ScriptBool.AsCSharp(leftObj))
+                                return new ValueReference(new ScriptValue(false));
+                            right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                            return new ValueReference(ScriptValue.And(left, right));
+                        }
+                    case "||":
+                        {
+                            // Left operand is true, the entire expression will always be true.
+                            ScriptObject leftObj = left.TryObject;
+                            if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && ScriptBool.AsCSharp(leftObj))
+                                return new ValueReference(new ScriptValue(true));
+                            right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                            return new ValueReference(ScriptValue.Or(left, right));
+                        }
                 }
 
                 right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                if (_operater == "+") return new ValueReference(left + right);
-                else if (_operater == "-") return new ValueReference(left - right);
-                else if (_operater == "*") return new ValueReference(left * right);
-                else if (_operater == "/") return new ValueReference(left / right);
-                else if (_operater == "%") return new ValueReference(left % right);
-                else if (_operater == "==") return new ValueReference(new ScriptValue(left.Equals(right)));
-                else if (_operater == "!=") return new ValueReference(new ScriptValue(!left.Equals(right)));
-                else if (_operater == "<") return new ValueReference(left < right);
-                else if (_operater == ">") return new ValueReference(left > right);
-                else if (_operater == "<=") return new ValueReference(left <= right);
-                else if (_operater == ">=") return new ValueReference(left >= right);
-                else throw new SystemException("Unknown operator " + _operater);
+
+                switch (_operater)
+                {
+                    case "&":
+                        return new ValueReference(ScriptValue.BitAnd(left, right));
+                    case "|":
+                        return new ValueReference(ScriptValue.BitOr(left, right));
+                    case "^":
+                        return new ValueReference(ScriptValue.BitXor(left, right));
+                    case "<<":
+                        return new ValueReference(ScriptValue.BitLeftShift(left, right));
+                    case ">>":
+                        return new ValueReference(ScriptValue.BitRightShift(left, right));
+                    case "+":
+                        return new ValueReference(ScriptValue.Add(left, right));
+                    case "-":
+                        return new ValueReference(ScriptValue.Minus(left, right));
+                    case "*":
+                        return new ValueReference(ScriptValue.Multiply(left, right));
+                    case "/":
+                        return new ValueReference(ScriptValue.Divide(left, right));
+                    case "%":
+                        return new ValueReference(ScriptValue.Mudulo(left, right));
+                    case ">":
+                        return new ValueReference(ScriptValue.Larger(left, right));
+                    case ">=":
+                        return new ValueReference(ScriptValue.LargerEquals(left, right));
+                    case "<":
+                        return new ValueReference(ScriptValue.Less(left, right));
+                    case "<=":
+                        return new ValueReference(ScriptValue.LessEquals(left, right));
+                    case "==":
+                        return new ValueReference(ScriptValue.Equals(left, right));
+                    case "!=":
+                        return new ValueReference(ScriptValue.NotEquals(left, right));
+                    default:
+                        throw new SystemException($"Unexpected Operator: {_operater}");
+                }
             }
-            else if (node is IntNode)
+            else if (node is ConstValueNode)
             {
-                var realNode = (IntNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
+                var realNode = (ConstValueNode)node;
+                return new ValueReference(realNode.Value);
             }
-            else if (node is FloatNode)
+            else if (node is InterpolatedStringNode)
             {
-                var realNode = (FloatNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
-            }
-            else if (node is StringNode)
-            {
-                var realNode = (StringNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
-            }
-            else if (node is InterpolatedString)
-            {
-                var realNode = (InterpolatedString)node;
+                var realNode = (InterpolatedStringNode)node;
                 StringBuilder text = new StringBuilder();
-                var interpolatedNodes = realNode.InterpolatedNodes;
-                foreach (string str in realNode.Values)
+                var interpolatedNodes = realNode.CloneInterpolatedNodes();
+                foreach (string str in realNode.Texts)
                 {
                     if (str == null)
                     {
@@ -1690,16 +1734,32 @@ namespace HanabiLangLib.Interprets
                 var realNode = (UnaryNode)node;
                 ScriptValue value = InterpretExpression(interpretScope, realNode.Node).Ref;
 
-                if (realNode.Operator == "+")
-                    return new ValueReference(+value);
-                else if (realNode.Operator == "!")
-                    return new ValueReference(!value);
-                else if (realNode.Operator == "-")
-                    return new ValueReference(-value);
-                else if (realNode.Operator == "*")
-                    return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
-                else
-                    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
+                //if (realNode.Operator == "+")
+                //    return new ValueReference(+value);
+                //else if (realNode.Operator == "!")
+                //    return new ValueReference(ScriptValue.Not(value));
+                //else if (realNode.Operator == "-")
+                //    return new ValueReference(-value);
+                //else if (realNode.Operator == "*")
+                //    return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
+                //else
+                //    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
+
+                switch (realNode.Operator)
+                {
+                    case "~":
+                        return new ValueReference(ScriptValue.BitNot(value));
+                    case "!":
+                        return new ValueReference(ScriptValue.Not(value));
+                    case "+":
+                        return new ValueReference(ScriptValue.Positive(value));
+                    case "-":
+                        return new ValueReference(ScriptValue.Negative(value));
+                    case "*":
+                        return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
+                    default:
+                        throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
+                }
             }
             else if (node is VariableReferenceNode)
             {
@@ -1726,6 +1786,11 @@ namespace HanabiLangLib.Interprets
 
                 return new ValueReference(new ScriptValue(values));
             }
+            else if (node is InterpretedListNode)
+            {
+                var realNode = (InterpretedListNode)node;
+                return new ValueReference(realNode.CloneValue());
+            }
             else if (node is DictNode)
             {
                 var realNode = (DictNode)node;
@@ -1740,6 +1805,11 @@ namespace HanabiLangLib.Interprets
                 }
 
                 return new ValueReference(new ScriptValue(keyValues));
+            }
+            else if (node is InterpretedDictNode)
+            {
+                var realNode = (InterpretedDictNode)node;
+                return new ValueReference(realNode.CloneValue());
             }
             else if (node is IndexerNode)
             {
@@ -1772,15 +1842,6 @@ namespace HanabiLangLib.Interprets
                 {
                     throw new SystemException("The variable cannot use indexer");
                 }
-            }
-            else if (node is NullNode)
-            {
-                return new ValueReference(ScriptValue.Null);
-            }
-            else if (node is BooleanNode)
-            {
-                var realNode = (BooleanNode)node;
-                return new ValueReference(new ScriptValue(realNode.Value));
             }
             else if (node is FnDefineNode)
             {

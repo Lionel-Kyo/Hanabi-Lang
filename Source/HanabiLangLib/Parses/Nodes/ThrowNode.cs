@@ -10,15 +10,13 @@ namespace HanabiLangLib.Parses.Nodes
     {
         public AstNode Value { get; private set; }
 
-        public ThrowNode(AstNode value)
+        public ThrowNode(AstNode value, int pos, int line)
         {
             this.Value = value;
+            this.Pos = pos;
+            this.Line = line;
         }
 
-        public ThrowNode()
-        {
-            this.Value = null;
-        }
         public override string ToString()
         {
             StringBuilder result = new StringBuilder();

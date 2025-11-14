@@ -51,13 +51,13 @@ namespace HanabiLangTest
 
         private static void CheckEquals(ScriptValue a, ScriptValue b)
         {
-            if (!a.Equals(b))
+            if (ScriptBool.AsCSharp(ScriptValue.NotEquals(a, b).TryObject))
                 throw new SystemException($"{a} != {b}");
         }
 
         private static void CheckNotEquals(ScriptValue a, ScriptValue b)
         {
-            if (a.Equals(b))
+            if (ScriptBool.AsCSharp(ScriptValue.Equals(a, b).TryObject))
                 throw new SystemException($"{a} == {b}");
         }
 

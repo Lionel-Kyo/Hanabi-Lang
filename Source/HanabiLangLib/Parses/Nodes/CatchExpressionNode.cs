@@ -10,10 +10,12 @@ namespace HanabiLangLib.Parses.Nodes
         public AstNode Expression { get; private set; }
         public AstNode DefaultValue { get; private set; }
 
-        public CatchExpressionNode(AstNode expression, AstNode defaultValue)
+        public CatchExpressionNode(AstNode expression, AstNode defaultValue, int pos, int line)
         {
             this.Expression = expression;
             this.DefaultValue = defaultValue;
+            this.Pos = pos;
+            this.Line = line;
         }
 
         public override string ToString()

@@ -14,6 +14,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptList() :
             base("List", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
+            this.InitializeOperators();
+
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("this")
@@ -477,7 +479,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 new List<FnParameter> { new FnParameter("this"), new FnParameter("left"), new FnParameter("right") }, null,
             args =>
             {
-                if (ScriptBool.AsCSharp((args[0] < args[1]).TryObject))
+                if (ScriptBool.AsCSharp(ScriptValue.Less(args[0], args[1]).TryObject))
                     return new ScriptValue(-1);
                 else if (args[0].Equals(args[1]))
                     return new ScriptValue(0);
@@ -544,60 +546,104 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
         }
 
+        private void InitializeOperators()
+        {
+            this.AddFunction(OPEARTOR_ADD, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (ScriptIterable.TryGetIterable(_other, out var otherIter))
+                {
+                    resultObject = BasicTypes.List.Create(AsCSharp(_this).Concat(otherIter).ToList());
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} && {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_MULTIPLY, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Int))
+                {
+                    long value = ScriptInt.AsCSharp(_other);
+                    List<ScriptValue> leftList = AsCSharp(_this);
+                    List<ScriptValue> result = new List<ScriptValue>(ScriptInt.ValidateToInt32(leftList.Count * value));
+                    for (long i = 0; i < value; i++)
+                    {
+                        result.AddRange(leftList);
+                    }
+                    resultObject = BasicTypes.List.Create(result.ToList());
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} && {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(OperatorEquals(args[0], args[1]));
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(!OperatorEquals(args[0], args[1]));
+            });
+        }
+
         public override ScriptObject Create() => new ScriptObject(this, new List<ScriptValue>());
         public ScriptObject Create(List<ScriptValue> value) => new ScriptObject(this, value);
 
-        //public override ScriptObject Negative(ScriptObject left)
-        //{
-        //    var result = ((List<ScriptValue>)left.BuildInObject).ToList();
-        //    result.Reverse();
-        //    return BasicTypes.List.Create(result);
-        //}
-
-        public override ScriptObject Add(ScriptObject left, ScriptObject right)
+        private bool OperatorEquals(ScriptValue value1, ScriptValue value2)
         {
-            if (ScriptIterable.TryGetIterable(right, out var rightIter))
+            ScriptObject _this = value1.TryObject;
+            ScriptObject _other = value2.TryObject;
+            if (_other.IsTypeOrSubOf(BasicTypes.List))
             {
-                return BasicTypes.List.Create(AsCSharp(left).Concat(rightIter).ToList());
-            }
-            return base.Add(left, right);
-        }
+                if (object.ReferenceEquals(_this, _other))
+                    return true;
 
-        public override ScriptObject Multiply(ScriptObject left, ScriptObject right)
-        {
-            if (right.ClassType is ScriptInt)
-            {
-                long value = ScriptInt.AsCSharp(right);
-                List<ScriptValue> leftList = AsCSharp(left);
-                List<ScriptValue> result = new List<ScriptValue>(ScriptInt.ValidateToInt32(leftList.Count * value));
-                for (long i = 0; i < value; i++)
-                {
-                    result.AddRange(leftList);
-                }
-                return BasicTypes.List.Create(result.ToList());
-            }
-            return base.Add(left, right);
-        }
-
-        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
-        {
-            if (value.ClassType is ScriptList)
-            {
                 var a = AsCSharp(_this);
-                var b = AsCSharp(value);
+                var b = AsCSharp(_other);
                 if (a.Equals(b))
-                    return ScriptBool.True;
+                    return true;
                 if (a.Count != b.Count)
-                    return ScriptBool.False;
+                    return false;
 
                 for (int i = 0; i < a.Count; i++)
                 {
-                    if (!a[i].Equals(b[i]))
-                        return ScriptBool.False;
+                    if (ScriptBool.AsCSharp(ScriptValue.NotEquals(a[i], b[i]).TryObject))
+                        return false;
                 }
-                return ScriptBool.True;
+                return true;
             }
-            return ScriptBool.False;
+            return false;
         }
 
         public override ScriptObject ToStr(ScriptObject _this)

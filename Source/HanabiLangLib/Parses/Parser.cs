@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using HanabiLangLib.Interprets;
 using HanabiLangLib.Interprets.Exceptions;
+using HanabiLangLib.Interprets.Json5Converter;
 using HanabiLangLib.Lexers;
 using HanabiLangLib.Parses.Nodes;
 
@@ -79,38 +83,105 @@ namespace HanabiLangLib.Parses
                     }
                     break;
                 case TokenType.INT:
-                    this.Expect(TokenType.INT);
-                    return new IntNode(long.Parse(currentToken.Raw));
+                    {
+                        this.Expect(TokenType.INT);
+                        var i64Text = currentToken.Raw;
+                        var isPositive = i64Text.Length > 0 && i64Text[0] == '-' ? false : true;
+                        var i64TrimSignText = i64Text.TrimStart('+', '-');
+
+                        long value;
+                        if (i64TrimSignText.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            value = Convert.ToInt64(i64TrimSignText.Substring(2), 16);
+                        }
+                        else if (i64TrimSignText.StartsWith("0o", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            value = Convert.ToInt64(i64TrimSignText.Substring(2), 8);
+                        }
+                        else if (i64TrimSignText.StartsWith("0b", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            value = Convert.ToInt64(i64TrimSignText.Substring(2), 2);
+                        }
+                        else if (long.TryParse(i64TrimSignText, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+                        {
+                        }
+                        else
+                        {
+                            throw new FormatException($"Invalid integer format '{i64Text}' at line {currentToken.Line}, position {currentToken.Pos}");
+                        }
+                        if (!isPositive)
+                            value = -value;
+                        return new ConstValueNode(new ScriptValue(value), currentToken.Pos, currentToken.Line);
+                    }
                 case TokenType.FLOAT:
-                    this.Expect(TokenType.FLOAT);
-                    return new FloatNode(double.Parse(currentToken.Raw));
+                    {
+                        this.Expect(TokenType.FLOAT);
+                        var f64Text = currentToken.Raw;
+                        var isPositive = f64Text.Length > 0 && f64Text[0] == '-' ? false : true;
+                        var i64TrimSignText = f64Text.TrimStart('+', '-');
+
+                        if (double.TryParse(f64Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double f))
+                            return new ConstValueNode(new ScriptValue(f), currentToken.Pos, currentToken.Line);
+                        throw new FormatException($"Invalid float format '{f64Text}' at line {currentToken.Line}, position {currentToken.Pos}");
+                    }
                 case TokenType.STRING:
                     this.Expect(TokenType.STRING);
-                    return new StringNode(currentToken.Raw);
+                    return new ConstValueNode(new ScriptValue(currentToken.Raw), currentToken.Pos, currentToken.Line);
                 case TokenType.INTERPOLATED_STRING:
-                    Queue<AstNode> interpolatedNodes = new Queue<AstNode>();
-                    InterpolatedStringToken interpolatedToken = (InterpolatedStringToken)currentToken;
-                    foreach (List<Token> tokens in interpolatedToken.InterpolatedTokens)
                     {
-                        Parser parser = new Parser(tokens);
-                        var interpolatedNode = parser.Expression();
-                        if (parser.HasToken)
-                            throw new ParseException($"Cannot end with {parser.tokens[parser.currentTokenIndex].Raw} in a interpolated string",
-                                parser.tokens[parser.currentTokenIndex]);
-                        interpolatedNodes.Enqueue(interpolatedNode);
+                        InterpolatedStringToken interpolatedToken = (InterpolatedStringToken)this.Expect(TokenType.INTERPOLATED_STRING);
 
+                        List<string> texts = new List<string>();
+                        var tokenQueue = new Queue<List<Token>>(interpolatedToken.InterpolatedTokens);
+
+                        Queue<AstNode> interpolatedNodes = new Queue<AstNode>();
+                        foreach (string str in interpolatedToken.Texts)
+                        {
+                            if (str == null)
+                            {
+                                var tokens = tokenQueue.Dequeue();
+                                Parser parser = new Parser(tokens);
+                                var interpolatedNode = parser.Expression();
+                                if (parser.HasToken)
+                                    throw new ParseException($"Cannot end with {parser.tokens[parser.currentTokenIndex].Raw} in a interpolated string",
+                                        parser.tokens[parser.currentTokenIndex]);
+                                if (interpolatedNode is ConstValueNode)
+                                {
+                                    if (texts.Count > 0 && texts[texts.Count - 1] != null)
+                                        texts[texts.Count - 1] += ((ConstValueNode)interpolatedNode).Value.ToString();
+                                    else
+                                        texts.Add(str);
+                                }
+                                else
+                                {
+                                    texts.Add(null);
+                                    interpolatedNodes.Enqueue(interpolatedNode);
+                                }
+                            }
+                            else
+                            {
+                                if (texts.Count > 0 && texts[texts.Count - 1] != null)
+                                    texts[texts.Count - 1] += str;
+                                else
+                                    texts.Add(str);
+                            }
+                        }
+
+                        if (texts.Count == 1 && interpolatedNodes.Count <= 0)
+                        {
+                            return new ConstValueNode(new ScriptValue(texts[0]), currentToken.Pos, currentToken.Line);
+                        }
+                        return new InterpolatedStringNode(texts, interpolatedNodes, currentToken.Pos, currentToken.Line);
                     }
-                    this.Expect(TokenType.INTERPOLATED_STRING);
-                    return new InterpolatedString(interpolatedToken.Texts, interpolatedNodes);
                 case TokenType.TRUE:
                     this.Expect(TokenType.TRUE);
-                    return new BooleanNode(true);
+                    return new ConstValueNode(new ScriptValue(true), currentToken.Pos, currentToken.Line);
                 case TokenType.FALSE:
                     this.Expect(TokenType.FALSE);
-                    return new BooleanNode(false);
+                    return new ConstValueNode(new ScriptValue(false), currentToken.Pos, currentToken.Line);
                 case TokenType.NULL:
                     this.Expect(TokenType.NULL);
-                    return new NullNode();
+                    return new ConstValueNode(ScriptValue.Null, currentToken.Pos, currentToken.Line);
                 case TokenType.OPEN_ROUND_BRACKET:
                     {
                         // Check if it is a lambda function
@@ -153,6 +224,11 @@ namespace HanabiLangLib.Parses
                             var expression = this.TermDot(skipIndexer, skipArrowFn);
                             return new UnaryNode(expression, currentToken.Raw);
                         }
+                        else if (currentToken.Raw == "~")
+                        {
+                            var expression = this.TermDot(skipIndexer, skipArrowFn);
+                            return new UnaryNode(expression, currentToken.Raw);
+                        }
                         else
                         {
                             throw new ParseException(
@@ -167,9 +243,13 @@ namespace HanabiLangLib.Parses
 
                         this.Expect(TokenType.OPEN_SQURE_BRACKET);
 
+                        bool isAllConstNode = true;
                         while (this.HasToken && this.CurrentToken.Type != TokenType.CLOSE_SQURE_BRACKET)
                         {
-                            elements.Add(this.Expression());
+                            var itemNode = this.Expression();
+                            elements.Add(itemNode);
+                            if (!(itemNode is ConstValueNode))
+                                isAllConstNode = false;
 
                             if (HasToken && CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET)
                                 break;
@@ -181,9 +261,11 @@ namespace HanabiLangLib.Parses
 
                         this.Expect(TokenType.CLOSE_SQURE_BRACKET);
 
-                        var thing = new ListNode(elements);
+                        var listNode = isAllConstNode ? 
+                            new InterpretedListNode(new ScriptValue(elements.Select(n => ((ConstValueNode)n).Value).ToList()), currentToken.Pos, currentToken.Line) : 
+                            (AstNode)new ListNode(elements);
 
-                        return CheckIndexerAccess(thing);
+                        return CheckIndexerAccess(listNode);
                     }
                 case TokenType.OPEN_CURLY_BRACKET:
                     {
@@ -191,12 +273,15 @@ namespace HanabiLangLib.Parses
 
                         this.Expect(TokenType.OPEN_CURLY_BRACKET);
 
+                        bool isAllConstNode = true;
                         while (this.HasToken && CurrentToken.Type != TokenType.CLOSE_CURLY_BRACKET)
                         {
                             AstNode key = this.Expression();
                             this.Expect(TokenType.COLON);
                             AstNode value = this.Expression();
                             keyValues.Add(Tuple.Create(key, value));
+                            if (!(key is ConstValueNode) || !(value is ConstValueNode))
+                                isAllConstNode = false;
 
                             if (this.HasToken && CurrentToken.Type == TokenType.CLOSE_CURLY_BRACKET)
                                 break;
@@ -208,7 +293,11 @@ namespace HanabiLangLib.Parses
 
                         this.Expect(TokenType.CLOSE_CURLY_BRACKET);
 
-                        return new DictNode(keyValues);
+                        var dictNode = isAllConstNode ?
+                            new InterpretedDictNode(new ScriptValue(keyValues.Select(kv => Tuple.Create(((ConstValueNode)kv.Item1).Value, ((ConstValueNode)kv.Item2).Value)).ToDictionary(kv => kv.Item1, kv => kv.Item2)), currentToken.Pos, currentToken.Line) :
+                            (AstNode)new DictNode(keyValues);
+
+                        return dictNode;
                     }
                 case TokenType.KEYWORD:
                     if (currentToken.Raw == "this" || currentToken.Raw == "super")
@@ -383,7 +472,7 @@ namespace HanabiLangLib.Parses
             if (this.HasToken && (currentRaw == "++" || currentRaw == "--"))
             {
                 this.Expect(TokenType.OPERATOR);
-                return new VariableAssignmentNode(left, new ExpressionNode(left, new IntNode(1), currentRaw[0].ToString()));
+                return new VariableAssignmentNode(left, new ExpressionNode(left, new ConstValueNode(new ScriptValue(1), currentToken.Pos, currentToken.Line), currentRaw[0].ToString()));
             }
             if (this.HasToken &&
                 (currentRaw == "+=" || currentRaw == "-=" || currentRaw == "*=" || currentRaw == "/=" || currentRaw == "%="))
@@ -416,8 +505,9 @@ namespace HanabiLangLib.Parses
             List<AstNode> types = new List<AstNode> { TermDot(true, true) };
             if (HasToken && (this.CurrentToken.Type == TokenType.QUESTION_MARK))
             {
-                this.Expect(TokenType.QUESTION_MARK);
-                types.Add(new NullNode());
+                var token = this.Expect(TokenType.QUESTION_MARK);
+                // null
+                types.Add(new ConstValueNode(ScriptValue.Null, token.Pos, token.Line));
             }
 
             while (HasToken && (this.CurrentToken.Raw == "|"))
@@ -426,8 +516,8 @@ namespace HanabiLangLib.Parses
                 types.Add(TermDot(true, true));
                 if (HasToken && (this.CurrentToken.Type == TokenType.QUESTION_MARK))
                 {
-                    this.Expect(TokenType.QUESTION_MARK);
-                    types.Add(new NullNode());
+                    var token = this.Expect(TokenType.QUESTION_MARK);
+                    types.Add(new ConstValueNode(ScriptValue.Null, token.Pos, token.Line));
                 }
             }
             return new TypeNode(types);
@@ -496,15 +586,13 @@ namespace HanabiLangLib.Parses
                 }
                 if (toDefined.Count == 1)
                 {
-                    var valueNode1 = new VariableDefinitionNode(variableNames, toDefined[0], dataType, null, null, constant, isStatic, level);
-                    valueNode1.Line = keywordToken.Line;
+                    var valueNode1 = new VariableDefinitionNode(variableNames, toDefined[0], dataType, null, null, constant, isStatic, level, keywordToken.Pos, keywordToken.Line);
                     return valueNode1;
                 }
                 if (variableNames.Count != toDefined.Count)
                     throw new ParseException($"Cannot define {toDefined.Count} values to {variableNames.Count} variable{(variableNames.Count > 1 ? "s" : "")}", LastToken);
                 
-                var valueNode2 = new VariableDefinitionNode(variableNames, new ListNode(toDefined), dataType, null, null, constant, isStatic, level);
-                valueNode2.Line = keywordToken.Line;
+                var valueNode2 = new VariableDefinitionNode(variableNames, new ListNode(toDefined), dataType, null, null, constant, isStatic, level, keywordToken.Pos, keywordToken.Line);
                 return valueNode2;
             }
             else if (this.HasToken && this.CurrentToken.Type == TokenType.OPEN_CURLY_BRACKET)
@@ -588,7 +676,7 @@ namespace HanabiLangLib.Parses
                             {
                                 parameters.Insert(0, new FnDefineParameter("this", null));
                             }
-                            setFn = new FnDefineStatementNode($"set_{string.Join("_", variableNames)}", parameters, new NullNode(), body, isStatic, lastLevel ?? level);
+                            setFn = new FnDefineStatementNode($"set_{string.Join("_", variableNames)}", parameters, new ConstValueNode(ScriptValue.Null, keywordToken.Pos, keywordToken.Line), body, isStatic, lastLevel ?? level);
                         }
                         lastLevel = null;
                     }
@@ -627,11 +715,7 @@ namespace HanabiLangLib.Parses
                     throw new ParseException("Constant cannot have Setter", this.tokens[this.currentTokenIndex - 1]);
             }
 
-            var node = new VariableDefinitionNode(variableNames, null, dataType, getFn, setFn, constant, isStatic, level);
-            if (this.currentTokenIndex >= this.tokens.Count)
-                node.Line = this.tokens[this.tokens.Count - 1].Line;
-            else
-                node.Line = this.CurrentToken.Line;
+            var node = new VariableDefinitionNode(variableNames, null, dataType, getFn, setFn, constant, isStatic, level, keywordToken.Pos, keywordToken.Line);
             return node;
         }
 
@@ -918,8 +1002,7 @@ namespace HanabiLangLib.Parses
             var currentToken = this.tokens[this.currentTokenIndex];
 
             var expression = this.Expression();
-            expression.Line = currentToken.Line;
-            return new ThrowNode(expression);
+            return new ThrowNode(expression, keywordToken.Pos, keywordToken.Line);
         }
 
         private AstNode CatchExpression()
@@ -935,8 +1018,7 @@ namespace HanabiLangLib.Parses
                 defaultValue = this.Expression();
             }
             this.Expect(TokenType.CLOSE_ROUND_BRACKET);
-            expression.Line = currentToken.Line;
-            return new CatchExpressionNode(expression, defaultValue);
+            return new CatchExpressionNode(expression, defaultValue, keywordToken.Pos, keywordToken.Line);
         }
 
         private AstNode ImportStatement()
@@ -1009,7 +1091,7 @@ namespace HanabiLangLib.Parses
                 asName = this.LastToken.Raw;
             }
 
-            return new ImportNode(importPath, imports, asName);
+            return new ImportNode(importPath, imports, asName, keywordToken.Pos, keywordToken.Line);
         }
 
         private AstNode FnDefinition(bool isStatic, AccessibilityLevel level, bool isLambdaFn = false, bool isOneParam = false)
@@ -1246,7 +1328,6 @@ namespace HanabiLangLib.Parses
                     if (token.Raw == "case")
                     {
                         AstNode caseExpression = this.Expression();
-                        caseExpression.Line = token.Line;
                         caseExpressions.Add(caseExpression);
                     }
                     else
@@ -1382,7 +1463,7 @@ namespace HanabiLangLib.Parses
                 }
                 else
                 {
-                    members[key] = new IntNode(count);
+                    members[key] = new ConstValueNode(new ScriptValue(count), this.CurrentToken.Pos, this.CurrentToken.Line);
                     count++;
                 }
 
@@ -1466,8 +1547,7 @@ namespace HanabiLangLib.Parses
         private AstNode Identifier(bool skipIndexer)
         {
             var currentToken = Expect(TokenType.IDENTIFIER, TokenType.KEYWORD);
-            AstNode result = new VariableReferenceNode(currentToken.Raw);
-            result.Line = currentToken.Line;
+            AstNode result = new VariableReferenceNode(currentToken.Raw, currentToken.Pos, currentToken.Line);
             return result;
         }
 
@@ -1493,13 +1573,12 @@ namespace HanabiLangLib.Parses
                 AstNode stepNode = null;
                 if (this.HasToken && this.CurrentToken.Type == TokenType.COLON)
                 {
-                    startNode = new NullNode();
-                    startNode.Line = startToken.Line;
+                    // null
+                    startNode = new ConstValueNode(ScriptValue.Null, this.CurrentToken.Pos, this.CurrentToken.Line);
                 }
                 else
                 {
                     startNode = this.Expression();
-                    startNode.Line = startToken.Line;
                 }
 
                 // indexer
@@ -1515,40 +1594,38 @@ namespace HanabiLangLib.Parses
                     this.Expect(TokenType.COLON);
                     if (this.HasToken && this.CurrentToken.Type == TokenType.COLON)
                     {
-                        endNode = new NullNode();
-                        endNode.Line = startToken.Line;
+                        // null
+                        endNode = new ConstValueNode(ScriptValue.Null, this.CurrentToken.Pos, this.CurrentToken.Line);
                     }
                     else if (this.HasToken && (this.CurrentToken.Type == TokenType.COMMA || this.CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET))
                     {
-                        endNode = new NullNode();
-                        endNode.Line = startToken.Line;
+                        // null
+                        endNode = new ConstValueNode(ScriptValue.Null, this.CurrentToken.Pos, this.CurrentToken.Line);
                     }
                     else
                     {
                         endNode = this.Expression();
-                        endNode.Line = startToken.Line;
                     }
 
                     if (this.HasToken && (this.CurrentToken.Type == TokenType.COMMA || this.CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET))
                     {
-                        stepNode = new NullNode();
-                        stepNode.Line = startToken.Line;
+                        // null
+                        stepNode = new ConstValueNode(ScriptValue.Null, this.CurrentToken.Pos, this.CurrentToken.Line);
                     }
                     else
                     {
                         this.Expect(TokenType.COLON);
                         if (this.HasToken && (this.CurrentToken.Type == TokenType.COMMA || this.CurrentToken.Type == TokenType.CLOSE_SQURE_BRACKET))
                         {
-                            stepNode = new NullNode();
-                            stepNode.Line = startToken.Line;
+                            // null
+                            stepNode = new ConstValueNode(ScriptValue.Null, this.CurrentToken.Pos, this.CurrentToken.Line);
                         }
                         else
                         {
                             stepNode = this.Expression();
-                            stepNode.Line = startToken.Line;
                         }
                     }
-                    elements.Add(new FnReferenceCallNode(new VariableReferenceNode("slice"), new List<AstNode>() { startNode, endNode, stepNode }, new Dictionary<string, AstNode>(), false));
+                    elements.Add(new FnReferenceCallNode(new VariableReferenceNode("slice", startToken.Pos, startToken.Line), new List<AstNode>() { startNode, endNode, stepNode }, new Dictionary<string, AstNode>(), false));
                 }
                 Token lastToken = this.Expect(TokenType.COMMA, TokenType.CLOSE_SQURE_BRACKET);
                 if (lastToken.Type == TokenType.CLOSE_SQURE_BRACKET)
@@ -1733,7 +1810,6 @@ namespace HanabiLangLib.Parses
                 case TokenType.OPEN_CURLY_BRACKET:
                     {
                         var expression = this.Expression();
-                        expression.Line = token.Line;
                         return expression;
                     }
                 case TokenType.KEYWORD:
@@ -1769,7 +1845,6 @@ namespace HanabiLangLib.Parses
                         else if (token.Raw.Equals("this") || token.Raw.Equals("super") || token.Raw.Equals("catch"))
                         {
                             var expression = this.Expression();
-                            expression.Line = token.Line;
                             return expression;
                         }
                         else
@@ -1781,7 +1856,6 @@ namespace HanabiLangLib.Parses
                         {
                             Expect(TokenType.SEMI_COLON);
                         }
-                        result.Line = token.Line;
                         return result;
                     }
                 case TokenType.SEMI_COLON:

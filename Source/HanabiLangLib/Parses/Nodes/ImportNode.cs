@@ -16,11 +16,13 @@ namespace HanabiLangLib.Parses.Nodes
         public List<Tuple<string, string>> Imports { get; private set; }
         public string AsName { get; private set; }
 
-        public ImportNode(string path, List<Tuple<string, string>> imports, string asName)
+        public ImportNode(string path, List<Tuple<string, string>> imports, string asName, int pos, int line)
         {
             this.Path = path;
             this.Imports = imports;
             this.AsName = asName;
+            this.Pos = pos;
+            this.Line = line;
         }
 
         public override string ToString()

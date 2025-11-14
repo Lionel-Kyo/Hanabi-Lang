@@ -13,6 +13,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptBool() : 
             base("bool", isStatic: false)
         {
+            this.InitializeOperators();
+
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("this"),
@@ -51,42 +53,157 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
         }
+
+        private void InitializeOperators()
+        {
+            this.AddFunction(OPEARTOR_BIT_AND, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Bool))
+                {
+                    resultObject = BasicTypes.Bool.Create(AsCSharp(_this) & AsCSharp(_other));
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} & {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_BIT_OR, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Int))
+                {
+                    resultObject = BasicTypes.Bool.Create(AsCSharp(_this) | AsCSharp(_other));
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} | {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_BIT_XOR, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Int))
+                {
+                    resultObject = BasicTypes.Bool.Create(AsCSharp(_this) ^ AsCSharp(_other));
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} ^ {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_NOT, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                return new ScriptValue(BasicTypes.Bool.Create(!AsCSharp(_this)));
+            });
+            this.AddFunction(OPEARTOR_AND, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Bool))
+                {
+                    resultObject = BasicTypes.Bool.Create(AsCSharp(_this) && AsCSharp(_other));
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} && {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_OR, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Bool))
+                {
+                    resultObject = BasicTypes.Bool.Create(AsCSharp(_this) || AsCSharp(_other));
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} || {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                if (_other.IsTypeOrSubOf(BasicTypes.Bool))
+                    return new ScriptValue(AsCSharp(_this) == AsCSharp(_other));
+                return new ScriptValue(false);
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                if (_other.IsTypeOrSubOf(BasicTypes.Bool))
+                    return new ScriptValue(AsCSharp(_this) != AsCSharp(_other));
+                return new ScriptValue(true);
+            });
+        }
         public override ScriptObject Create() => new ScriptObject(this, false);
         public ScriptObject Create(bool value) => new ScriptObject(this, value);
 
         public static ScriptObject True => BasicTypes.Bool.Create(true);
         public static ScriptObject False => BasicTypes.Bool.Create(false);
-
-        public override ScriptObject Not(ScriptObject _this)
-        {
-            return BasicTypes.Bool.Create(!(bool)_this.BuildInObject);
-        }
-
-        public override ScriptObject And(ScriptObject _this, ScriptObject value)
-        {
-            if (value.ClassType is ScriptBool)
-            {
-                return BasicTypes.Bool.Create((bool)_this.BuildInObject && (bool)value.BuildInObject);
-            }
-            return base.And(_this, value);
-        }
-        public override ScriptObject Or(ScriptObject _this, ScriptObject value)
-        {
-            if (value.ClassType is ScriptBool)
-            {
-                return BasicTypes.Bool.Create((bool)_this.BuildInObject || (bool)value.BuildInObject);
-            }
-            return base.Or(_this, value);
-        }
-
-        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
-        {
-            if (value.ClassType is ScriptBool)
-            {
-                return BasicTypes.Bool.Create((bool)_this.BuildInObject == (bool)value.BuildInObject);
-            }
-            return ScriptBool.False;
-        }
 
         public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create((bool)_this.BuildInObject ? "true" : "false");
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)

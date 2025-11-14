@@ -18,7 +18,8 @@ namespace HanabiLangLib.Parses.Nodes
         public AccessibilityLevel Level { get; private set; }
 
         public VariableDefinitionNode(List<string> name, AstNode value, AstNode dataType,
-            FnDefineNode getFn, FnDefineNode setFn, bool isConstant, bool isStatic, AccessibilityLevel level)
+            FnDefineNode getFn, FnDefineNode setFn, bool isConstant, bool isStatic, AccessibilityLevel level,
+            int pos, int line)
         {
             this.Names = name;
             this.Value = value;
@@ -28,6 +29,8 @@ namespace HanabiLangLib.Parses.Nodes
             this.IsConstant = isConstant;
             this.IsStatic = isConstant ? true : isStatic;
             this.Level = level;
+            this.Pos = pos;
+            this.Line = line;
         }
 
         public override string ToString()

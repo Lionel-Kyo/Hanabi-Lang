@@ -164,6 +164,8 @@ namespace HanabiLangLib.Lexers
                 int startLine = _line;
                 switch (c)
                 {
+                    case '~': tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), startPos, startLine)); _pos++; break;
+                    case '^': tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), startPos, startLine)); _pos++; break;
                     case '(': tokens.Add(new Token(TokenType.OPEN_ROUND_BRACKET, c.ToString(), startPos, startLine)); _pos++; break;
                     case ')': tokens.Add(new Token(TokenType.CLOSE_ROUND_BRACKET, c.ToString(), startPos, startLine)); _pos++; break;
                     case '[': tokens.Add(new Token(TokenType.OPEN_SQURE_BRACKET, c.ToString(), startPos, startLine)); _pos++; break;
@@ -191,13 +193,15 @@ namespace HanabiLangLib.Lexers
                     case '-':
                     case '&':
                     case '|':
-                        // ==, ++, --, &&, ||
+                    case '<':
+                    case '>':
+                        // ==, ++, --, &&, ||, <<, >>
                         if (_pos + 1 < _input.Length && _input[_pos + 1] == c)
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, _input.Substring(_pos, 2), startPos, startLine));
                             _pos += 2;
                         }
-                        // +=, -=, &=, |=
+                        // +=, -=, &=, |=, <=, >=
                         else if (_pos + 1 < _input.Length && _input[_pos + 1] == '=')
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, _input.Substring(_pos, 2), startPos, startLine));
@@ -230,7 +234,7 @@ namespace HanabiLangLib.Lexers
                             tokens.Add(new Token(TokenType.EQUALS, c.ToString(), startPos, startLine));
                             _pos++;
                         }
-                        // +, -, &, |
+                        // +, -, &, |, <, >
                         else
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), startPos, startLine));
@@ -238,18 +242,16 @@ namespace HanabiLangLib.Lexers
                         }
                         break;
                     case '!':
-                    case '<':
-                    case '>':
                     case '*':
                     case '/':
                     case '%':
-                        // !=, <=, >=, *=, /=, %=
+                        // !=, *=, /=, %=
                         if (_pos + 1 < _input.Length && _input[_pos + 1] == '=')
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, _input.Substring(_pos, 2), startPos, startLine));
                             _pos += 2;
                         }
-                        // !, <, >, *, /, %
+                        // !, *, /, %
                         else
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), startPos, startLine));
@@ -313,10 +315,7 @@ namespace HanabiLangLib.Lexers
                             string delimiter = _input[_pos + 2].ToString();
                             _pos += 3;
                             var chunks = ReadInterpolatedString(delimiter, isLiteral: true, isMultiline: true);
-                            if (chunks.Item1.Count == 1 && chunks.Item2.Count <= 0)
-                                tokens.Add(new Token(TokenType.STRING, chunks.Item1[0], startPos, startLine));
-                            else
-                                tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
+                            tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
                         }
                         else
                         {
@@ -329,30 +328,21 @@ namespace HanabiLangLib.Lexers
                             string delimiter = new string(_input[_pos + 1], 3);
                             _pos += 4;
                             var chunks = ReadInterpolatedString(delimiter, isLiteral: true, isMultiline: true);
-                            if (chunks.Item1.Count == 1 && chunks.Item2.Count <= 0)
-                                tokens.Add(new Token(TokenType.STRING, chunks.Item1[0], startPos, startLine));
-                            else
-                                tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
+                            tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
                         }
                         else if (_pos + 1 < _input.Length && (_input[_pos + 1] == '\'' || _input[_pos + 1] == '\"'))
                         {
                             string delimiter = _input[_pos + 1].ToString();
                             _pos += 2;
                             var chunks = ReadInterpolatedString(delimiter, isLiteral: false, isMultiline: false);
-                            if (chunks.Item1.Count == 1 && chunks.Item2.Count <= 0)
-                                tokens.Add(new Token(TokenType.STRING, chunks.Item1[0], startPos, startLine));
-                            else
-                                tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
+                            tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
                         }
                         else if (_pos + 2 < _input.Length && _input[_pos + 1] == '@' && (_input[_pos + 2] == '\'' || _input[_pos + 2] == '\"'))
                         {
                             string delimiter = _input[_pos + 2].ToString();
                             _pos += 3;
                             var chunks = ReadInterpolatedString(delimiter, isLiteral: true, isMultiline: true);
-                            if (chunks.Item1.Count == 1 && chunks.Item2.Count <= 0)
-                                tokens.Add(new Token(TokenType.STRING, chunks.Item1[0], startPos, startLine));
-                            else
-                                tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
+                            tokens.Add(new InterpolatedStringToken(TokenType.INTERPOLATED_STRING, "", startPos, startLine, chunks.Item1, chunks.Item2));
                         }
                         else
                         {

@@ -14,6 +14,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptStr() :
             base("str", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
+            this.InitializeOperators();
+
             this.AddFunction(ConstructorName, new List<FnParameter>() 
             {
                 new FnParameter("this"),
@@ -33,6 +35,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             {
                 string text = AsCSharp(args[0].TryObject);
                 var result = BasicTypes.Iterable.Create(text.Select(c => new ScriptValue(c)));
+                // var result = BasicTypes.Iterable.Create(RuneIterable(text));
                 return new ScriptValue(result);
             }, null, false, null);
 
@@ -268,8 +271,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 new FnParameter("character", BasicTypes.Int, null, false),
             }, args =>
             {
-                long character = ScriptInt.AsCSharp(args[0].TryObject);
-                return new ScriptValue((char)character);
+                var utf32 = char.ConvertFromUtf32(ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(args[0].TryObject)));
+                return new ScriptValue(utf32);
             }, true);
 
             this.AddFunction("ToInt", new List<FnParameter>()
@@ -281,7 +284,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 string str = AsCSharp(args[0].TryObject);
                 if (str.Length <= 0)
                     throw new IndexOutOfRangeException("Empty string cannot convert to int");
-                return new ScriptValue((long)str[0]);
+                return new ScriptValue(BitConverter.ToInt32(Encoding.UTF32.GetBytes(str), 0));
             }, false);
 
             this.AddFunction("Join", new List<FnParameter>()
@@ -336,30 +339,117 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
         }
 
+        private void InitializeOperators()
+        {
+            this.AddFunction(OPEARTOR_ADD, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else
+                {
+                    if (_other.IsTypeOrSubOf(BasicTypes.Str))
+                        resultObject = BasicTypes.Str.Create(AsCSharp(_this) + AsCSharp(_other));
+                    else
+                        resultObject = BasicTypes.Str.Create(AsCSharp(_this) + _other.ToString());
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} && {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_MULTIPLY, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Int))
+                {
+                    string text = AsCSharp(_this);
+                    StringBuilder result = new StringBuilder();
+                    long number = ScriptInt.AsCSharp(_other);
+                    for (long i = 0; i < number; i++)
+                    {
+                        result.Append(text);
+                    }
+                    resultObject = BasicTypes.Str.Create(result);
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} && {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                if (_other.IsTypeOrSubOf(BasicTypes.Str))
+                    return new ScriptValue(AsCSharp(_this).Equals(AsCSharp(_other)));
+                return new ScriptValue(false);
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                if (_other.IsTypeOrSubOf(BasicTypes.Str))
+                    return new ScriptValue(!AsCSharp(_this).Equals(AsCSharp(_other)));
+                return new ScriptValue(true);
+            });
+        }
+
         public override ScriptObject Create() => new ScriptObject(this, "");
         public ScriptObject Create(string value) => new ScriptObject(this, value);
         public ScriptObject Create(StringBuilder value) => new ScriptObject(this, value.ToString());
         public ScriptObject Create(char value) => new ScriptObject(this, value.ToString());
 
-        public override ScriptObject Add(ScriptObject _this, ScriptObject value)
+        private static IEnumerable<ScriptValue> RuneIterable(string text)
         {
-            return BasicTypes.Str.Create(AsCSharp(_this) + value.ToString());
+            int length = text.Length;
+            for (int i = 0; i < length; i++)
+            {
+                bool is32Bits = i + 1 < length && char.IsSurrogatePair(text[i], text[i + 1]);
+                string utf32Char = is32Bits ? text.Substring(i, 2) : text.Substring(i, 1);
+                if (is32Bits)
+                    i++;
+                yield return new ScriptValue(utf32Char);
+            }
         }
 
-        public override ScriptObject Multiply(ScriptObject _this, ScriptObject value)
+        private static int GetRuneLength(string text)
         {
-            if (value.ClassType is ScriptInt)
+            int length = text.Length;
+            int count = 0;
+            for (int i = 0; i < length; i++)
             {
-                StringBuilder result = new StringBuilder(AsCSharp(_this));
-                long number = ScriptInt.AsCSharp(value);
-                for (long i = 1; i < number; i++)
-                {
-                    result.Append(AsCSharp(_this));
-                }
-                return BasicTypes.Str.Create(result);
+                count++;
+                if (i + 1 < length && char.IsSurrogatePair(text[i], text[i + 1]))
+                    i++;
             }
-
-            return base.Multiply(_this, value);
+            return count;
         }
 
         public static string Slice(string str, long? start = null, long? end = null, long? step = null)
@@ -400,13 +490,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         }
 
         public override ScriptObject ToStr(ScriptObject _this) => _this;
-
-        public override ScriptObject Equals(ScriptObject left, ScriptObject right)
-        {
-            if (left.ClassType is ScriptStr && right.ClassType is ScriptStr)
-                return BasicTypes.Bool.Create(left.BuildInObject.Equals(right.BuildInObject));
-            return base.Equals(left, right);
-        }
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {

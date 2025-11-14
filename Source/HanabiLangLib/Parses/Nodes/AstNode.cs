@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HanabiLangLib.Lexers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,15 +9,18 @@ namespace HanabiLangLib.Parses.Nodes
 {
     public abstract class AstNode
     {
-        public int Line;
+        private static readonly string NODE_NAME_POST_TEXT = "Node";
+
+        public int Pos { get; protected set; }
+        public int Line { get; protected set; }
+
         public string NodeName
         {
             get
             {
-                string removeText = "Node";
                 string result = this.GetType().Name;
-                if (result.EndsWith(removeText))
-                    result = result.Remove(result.Length - removeText.Length, removeText.Length);
+                if (result.EndsWith(NODE_NAME_POST_TEXT))
+                    result = result.Remove(result.Length - NODE_NAME_POST_TEXT.Length, NODE_NAME_POST_TEXT.Length);
                 return result;
             }
         }

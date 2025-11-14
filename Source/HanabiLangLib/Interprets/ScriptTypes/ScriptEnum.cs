@@ -14,6 +14,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptEnum() :
             base("Enum", isStatic: false)
         {
+            this.InitializeOperators();
+
             this.AddFunction(ConstructorName, new List<FnParameter>() { new FnParameter("this"), }, args => throw new NotSupportedException("Enum class can not be called"));
 
             AddVariable("Value", args =>
@@ -28,17 +30,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             }, args =>
             {
                 return new ScriptValue(this.ToStr(args[0].TryObject));
-            });
-
-            this.AddFunction("==", new List<FnParameter>()
-            {
-                new FnParameter("this"),
-                new FnParameter("right")
-            }, args =>
-            {
-                ScriptObject left = args[0].TryObject;
-                ScriptObject right = args[1].TryObject;
-                return new ScriptValue(this.Equals(left, right));
             });
 
             //this.AddFunction("FromName", new List<FnParameter>()
@@ -83,15 +74,38 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             //}, true, AccessibilityLevel.Public);
         }
 
-        public override ScriptObject Equals(ScriptObject left, ScriptObject right)
+        private void InitializeOperators()
         {
-            if (!left.IsTypeOrSubOf(BasicTypes.Enum))
-                return ScriptBool.False;
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(OperatorEquals(args[0], args[1]));
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(!OperatorEquals(args[0], args[1]));
+            });
+        }
 
-            if (right == null || (left.ClassType != right.ClassType))
-                return ScriptBool.False;
+        private bool OperatorEquals(ScriptValue value1, ScriptValue value2)
+        {
+            ScriptObject _this = value1.TryObject;
+            ScriptObject _other = value2.TryObject;
+            if (_other.IsTypeOrSubOf(BasicTypes.Enum))
+            {
+                if (_this.ClassType != _other.ClassType)
+                    return false;
 
-            return BasicTypes.Bool.Create(GetEnumValue(left).Equals(GetEnumValue(right)));
+                return GetEnumValue(_this).Equals(GetEnumValue(_other));
+            }
+            return false;
         }
 
         public override ScriptObject ToStr(ScriptObject _this) => BasicTypes.Str.Create($"<enum {_this.ClassType.Name}.{GetEnumName(_this)}: {GetEnumValue(_this)}>");

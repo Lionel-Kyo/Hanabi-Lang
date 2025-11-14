@@ -1,18 +1,19 @@
-﻿using System;
+﻿using HanabiLangLib.Interprets;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace HanabiLangLib.Parses.Nodes
 {
-    class FloatNode : AstNode, IExpressionNode
+    class ConstValueNode : AstNode, IExpressionNode
     {
-        public double Value { get; private set; }
+        public ScriptValue Value { get; private set; }
 
-        public FloatNode(double value)
+        public ConstValueNode(ScriptValue value, int pos, int line)
         {
             this.Value = value;
+            this.Pos = pos;
+            this.Line = line;
         }
 
         public override string ToString()

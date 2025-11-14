@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using HanabiLangLib.Interprets.ScriptTypes;
 using HanabiLangLib.Parses.Nodes;
-using HanabiLangLib.Interprets.ScriptTypes;
+using System.Xml.Linq;
 
 namespace HanabiLangLib.Interprets
 {
@@ -217,160 +217,144 @@ namespace HanabiLangLib.Interprets
             return obj != null && obj.ClassType == type;
         }
 
-        public static ScriptValue operator !(ScriptValue a)
+        private static ScriptValue OperatorOneValue(ScriptValue value, string fnName, string operatorSymbol)
         {
-            if (a.value is ScriptObject)
+            var _class = value.TryClass;
+            var _object = value.TryObject;
+            if (_object != null)
             {
-                var obj = (ScriptObject)a.value;
-                return new ScriptValue(obj.ClassType.Not(obj));
+                if (_object.ClassType.TryGetValue(fnName, out var scriptVariable) && scriptVariable.Value != null && scriptVariable.Value.IsFunction)
+                {
+                    var fns = scriptVariable.Value.TryFunction;
+                    return fns.Call(_object);
+                }
+                else
+                {
+                    throw new Exception($"operator '{operatorSymbol}value' is not avalible for {_object.ClassType.Name}.");
+                }
             }
-            throw new SystemException("operator ! is not defined");
-        }
-        public static ScriptValue operator +(ScriptValue a)
-        {
-            if (a.value is ScriptObject)
+            else if (_class != null)
             {
-                var obj = (ScriptObject)a.value;
-                return new ScriptValue(obj.ClassType.Positive(obj));
+                if (_class.TryGetValue(fnName, out var scriptVariable) && scriptVariable.Value != null && scriptVariable.Value.IsFunction)
+                {
+                    var fns = scriptVariable.Value.TryFunction;
+                    return fns.Call(null, value);
+                }
+                else
+                {
+                    throw new Exception($"operator '{operatorSymbol}value' is not avalible for {_class.Name}.");
+                }
             }
-            throw new SystemException("operator + is not defined");
-        }
-        public static ScriptValue operator -(ScriptValue a)
-        {
-            if (a.value is ScriptObject)
+            else
             {
-                var obj = (ScriptObject)a.value;
-                return new ScriptValue(obj.ClassType.Negative(obj));
+                throw new Exception($"operator '{operatorSymbol}value' is only avalible for class and object.");
             }
-            throw new SystemException("operator - is not defined");
-        }
-
-        public static ScriptValue operator +(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                if (left.ClassType is ScriptStr ||right.ClassType is ScriptStr)
-                    return new ScriptValue(left.ToString() + right.ToString());
-                return new ScriptValue(left.ClassType.Add(left, right));
-            }
-            throw new SystemException($"cannot + value between {a.value} and {b.value}");
         }
 
-        public static ScriptValue operator -(ScriptValue a, ScriptValue b)
+        private static ScriptValue OperatorTwoValues(ScriptValue value1, ScriptValue value2, string fnName, string operatorSymbol)
         {
-            if (a.value is ScriptObject && b.value is ScriptObject)
+            var _class = value1.TryClass;
+            var _object = value1.TryObject;
+            if (_object != null)
             {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.Minus(left, right));
+                if (_object.ClassType.TryGetValue(fnName, out var scriptVariable) && scriptVariable.Value != null && scriptVariable.Value.IsFunction)
+                {
+                    var fns = scriptVariable.Value.TryFunction;
+                    return fns.Call(_object, value2);
+                }
+                else
+                {
+                    throw new Exception($"operator 'value1 {operatorSymbol} value2' is not avalible for {_object.ClassType.Name}.");
+                }
             }
-            throw new SystemException($"cannot - value between {a.value} and {b.value}");
+            else if (_class != null)
+            {
+                if (_class.TryGetValue(fnName, out var scriptVariable) && scriptVariable.Value != null && scriptVariable.Value.IsFunction)
+                {
+                    var fns = scriptVariable.Value.TryFunction;
+                    return fns.Call(null, value1, value2);
+                }
+                else
+                {
+                    throw new Exception($"operator 'value1 {operatorSymbol} value2' is not avalible for {_class.Name}.");
+                }
+            }
+            else
+            {
+                throw new Exception($"operator 'value1 {operatorSymbol} value2' is only avalible for class and object.");
+            }
         }
 
-        public static ScriptValue operator *(ScriptValue a, ScriptValue b)
+        public static ScriptValue BitNot(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_BIT_NOT, "~");
+        public static ScriptValue BitAnd(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_AND, "&");
+        public static ScriptValue BitOr(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_OR, "|");
+        public static ScriptValue BitXor(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_XOR, "^");
+        public static ScriptValue BitLeftShift(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_LEFT_SHIFT, "<<");
+        public static ScriptValue BitRightShift(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_RIGHT_SHIFT, ">>");
+        public static ScriptValue Not(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_NOT, "!");
+        public static ScriptValue And(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_AND, "&&");
+        public static ScriptValue Or(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_OR, "||");
+        public static ScriptValue Positive(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_POSITIVE, "+");
+        public static ScriptValue Negative(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_NEGATIVE, "-");
+        public static ScriptValue Add(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_ADD, "+");
+        public static ScriptValue Minus(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MINUS, "-");
+        public static ScriptValue Multiply(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MULTIPLY, "*");
+        public static ScriptValue Divide(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_DIVIDE, "/");
+        public static ScriptValue Mudulo(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MUDULO, "%");
+        public static ScriptValue Larger(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LARGER, ">");
+        public static ScriptValue LargerEquals(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LARGER_EQUALS, ">=");
+        public static ScriptValue Less(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LESS, "<");
+        public static ScriptValue LessEquals(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LESS_EQUALS, "<=");
+        public static ScriptValue Equals(ScriptValue value1, ScriptValue value2)
         {
-            if (a.value is ScriptObject && b.value is ScriptObject)
+            var _object = value1.TryObject;
+            if (_object != null)
             {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                if ((left.ClassType is ScriptStr && right.ClassType is ScriptInt) ||
-                    (right.ClassType is ScriptStr && left.ClassType is ScriptInt))
-                    return new ScriptValue(left.ClassType.Multiply(left, right));
-
-                if ((left.ClassType is ScriptList && right.ClassType is ScriptInt) ||
-                    (right.ClassType is ScriptList && left.ClassType is ScriptInt))
-                    return new ScriptValue(left.ClassType.Multiply(left, right));
-
-                return new ScriptValue(left.ClassType.Multiply(left, right));
+                if (_object.ClassType.TryGetValue(ScriptClass.OPEARTOR_EQUALS, out var scriptVariable) && scriptVariable.Value != null && scriptVariable.Value.IsFunction)
+                {
+                    var fns = scriptVariable.Value.TryFunction;
+                    var result = fns.Call(_object, value2);
+                    var resultObject = result.TryObject;
+                    if (resultObject == null || !resultObject.IsTypeOrSubOf(BasicTypes.Bool))
+                        throw new Exception($"{ScriptClass.OPEARTOR_EQUALS} must return a bool.");
+                    return result;
+                }
+                else
+                {
+                    throw new Exception($"operator 'value1 == value2' is not avalible for {_object.ClassType.Name}.");
+                }
             }
-            throw new SystemException($"cannot * value between {a.value} and {b.value}");
+            return new ScriptValue(object.ReferenceEquals(value1.Value, value2.Value));
         }
-
-        public static ScriptValue operator /(ScriptValue a, ScriptValue b)
+        public static ScriptValue NotEquals(ScriptValue value1, ScriptValue value2)
         {
-            if (a.value is ScriptObject && b.value is ScriptObject)
+            var _object = value1.TryObject;
+            if (_object != null)
             {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.Divide(left, right));
+                if (_object.ClassType.TryGetValue(ScriptClass.OPEARTOR_NOT_EQUALS, out var scriptVariable1) && scriptVariable1.Value != null && scriptVariable1.Value.IsFunction)
+                {
+                    var fns = scriptVariable1.Value.TryFunction;
+                    var result = fns.Call(_object, value2);
+                    var resultObject = result.TryObject;
+                    if (resultObject == null || !resultObject.IsTypeOrSubOf(BasicTypes.Bool))
+                        throw new Exception($"{ScriptClass.OPEARTOR_NOT_EQUALS} must return a bool.");
+                    return result;
+                }
+                else if (_object.ClassType.TryGetValue(ScriptClass.OPEARTOR_EQUALS, out var scriptVariable2) && scriptVariable2.Value != null && scriptVariable2.Value.IsFunction)
+                {
+                    var fns = scriptVariable2.Value.TryFunction;
+                    var result = fns.Call(_object, value2);
+                    var resultObject = result.TryObject;
+                    if (resultObject == null || !resultObject.IsTypeOrSubOf(BasicTypes.Bool))
+                        throw new Exception($"{ScriptClass.OPEARTOR_EQUALS} must return a bool.");
+                    return new ScriptValue(!ScriptBool.AsCSharp(resultObject));
+                }
+                else
+                {
+                    throw new Exception($"operator 'value1 != value2' is not avalible for {_object.ClassType.Name}.");
+                }
             }
-            throw new SystemException($"cannot / value between {a.value} and {b.value}");
-        }
-
-        public static ScriptValue operator %(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.Modulo(left, right));
-            }
-            throw new SystemException($"cannot % value between {a.value} and {b.value}");
-        }
-
-        public static ScriptValue operator >(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.Larger(left, right));
-            }
-            throw new SystemException($"cannot > value between {a.value} and {b.value}");
-        }
-        public static ScriptValue operator <(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.Less(left, right));
-            }
-            throw new SystemException($"cannot < value between {a.value} and {b.value}");
-        }
-        public static ScriptValue operator >=(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.LargerEquals(left, right));
-            }
-            throw new SystemException($"cannot >= value between {a.value} and {b.value}");
-        }
-        public static ScriptValue operator <=(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.LessEquals(left, right));
-            }
-            throw new SystemException($"cannot <= value between {a.value} and {b.value}");
-        }
-
-        public static ScriptValue And(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.And(left, right));
-            }
-            throw new SystemException($"cannot && value between {a.value} and {b.value}");
-        }
-
-        public static ScriptValue Or(ScriptValue a, ScriptValue b)
-        {
-            if (a.value is ScriptObject && b.value is ScriptObject)
-            {
-                var left = (ScriptObject)a.value;
-                var right = (ScriptObject)b.value;
-                return new ScriptValue(left.ClassType.Or(left, right));
-            }
-            throw new SystemException($"cannot || value between {a.value} and {b.value}");
+            return new ScriptValue(!object.ReferenceEquals(value1.Value, value2.Value));
         }
 
         public static ScriptValue OperatorSingleUnzip(ScriptValue a)
@@ -393,15 +377,12 @@ namespace HanabiLangLib.Interprets
 
         public bool Equals(ScriptValue value)
         {
-            if (this.value is ScriptObject && value.value is ScriptObject)
-            {
-                ScriptObject oleft = (ScriptObject)this.value;
-                ScriptObject oright = (ScriptObject)value.value;
-                return (bool)oleft.ClassType.Equals(oleft, oright).BuildInObject;
-            }
-            ScriptType left = this.value;
-            ScriptType right = value.value;
-            return left.Equals(right);
+            return ScriptBool.AsCSharp(Equals(value, this).TryObject);
+        }
+
+        public bool NotEquals(ScriptValue value)
+        {
+            return ScriptBool.AsCSharp(NotEquals(value, this).TryObject);
         }
 
         public override bool Equals(object obj)

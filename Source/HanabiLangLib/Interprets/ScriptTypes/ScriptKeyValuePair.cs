@@ -11,6 +11,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptKeyValuePair() :
             base("KeyValuePair", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
+            this.InitializeOperators();
+
             AddVariable("Key", args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
@@ -56,26 +58,46 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
         }
 
-        public override ScriptObject Create() => new ScriptObject(this, new KeyValuePair<ScriptValue, ScriptValue>());
-        public ScriptObject Create(KeyValuePair<ScriptValue, ScriptValue> value) => new ScriptObject(this, value);
-
-        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
+        private void InitializeOperators()
         {
-            if (value.ClassType is ScriptKeyValuePair)
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
             {
-                if (_this.Equals(value))
-                    return ScriptBool.True;
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(OperatorEquals(args[0], args[1]));
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(!OperatorEquals(args[0], args[1]));
+            });
+        }
+
+        private bool OperatorEquals(ScriptValue value1, ScriptValue value2)
+        {
+            ScriptObject _this = value1.TryObject;
+            ScriptObject _other = value2.TryObject;
+            if (_other.IsTypeOrSubOf(BasicTypes.KeyValuePair))
+            {
+                if (object.ReferenceEquals(_this, _other))
+                    return true;
 
                 var a = AsCSharp(_this);
-                var b = AsCSharp(value);
+                var b = AsCSharp(_other);
+
                 if (a.Key.Equals(b.Key) && a.Value.Equals(b.Value))
-                {
-                    return ScriptBool.True;
-                }
-                return ScriptBool.False;
+                    return true;
             }
-            return ScriptBool.False;
+            return false;
         }
+
+        public override ScriptObject Create() => new ScriptObject(this, new KeyValuePair<ScriptValue, ScriptValue>());
+        public ScriptObject Create(KeyValuePair<ScriptValue, ScriptValue> value) => new ScriptObject(this, value);
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
         {

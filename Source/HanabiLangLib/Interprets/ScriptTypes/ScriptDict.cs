@@ -15,6 +15,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptDict() :
             base("Dict", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
+            this.InitializeOperators();
+
             this.AddFunction(ConstructorName, new List<FnParameter>()
             {
                 new FnParameter("this"),
@@ -145,32 +147,53 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             });
         }
 
+        private void InitializeOperators()
+        {
+            this.AddFunction(OPEARTOR_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(OperatorEquals(args[0], args[1]));
+            });
+            this.AddFunction(OPEARTOR_NOT_EQUALS, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                return new ScriptValue(!OperatorEquals(args[0], args[1]));
+            });
+        }
+
         public override ScriptObject Create() => new ScriptObject(this, new Dictionary<ScriptValue, ScriptValue>());
         public ScriptObject Create(Dictionary<ScriptValue, ScriptValue> value) => new ScriptObject(this, value);
 
-        public override ScriptObject Equals(ScriptObject _this, ScriptObject value)
+        private bool OperatorEquals(ScriptValue value1, ScriptValue value2)
         {
-            if (value.ClassType is ScriptDict)
+            ScriptObject _this = value1.TryObject;
+            ScriptObject _other = value2.TryObject;
+            if (_other.IsTypeOrSubOf(BasicTypes.Dict))
             {
                 var a = AsCSharp(_this);
-                var b = AsCSharp(value);
+                var b = AsCSharp(_other);
 
                 if (a.Equals(b))
-                    return ScriptBool.True;
+                    return true;
 
                 if (a.Count != b.Count)
-                    return ScriptBool.False;
+                    return false;
 
-                var aList = a.ToList();
-                var bList = b.ToList();
-                for (int i = 0; i < a.Count; i++)
+                foreach (var lri in a.Zip(b, (l, r) => Tuple.Create(l,r)).Select((lr, i) => Tuple.Create(lr.Item1, lr.Item2, i)))
                 {
-                    if (!aList[i].Key.Equals(bList[i].Key) || !aList[i].Value.Equals(bList[i].Value))
-                        return ScriptBool.False;
+                    if (ScriptBool.AsCSharp(ScriptValue.NotEquals(lri.Item1.Key, lri.Item2.Key).TryObject) ||
+                        ScriptBool.AsCSharp(ScriptValue.NotEquals(lri.Item1.Value, lri.Item2.Value).TryObject))
+                        return false;
                 }
-                return ScriptBool.True;
+                return true;
             }
-            return ScriptBool.False;
+            return false;
         }
 
         public override string ToJsonString(ScriptObject _this, int basicIndent = 2, int currentIndent = 0)
