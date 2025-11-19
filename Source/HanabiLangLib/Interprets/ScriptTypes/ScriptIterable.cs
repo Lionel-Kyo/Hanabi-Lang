@@ -46,7 +46,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(BasicTypes.Iterable.Create(new ScriptIterator(currentFn, moveNextFn, resetFn)));
             }, true);
 
-            AddVariable("Iter", args =>
+            AddVariable(GET_ITERABLE, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 var result = BasicTypes.Iterable.Create(AsCSharp(_this));
@@ -568,7 +568,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(BasicTypes.Iterable.Create(result));
             });
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
+            this.AddFunction(GET_INDEXER, new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 if (!TryGetIterable(_this, out var iter))
@@ -615,7 +615,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 result = AsCSharp(obj);
                 return true;
             }
-            if (!obj.Scope.TryGetValue("Iter", out ScriptVariable iter)) 
+            if (!obj.Scope.TryGetValue(GET_ITERABLE, out ScriptVariable iter)) 
                 return false;
 
             ScriptObject iterObj;

@@ -58,7 +58,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).Count);
             }, null, false, null);
 
-            AddVariable("Iter", args =>
+            AddVariable(GET_ITERABLE, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 return new ScriptValue(BasicTypes.Iterable.Create(AsCSharp(_this)));
@@ -504,7 +504,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return ScriptValue.Null;
             }); 
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
+            this.AddFunction(GET_INDEXER, new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 List<ScriptValue> listValue = AsCSharp(_this);
@@ -527,7 +527,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return listValue[ScriptInt.ValidateToInt32(ScriptRange.GetModuloIndex(index, listValue.Count))];
             });
-            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List), new FnParameter("value") }, args =>
+            this.AddFunction(SET_INDEXER, new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 List<ScriptValue> listValue = AsCSharp(_this);
@@ -655,25 +655,6 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return true;
             }
             return false;
-        }
-
-        public static string ToStr(ScriptObject _this)
-        {
-            StringBuilder result = new StringBuilder();
-            result.Append('[');
-            foreach (var item in AsCSharp(_this))
-            {
-                if (item.TryObject == _this)
-                    result.Append("[...], ");
-                else if (item.TryObject?.ClassType is ScriptStr)
-                    result.Append($"\"{item}\", ");
-                else
-                    result.Append($"{item}, ");
-            }
-            if (result.Length >= 2)
-                result.Remove(result.Length - 2, 2);
-            result.Append(']');
-            return result.ToString();
         }
 
         public static string ToStr(ScriptObject _this, string indent = null)

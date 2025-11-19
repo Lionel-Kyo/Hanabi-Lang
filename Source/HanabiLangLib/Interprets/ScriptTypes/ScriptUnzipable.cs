@@ -27,7 +27,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            AddVariable("Iter", args =>
+            AddVariable(GET_ITERABLE, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 return new ScriptValue(BasicTypes.Iterable.Create(AsCSharp(_this)));

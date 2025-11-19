@@ -1830,8 +1830,8 @@ namespace HanabiLangLib.Interprets
                 }
                 ScriptValue indexer = new ScriptValue(indexes);
 
-                obj.ClassType.Scope.Variables.TryGetValue("__GetIndexer__", out ScriptVariable getFn);
-                obj.ClassType.Scope.Variables.TryGetValue("__SetIndexer__", out ScriptVariable setFn);
+                obj.ClassType.Scope.Variables.TryGetValue(ScriptClass.GET_INDEXER, out ScriptVariable getFn);
+                obj.ClassType.Scope.Variables.TryGetValue(ScriptClass.SET_INDEXER, out ScriptVariable setFn);
 
                 if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
                 {

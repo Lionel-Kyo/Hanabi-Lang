@@ -25,14 +25,14 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return AsCSharp(_this).Value;
             }, null, false, null);
 
-            AddVariable("Iter", args =>
+            AddVariable(GET_ITERABLE, args =>
             {
                 var keyValue = AsCSharp(args[0].TryObject);
                 var result = BasicTypes.Iterable.Create(new List<ScriptValue>() { keyValue.Key, keyValue.Value });
                 return new ScriptValue(result);
             }, null, false, null);
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this") , new FnParameter("indexes", BasicTypes.List) }, args =>
+            this.AddFunction(GET_INDEXER, new List<FnParameter> { new FnParameter("this") , new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 var kvValue = AsCSharp(_this);

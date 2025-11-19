@@ -52,7 +52,7 @@ void Start()
         try
         {
             //tokens = Lexer.Tokenize(lines);
-            tokens = new NewLexer(line).Tokenize();
+            tokens = new NewLexer(string.Join(Environment.NewLine, lines)).Tokenize();
             //Console.WriteLine(string.Join("\n", tokens));
         }
         catch (Exception ex)

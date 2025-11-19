@@ -34,7 +34,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).Count);
             }, null, false, null);
 
-            AddVariable("Iter", args =>
+            AddVariable(GET_ITERABLE, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 var result = BasicTypes.Iterable.Create(AsCSharp(_this).Select(kv => new ScriptValue(BasicTypes.KeyValuePair.Create(kv))));
@@ -125,7 +125,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(obj);
             });
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key", BasicTypes.List) }, args =>
+            this.AddFunction(GET_INDEXER, new List<FnParameter> { new FnParameter("this"), new FnParameter("key", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);
@@ -135,7 +135,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 return AsCSharp(_this)[key];
             });
-            this.AddFunction("__SetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("key", BasicTypes.List), new FnParameter("value") }, args =>
+            this.AddFunction(SET_INDEXER, new List<FnParameter> { new FnParameter("this"), new FnParameter("key", BasicTypes.List), new FnParameter("value") }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 List<ScriptValue> indexes = ScriptList.AsCSharp(args[1].TryObject);

@@ -79,7 +79,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return ScriptValue.Null;
             });
 
-            AddVariable("Iter", args =>
+            AddVariable(GET_ITERABLE, args =>
             {
                 var range = AsCSharp(args[0].TryObject);
                 var result = BasicTypes.Iterable.Create(RangeIterable(range.Start, range.End, range.Step));
@@ -92,7 +92,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(AsCSharp(_this).GetLength());
             }, null, false, null);
 
-            this.AddFunction("__GetIndexer__", new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
+            this.AddFunction(GET_INDEXER, new List<FnParameter> { new FnParameter("this"), new FnParameter("indexes", BasicTypes.List) }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
                 Range range = AsCSharp(_this);

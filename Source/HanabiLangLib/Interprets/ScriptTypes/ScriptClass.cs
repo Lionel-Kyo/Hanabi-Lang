@@ -37,7 +37,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public static readonly string TO_STR = "ToStr";
         public static readonly string GET_INDEXER = "__GET_INDEXER__";
         public static readonly string SET_INDEXER = "__SET_INDEXER__";
-        public static readonly string GET_ITERATOR = "__ITER__";
+        public static readonly string GET_ITERABLE = "__ITER__";
+        // public static readonly string OBJECT_INITIALZATION = "__INIT__";
 
         public string ConstructorName => $"{this.Name}::New";
         public string Name { get; private set; }
