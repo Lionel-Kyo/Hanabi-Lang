@@ -85,7 +85,7 @@ namespace HanabiLangLib.Parses
                 case TokenType.INT:
                     {
                         this.Expect(TokenType.INT);
-                        var i64Text = currentToken.Raw;
+                        var i64Text = currentToken.Raw.Replace("_", "");
                         var isPositive = i64Text.Length > 0 && i64Text[0] == '-' ? false : true;
                         var i64TrimSignText = i64Text.TrimStart('+', '-');
 
@@ -116,7 +116,7 @@ namespace HanabiLangLib.Parses
                 case TokenType.FLOAT:
                     {
                         this.Expect(TokenType.FLOAT);
-                        var f64Text = currentToken.Raw;
+                        var f64Text = currentToken.Raw.Replace("_", "");
                         var isPositive = f64Text.Length > 0 && f64Text[0] == '-' ? false : true;
                         var i64TrimSignText = f64Text.TrimStart('+', '-');
 
@@ -208,35 +208,31 @@ namespace HanabiLangLib.Parses
                         this.Expect(TokenType.OPERATOR);
 
                         // Unary operator
-                        if (currentToken.Raw == "-" || currentToken.Raw == "+")
+                        switch (currentToken.Raw)
                         {
-                            var expression = this.TermDot(skipIndexer, skipArrowFn);
-                            return new UnaryNode(expression, currentToken.Raw);
-                        }
-
-                        else if (currentToken.Raw == "!")
-                        {
-                            var expression = this.TermDot(skipIndexer, skipArrowFn);
-                            return new UnaryNode(expression, currentToken.Raw);
-                        }
-                        else if (currentToken.Raw == "*")
-                        {
-                            var expression = this.TermDot(skipIndexer, skipArrowFn);
-                            return new UnaryNode(expression, currentToken.Raw);
-                        }
-                        else if (currentToken.Raw == "~")
-                        {
-                            var expression = this.TermDot(skipIndexer, skipArrowFn);
-                            return new UnaryNode(expression, currentToken.Raw);
-                        }
-                        else
-                        {
-                            throw new ParseException(
+                            // Unary operator
+                            case "~":
+                            case "!":
+                            case "+":
+                            case "-":
+                            case "*":
+                                {
+                                    var expression = this.TermDot(skipIndexer, skipArrowFn);
+                                    return new UnaryNode(expression, currentToken.Raw);
+                                }
+                             // Prefix increment/decrement
+                            case "++":
+                            case "--":
+                                {
+                                    var expression = this.TermDot(skipIndexer, skipArrowFn);
+                                    return new UnaryNode(expression, $"^{currentToken.Raw}");
+                                }
+                            default:
+                                throw new ParseException(
                                     "Unexpected token: " + currentToken.Raw + ", " + currentToken.Type,
                                     currentToken);
                         }
                     }
-
                 case TokenType.OPEN_SQURE_BRACKET:
                     {
                         List<AstNode> elements = new List<AstNode>();
@@ -316,11 +312,18 @@ namespace HanabiLangLib.Parses
             var left = this.Factor(skipIndexer, skipArrowFn);
 
             while (HasToken &&
+                ((CurrentToken.Type == TokenType.OPERATOR && (CurrentToken.Raw == "++" || CurrentToken.Raw == "--")) ||
                 (CurrentToken.Type == TokenType.DOT || CurrentToken.Type == TokenType.QUESTION_DOT ||
                 CurrentToken.Type == TokenType.OPEN_ROUND_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_ROUND_BRACKET ||
-                (!skipIndexer && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET))))
+                (!skipIndexer && (CurrentToken.Type == TokenType.OPEN_SQURE_BRACKET || CurrentToken.Type == TokenType.QUESTION_OPEN_SQURE_BRACKET)))))
             {
-                if (CurrentToken.Type == TokenType.DOT)
+                if (CurrentToken.Type == TokenType.OPERATOR && (CurrentToken.Raw == "++" || CurrentToken.Raw == "--"))
+                {
+                    var currentToken = CurrentToken;
+                    this.Expect(TokenType.OPERATOR);
+                    left = new UnaryNode(left, $"{currentToken.Raw}$");
+                }
+                else if (CurrentToken.Type == TokenType.DOT)
                 {
                     this.Expect(TokenType.DOT);
                     left = new ExpressionNode(left, this.Factor(skipIndexer, skipArrowFn), ".");
@@ -375,16 +378,32 @@ namespace HanabiLangLib.Parses
             return left;
         }
 
-        private AstNode TermComparative(bool skipIndexer, bool skipArrowFn)
+        private AstNode TermShift(bool skipIndexer, bool skipArrowFn)
         {
             var left = this.TermArithmetic2(skipIndexer, skipArrowFn);
 
-            while (HasToken &&
-                (CurrentToken.Raw == ">=" || CurrentToken.Raw == "<=" || CurrentToken.Raw == ">" || CurrentToken.Raw == "<"))
+            while (HasToken && (CurrentToken.Raw == "<<" || CurrentToken.Raw == ">>"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
                 left = new ExpressionNode(left, this.TermArithmetic2(skipIndexer, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermComparative(bool skipIndexer, bool skipArrowFn)
+        {
+            var left = this.TermShift(skipIndexer, skipArrowFn);
+
+            while (HasToken &&
+                (CurrentToken.Raw == ">=" || CurrentToken.Raw == "<=" ||
+                 CurrentToken.Raw == ">" || CurrentToken.Raw == "<" ||
+                 CurrentToken.Raw == "is" || CurrentToken.Raw == "is not"))
+            {
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermShift(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
@@ -397,12 +416,54 @@ namespace HanabiLangLib.Parses
             while (HasToken &&
                 (CurrentToken.Raw == "==" || CurrentToken.Raw == "!="))
             {
-                if (CurrentToken.Raw == "==" || CurrentToken.Raw == "!=")
-                {
-                    var currentToken = CurrentToken;
-                    this.Expect(TokenType.OPERATOR);
-                    left = new ExpressionNode(left, this.TermComparative(skipIndexer, skipArrowFn), currentToken.Raw);
-                }
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermComparative(skipIndexer, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermBitwiseAnd(bool skipIndexer, bool skipArrowFn)
+        {
+            var left = this.TermEqual(skipIndexer, skipArrowFn);
+
+            while (HasToken &&
+                (CurrentToken.Raw == "&"))
+            {
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermEqual(skipIndexer, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermXor(bool skipIndexer, bool skipArrowFn)
+        {
+            var left = this.TermBitwiseAnd(skipIndexer, skipArrowFn);
+
+            while (HasToken &&
+                (CurrentToken.Raw == "^"))
+            {
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermBitwiseAnd(skipIndexer, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermBitwiseOr(bool skipIndexer, bool skipArrowFn)
+        {
+            var left = this.TermXor(skipIndexer, skipArrowFn);
+
+            while (HasToken &&
+                (CurrentToken.Raw == "|"))
+            {
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermXor(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
@@ -410,14 +471,14 @@ namespace HanabiLangLib.Parses
 
         private AstNode TermAnd(bool skipIndexer, bool skipArrowFn)
         {
-            var left = this.TermEqual(skipIndexer, skipArrowFn);
+            var left = this.TermBitwiseOr(skipIndexer, skipArrowFn);
 
             while (HasToken &&
                 (CurrentToken.Raw == "&&"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermEqual(skipIndexer, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermBitwiseOr(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;
@@ -438,12 +499,27 @@ namespace HanabiLangLib.Parses
             return left;
         }
 
+        private AstNode TermNullCoalescing(bool skipIndexer, bool skipArrowFn)
+        {
+            var left = this.TermOr(skipIndexer, skipArrowFn);
+
+            while (HasToken &&
+                (CurrentToken.Raw == "??"))
+            {
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermOr(skipIndexer, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
         private AstNode Expression(bool skipIndexer = false, bool skipEquals = false, bool skipArrowFn = false)
         {
             if (!HasToken)
                 throw new ParseFormatNotCompleteException("Format is not complete", this.tokens[this.currentTokenIndex - 1]);
 
-            var left = this.TermOr(skipIndexer, skipArrowFn);
+            var left = this.TermNullCoalescing(skipIndexer, skipArrowFn);
 
             if (!HasToken)
                 return left;
@@ -462,18 +538,6 @@ namespace HanabiLangLib.Parses
                 left = new TernaryNode(condition, consequent, alternative);
             }
 
-            if (this.HasToken && currentToken.Type == TokenType.DOUBLE_QUESTION_MARK)
-            {
-                this.Expect(TokenType.DOUBLE_QUESTION_MARK);
-                var consequent = this.Expression();
-                left = new NullCoalescingNode(left, consequent);
-            }
-
-            if (this.HasToken && (currentRaw == "++" || currentRaw == "--"))
-            {
-                this.Expect(TokenType.OPERATOR);
-                return new VariableAssignmentNode(left, new ExpressionNode(left, new ConstValueNode(new ScriptValue(1), currentToken.Pos, currentToken.Line), currentRaw[0].ToString()));
-            }
             if (this.HasToken &&
                 (currentRaw == "+=" || currentRaw == "-=" || currentRaw == "*=" || currentRaw == "/=" || currentRaw == "%="))
             {

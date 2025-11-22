@@ -17,6 +17,10 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public static readonly string OPEARTOR_BIT_XOR = "__OP_BIT_XOR__";
         public static readonly string OPEARTOR_BIT_LEFT_SHIFT = "__OP_BIT_LEFT_SHIFT__";
         public static readonly string OPEARTOR_BIT_RIGHT_SHIFT = "__OP_BIT_RIGHT_SHIFT__";
+        public static readonly string OPEARTOR_POST_INCREMENT = "__OP_POST_INCREMENT__";
+        public static readonly string OPEARTOR_POST_DECREMENT = "__OP_POST_DECREMENT__";
+        public static readonly string OPEARTOR_PRE_INCREMENT = "__OP_PRE_INCREMENT__";
+        public static readonly string OPEARTOR_PRE_DECREMENT = "__OP_PRE_DECREMENT__";
         public static readonly string OPEARTOR_NOT = "__OP_NOT__";
         public static readonly string OPEARTOR_AND = "__OP_AND__";
         public static readonly string OPEARTOR_OR = "__OP_OR__";

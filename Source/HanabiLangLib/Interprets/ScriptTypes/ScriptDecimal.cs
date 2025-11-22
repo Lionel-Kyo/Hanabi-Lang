@@ -83,6 +83,44 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 ScriptObject _this = args[0].TryObject;
                 return new ScriptValue(BasicTypes.Decimal.Create(-AsCSharp(_this)));
             });
+            this.AddFunction(OPEARTOR_PRE_INCREMENT, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                _this.BuildInObject = AsCSharp(_this) + 1;
+                return new ScriptValue(BasicTypes.Decimal.Create(AsCSharp(_this)));
+            });
+            this.AddFunction(OPEARTOR_PRE_DECREMENT, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                _this.BuildInObject = AsCSharp(_this) - 1;
+                return new ScriptValue(BasicTypes.Decimal.Create(AsCSharp(_this)));
+            });
+            this.AddFunction(OPEARTOR_POST_INCREMENT, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var original = AsCSharp(_this);
+                _this.BuildInObject = AsCSharp(_this) + 1;
+                return new ScriptValue(BasicTypes.Decimal.Create(original));
+            });
+            this.AddFunction(OPEARTOR_POST_DECREMENT, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+            }, args =>
+            {
+                ScriptObject _this = (ScriptObject)args[0].Value;
+                var original = AsCSharp(_this);
+                _this.BuildInObject = AsCSharp(_this) - 1;
+                return new ScriptValue(BasicTypes.Decimal.Create(original));
+            });
             this.AddFunction(OPEARTOR_ADD, new List<FnParameter>()
             {
                 new FnParameter("this"),

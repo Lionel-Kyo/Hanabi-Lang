@@ -574,7 +574,7 @@ import ""Iterable""
 
 class Test: Iterable {
     private let values = null;
-    public let Iter => TestIterator.Create(this.values);
+    public let __ITER__ => TestIterator.Create(this.values);
 
     public fn Test(this, values: Iterable) {
         this.values = values;
@@ -613,7 +613,8 @@ class Test: Iterable {
 
 const test = Test([*range(10, 20)]);
 const result1 = test.ToList();
-const result2 = test.Iter.ToList();
+const a = test.__ITER__;
+const result2 = test.__ITER__.ToList();
 ";
             var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
             var result = Enumerable.Range(10, 10).Select(i => new ScriptValue(i)).ToList();
@@ -625,7 +626,7 @@ const result2 = test.Iter.ToList();
         {
             string sourceCode = @"
 const result1 = range(25, 50).SelectWithIndex((value, index) => *[value, index]).Where((value, index) => index >= 10).Select((value, index) => $""{index}: {value}"").ToList();
-const result2 = range(25, 50).Iter.SelectWithIndex((value, index) => *[value, index]).Where((value, index) => index >= 10).Select((value, index) => $""{index}: {value}"").ToList();
+const result2 = range(25, 50).__ITER__.SelectWithIndex((value, index) => *[value, index]).Where((value, index) => index >= 10).Select((value, index) => $""{index}: {value}"").ToList();
 ";
             var values = Interpret(sourceCode, out var interpreter, "result1", "result2");
             var result = Enumerable.Range(25, 25).Select((value, index) => Tuple.Create(value, index)).Where(vi => vi.Item2 >= 10).Select(vi => new ScriptValue($"{vi.Item2}: {vi.Item1}")).ToList();

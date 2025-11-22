@@ -217,7 +217,7 @@ namespace HanabiLangLib.Interprets
             return obj != null && obj.ClassType == type;
         }
 
-        private static ScriptValue OperatorOneValue(ScriptValue value, string fnName, string operatorSymbol)
+        private static ScriptValue OperatorOneValue(ScriptValue value, string fnName, string operatorSymbol, bool isPrefix = true)
         {
             var _class = value.TryClass;
             var _object = value.TryObject;
@@ -230,7 +230,8 @@ namespace HanabiLangLib.Interprets
                 }
                 else
                 {
-                    throw new Exception($"operator '{operatorSymbol}value' is not avalible for {_object.ClassType.Name}.");
+                    string valueFormat = isPrefix ? $"{operatorSymbol}value" : $"value{operatorSymbol}";
+                    throw new Exception($"operator '{valueFormat}' is not avalible for {_object.ClassType.Name}.");
                 }
             }
             else if (_class != null)
@@ -242,7 +243,8 @@ namespace HanabiLangLib.Interprets
                 }
                 else
                 {
-                    throw new Exception($"operator '{operatorSymbol}value' is not avalible for {_class.Name}.");
+                    string valueFormat = isPrefix ? $"{operatorSymbol}value" : $"value{operatorSymbol}";
+                    throw new Exception($"operator '{valueFormat}' is not avalible for {_class.Name}.");
                 }
             }
             else
@@ -292,6 +294,10 @@ namespace HanabiLangLib.Interprets
         public static ScriptValue BitLeftShift(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_LEFT_SHIFT, "<<");
         public static ScriptValue BitRightShift(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_BIT_RIGHT_SHIFT, ">>");
         public static ScriptValue Not(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_NOT, "!");
+        public static ScriptValue PrefixIncrement(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_PRE_INCREMENT, "++");
+        public static ScriptValue PrefixDecrement(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_PRE_DECREMENT, "--");
+        public static ScriptValue PostfixIncrement(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_POST_INCREMENT, "++", isPrefix: false);
+        public static ScriptValue PostfixDecrement(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_POST_DECREMENT, "--", isPrefix: false);
         public static ScriptValue And(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_AND, "&&");
         public static ScriptValue Or(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_OR, "||");
         public static ScriptValue Positive(ScriptValue value) => OperatorOneValue(value, ScriptClass.OPEARTOR_POSITIVE, "+");
@@ -356,6 +362,9 @@ namespace HanabiLangLib.Interprets
             }
             return new ScriptValue(!object.ReferenceEquals(value1.Value, value2.Value));
         }
+
+        public static ScriptValue ReferenceEquals(ScriptValue value1, ScriptValue value2) => new ScriptValue(object.ReferenceEquals(value1.Value, value2.Value));
+        public static ScriptValue ReferenceNotEquals(ScriptValue value1, ScriptValue value2) => new ScriptValue(!object.ReferenceEquals(value1.Value, value2.Value));
 
         public static ScriptValue OperatorSingleUnzip(ScriptValue a)
         {

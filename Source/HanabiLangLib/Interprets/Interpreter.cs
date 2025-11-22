@@ -1663,6 +1663,10 @@ namespace HanabiLangLib.Interprets
                             right = InterpretExpression(interpretScope, realNode.Right).Ref;
                             return new ValueReference(ScriptValue.Or(left, right));
                         }
+                    case "??":
+                        if (!left.IsNull)
+                            return new ValueReference(left);
+                        return InterpretExpression(interpretScope, realNode.Right);
                 }
 
                 right = InterpretExpression(interpretScope, realNode.Right).Ref;
@@ -1701,6 +1705,10 @@ namespace HanabiLangLib.Interprets
                         return new ValueReference(ScriptValue.Equals(left, right));
                     case "!=":
                         return new ValueReference(ScriptValue.NotEquals(left, right));
+                    case "is":
+                        return new ValueReference(ScriptValue.ReferenceEquals(left, right));
+                    case "is not":
+                        return new ValueReference(ScriptValue.ReferenceNotEquals(left, right));
                     default:
                         throw new SystemException($"Unexpected Operator: {_operater}");
                 }
@@ -1756,6 +1764,14 @@ namespace HanabiLangLib.Interprets
                         return new ValueReference(ScriptValue.Negative(value));
                     case "*":
                         return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
+                    case "^++":
+                        return new ValueReference(ScriptValue.PrefixIncrement(value));
+                    case "^--":
+                        return new ValueReference(ScriptValue.PrefixDecrement(value));
+                    case "++$":
+                        return new ValueReference(ScriptValue.PostfixIncrement(value));
+                    case "--$":
+                        return new ValueReference(ScriptValue.PostfixDecrement(value));
                     default:
                         throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
                 }
@@ -1887,17 +1903,6 @@ namespace HanabiLangLib.Interprets
                     return InterpretExpression(interpretScope, realNode.Consequent);
                 }
                 return InterpretExpression(interpretScope, realNode.Alternative);
-            }
-            else if (node is NullCoalescingNode)
-            {
-                var realNode = (NullCoalescingNode)node;
-                var value = InterpretExpression(interpretScope, realNode.Value);
-
-                if (value.Ref.IsNull)
-                {
-                    return InterpretExpression(interpretScope, realNode.Consequent);
-                }
-                return value;
             }
             else if (node is VariableAssignmentNode)
             {

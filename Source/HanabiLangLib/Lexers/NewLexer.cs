@@ -262,7 +262,7 @@ namespace HanabiLangLib.Lexers
                         // ??
                         if (_pos + 1 < _input.Length && _input[_pos + 1] == c)
                         {
-                            tokens.Add(new Token(TokenType.DOUBLE_QUESTION_MARK, _input.Substring(_pos, 2), startPos, startLine));
+                            tokens.Add(new Token(TokenType.OPERATOR, _input.Substring(_pos, 2), startPos, startLine));
                             _pos += 2;
                         }
                         // ?.
@@ -361,6 +361,13 @@ namespace HanabiLangLib.Lexers
                                 tokens.Add(new Token(TokenType.FALSE, id, startPos, startLine));
                             else if (id == "null")
                                 tokens.Add(new Token(TokenType.NULL, id, startPos, startLine));
+                            else if (id == "is")
+                                tokens.Add(new Token(TokenType.OPERATOR, id, startPos, startLine));
+                            else if (id == "not")
+                                if (tokens.Count > 0 && tokens[tokens.Count - 1].Type == TokenType.OPERATOR && tokens[tokens.Count - 1].Raw == "is")
+                                    tokens[tokens.Count - 1] = new Token(TokenType.OPERATOR, $"{tokens[tokens.Count - 1].Raw} {id}", tokens[tokens.Count - 1].Pos, tokens[tokens.Count - 1].Line);
+                                else
+                                    throw new FormatException($"Invalid keyword '{id}' at line {_line}, position {_pos}");
                             else if (Keywords.Contains(id))
                                 tokens.Add(new Token(TokenType.KEYWORD, id, startPos, startLine));
                             else
@@ -710,7 +717,11 @@ namespace HanabiLangLib.Lexers
                     if (_pos - basedNumberStartIndex <= 0)
                         throw new FormatException($"Invalid {numberBaseChar}-based literal at line {startLine}, position {startPos}");
 
-                    return new Token(TokenType.INT, _input.Substring(startPos, _pos - startPos), _pos, _line);
+                    string basedLiteral = _input.Substring(startPos, _pos - startPos);
+                    if (basedLiteral.EndsWith("_"))
+                        throw new FormatException($"Invalid {numberBaseChar}-based literal at line {startLine}, position {startPos}");
+
+                    return new Token(TokenType.INT, basedLiteral, _pos, _line);
                 }
             }
 
@@ -751,6 +762,8 @@ namespace HanabiLangLib.Lexers
                 throw new FormatException($"Invalid number starting at position at line {startLine}, position {startPos}");
 
             string literal = _input.Substring(startPos, _pos - startPos);
+            if (literal.EndsWith("_"))
+                throw new FormatException($"Invalid number starting at position at line {startLine}, position {startPos}");
 
             if (isFloat)
             {
