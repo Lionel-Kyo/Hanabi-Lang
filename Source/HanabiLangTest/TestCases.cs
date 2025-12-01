@@ -223,11 +223,58 @@ bubbleSort(list2, (x, y) => x < y);
             CheckEquals(values["list2"], new ScriptValue(verify.OrderByDescending(i => (long)i.TryObject.BuildInObject).ToList()));
         }
 
+        public static void MergeSortTest()
+        {
+            string sourceCode = @"
+fn mergeSort(list, compareFn = (x, y) => x > y) {
+    if list.Length <= 1 {
+        return list;
+    }
+    let mid = int(list.Length / 2);
+    let left = mergeSort(list[:mid], compareFn);
+    let right = mergeSort(list[mid:], compareFn);
+    return merge(left, right, compareFn);
+}
+
+fn merge(left, right, compareFn) {
+    let result = [];
+    let i = 0;
+    let j = 0;
+    while i < left.Length && j < right.Length {
+        if compareFn(left[i], right[j]) {
+            result.Add(right[j]);
+            j += 1;
+        } else {
+            result.Add(left[i]);
+            i += 1;
+        }
+    }
+    while i < left.Length {
+        result.Add(left[i]);
+        i += 1;
+    }
+    while j < right.Length {
+        result.Add(right[j]);
+        j += 1;
+    }
+    return result;
+}
+
+
+const list1 = mergeSort([8, 7, 9, 4, 5, 2, 1, 0, 3, 5, 1, 2]);
+const list2 = mergeSort([8, 7, 9, 4, 5, 2, 1, 0, 3, 5, 1, 2], (x, y) => x < y);
+";
+
+            var verify = (new int[] { 8, 7, 9, 4, 5, 2, 1, 0, 3, 5, 1, 2 }).Select(i => new ScriptValue(i));
+            var values = Interpret(sourceCode, out var interpreter, "list1", "list2");
+            CheckEquals(values["list1"], new ScriptValue(verify.OrderBy(i => (long)i.TryObject.BuildInObject).ToList()));
+            CheckEquals(values["list2"], new ScriptValue(verify.OrderByDescending(i => (long)i.TryObject.BuildInObject).ToList()));
+        }
+
         public static void FactorialTest()
         {
             string sourceCode = @"
 fn factorial(x) {
-
     if x == 0 {
         return 1;
     } else {

@@ -7,15 +7,16 @@ using System.Text;
 
 namespace HanabiLangLib.Parses.Nodes
 {
-    class InterpretedListNode : InterpretedNode
+    class InterpretedFloatNode : InterpretedNode
     {
-        public InterpretedListNode(ScriptValue value, int pos, int line) : base(value, pos, line) 
+
+        public InterpretedFloatNode(ScriptValue value, int pos, int line) : base(value, pos, line) 
         {
         }
 
         public override ScriptValue CloneValue()
         {
-            return new ScriptValue(ScriptList.AsCSharp(this.Value.TryObject).ToList());
+            return new ScriptValue(ScriptFloat.AsCSharp(this.Value.TryObject));
         }
     }
 }

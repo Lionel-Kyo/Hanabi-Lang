@@ -111,7 +111,7 @@ namespace HanabiLangLib.Parses
                         }
                         if (!isPositive)
                             value = -value;
-                        return new ConstValueNode(new ScriptValue(value), currentToken.Pos, currentToken.Line);
+                        return new InterpretedIntNode(new ScriptValue(value), currentToken.Pos, currentToken.Line);
                     }
                 case TokenType.FLOAT:
                     {
@@ -121,7 +121,7 @@ namespace HanabiLangLib.Parses
                         var i64TrimSignText = f64Text.TrimStart('+', '-');
 
                         if (double.TryParse(f64Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double f))
-                            return new ConstValueNode(new ScriptValue(f), currentToken.Pos, currentToken.Line);
+                            return new InterpretedFloatNode(new ScriptValue(f), currentToken.Pos, currentToken.Line);
                         throw new FormatException($"Invalid float format '{f64Text}' at line {currentToken.Line}, position {currentToken.Pos}");
                     }
                 case TokenType.STRING:
@@ -1527,7 +1527,7 @@ namespace HanabiLangLib.Parses
                 }
                 else
                 {
-                    members[key] = new ConstValueNode(new ScriptValue(count), this.CurrentToken.Pos, this.CurrentToken.Line);
+                    members[key] = new InterpretedIntNode(new ScriptValue(count), this.CurrentToken.Pos, this.CurrentToken.Line);
                     count++;
                 }
 

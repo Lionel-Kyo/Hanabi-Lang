@@ -7,28 +7,16 @@ using System.Text;
 
 namespace HanabiLangLib.Parses.Nodes
 {
-    class InterpretedDictNode : AstNode, IExpressionNode
+    class InterpretedDictNode : InterpretedNode
     {
-        private ScriptValue value;
 
-        public InterpretedDictNode(ScriptValue value, int pos, int line)
+        public InterpretedDictNode(ScriptValue value, int pos, int line) : base(value, pos, line) 
         {
-            this.value = value;
-            this.Pos = pos;
-            this.Line = line;
         }
 
-        public ScriptValue CloneValue()
+        public override ScriptValue CloneValue()
         {
-            return new ScriptValue(ScriptDict.AsCSharp(value.TryObject).ToDictionary(kv => kv.Key, kv => kv.Value));
-        }
-
-        public override string ToString()
-        {
-            StringBuilder result = new StringBuilder();
-            result.Append($"{this.NodeName}({value})");
-            //result.AppendLine("  ");
-            return result.ToString();
+            return new ScriptValue(ScriptDict.AsCSharp(this.Value.TryObject).ToDictionary(kv => kv.Key, kv => kv.Value));
         }
     }
 }

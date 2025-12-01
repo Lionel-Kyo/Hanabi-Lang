@@ -1718,6 +1718,11 @@ namespace HanabiLangLib.Interprets
                 var realNode = (ConstValueNode)node;
                 return new ValueReference(realNode.Value);
             }
+            else if (node is InterpretedNode)
+            {
+                var realNode = (InterpretedNode)node;
+                return new ValueReference(realNode.CloneValue());
+            }
             else if (node is InterpolatedStringNode)
             {
                 var realNode = (InterpolatedStringNode)node;
@@ -1801,11 +1806,6 @@ namespace HanabiLangLib.Interprets
 
                 return new ValueReference(new ScriptValue(values));
             }
-            else if (node is InterpretedListNode)
-            {
-                var realNode = (InterpretedListNode)node;
-                return new ValueReference(realNode.CloneValue());
-            }
             else if (node is DictNode)
             {
                 var realNode = (DictNode)node;
@@ -1820,11 +1820,6 @@ namespace HanabiLangLib.Interprets
                 }
 
                 return new ValueReference(new ScriptValue(keyValues));
-            }
-            else if (node is InterpretedDictNode)
-            {
-                var realNode = (InterpretedDictNode)node;
-                return new ValueReference(realNode.CloneValue());
             }
             else if (node is IndexerNode)
             {
