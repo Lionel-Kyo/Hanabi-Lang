@@ -850,247 +850,327 @@ namespace HanabiLangLib.Interprets
         /// </returns>
         public static ValueReference InterpretStatement(ScriptScope interpretScope, AstNode node)
         {
-            if (node is TryCatchNode)
+            switch (node)
             {
-                var realNode = (TryCatchNode)node;
-
-                var tryScope = new ScriptScope(null, interpretScope);
-
-                ScriptObject exceptionObject = null;
-                bool catched = false;
-                try
-                {
-                    foreach (var item in realNode.TryBranch)
+                case TryCatchNode realNode:
                     {
-                        if (item is ReturnNode)
+                        var tryScope = new ScriptScope(null, interpretScope);
+
+                        ScriptObject exceptionObject = null;
+                        bool catched = false;
+                        try
                         {
-                            var returnNode = (ReturnNode)item;
-
-                            if (returnNode.Value != null)
+                            foreach (var item in realNode.TryBranch)
                             {
-                                var value = InterpretExpression(tryScope, returnNode.Value);
+                                if (item is ReturnNode)
+                                {
+                                    var returnNode = (ReturnNode)item;
 
-                                return value;
+                                    if (returnNode.Value != null)
+                                    {
+                                        var value = InterpretExpression(tryScope, returnNode.Value);
+
+                                        return value;
+                                    }
+                                    return new ValueReference(ScriptValue.Null);
+                                }
+                                else if (item is BreakNode)
+                                {
+                                    return new ValueReference(ScriptValue.Break);
+                                }
+                                else if (item is ContinueNode)
+                                {
+                                    return new ValueReference(ScriptValue.Continue);
+                                }
+                                else if (IsStatementNode(item))
+                                {
+                                    var statementResult = InterpretStatement(tryScope, item);
+                                    if (!statementResult.IsEmpty)
+                                        return statementResult;
+                                }
+                                else
+                                {
+                                    InterpretChild(tryScope, item, false);
+                                }
                             }
-                            return new ValueReference(ScriptValue.Null);
                         }
-                        else if (item is BreakNode)
+                        catch (Exception ex)
                         {
-                            return new ValueReference(ScriptValue.Break);
-                        }
-                        else if (item is ContinueNode)
-                        {
-                            return new ValueReference(ScriptValue.Continue);
-                        }
-                        else if (IsStatementNode(item))
-                        {
-                            var statementResult = InterpretStatement(tryScope, item);
-                            if (!statementResult.IsEmpty)
-                                return statementResult;
-                        }
-                        else
-                        {
-                            InterpretChild(tryScope, item, false);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (ex is HanibiException)
-                        exceptionObject = ((HanibiException)ex).ExceptionObject;
-                    else
-                        exceptionObject = BasicTypes.Exception.Create(ex);
-                }
-
-                if (exceptionObject != null && realNode.CatchBranch != null)
-                {
-                    var catchScope = new ScriptScope(null, interpretScope);
-                    foreach (var item in realNode.CatchBranch)
-                    {
-                        DefinedTypes dataTypes = null;
-
-                        if (item.DataType != null)
-                        {
-                            ScriptValue type = InterpretExpression(interpretScope, item.DataType).Ref;
-                            if (!type.IsDefinedTypes)
-                                throw new SystemException($"Unexpected error: {item.Name}");
-                            dataTypes = (DefinedTypes)type.Value;
-
-                            if (!dataTypes.Value.Any(ex => exceptionObject.IsTypeOrSubOf(ex)))
-                                continue;
+                            if (ex is HanibiException)
+                                exceptionObject = ((HanibiException)ex).ExceptionObject;
+                            else
+                                exceptionObject = BasicTypes.Exception.Create(ex);
                         }
 
-                        if (!string.IsNullOrEmpty(item.Name))
+                        if (exceptionObject != null && realNode.CatchBranch != null)
                         {
-                            catchScope.Variables[item.Name] = new ScriptVariable(item.Name, null, new ScriptValue(exceptionObject), false, false, AccessibilityLevel.Public);
-                        }
-
-                        catched = true;
-                        foreach (var body in item.Body)
-                        {
-                            if (body is ReturnNode)
+                            var catchScope = new ScriptScope(null, interpretScope);
+                            foreach (var item in realNode.CatchBranch)
                             {
-                                var returnNode = (ReturnNode)body;
+                                DefinedTypes dataTypes = null;
+
+                                if (item.DataType != null)
+                                {
+                                    ScriptValue type = InterpretExpression(interpretScope, item.DataType).Ref;
+                                    if (!type.IsDefinedTypes)
+                                        throw new SystemException($"Unexpected error: {item.Name}");
+                                    dataTypes = (DefinedTypes)type.Value;
+
+                                    if (!dataTypes.Value.Any(ex => exceptionObject.IsTypeOrSubOf(ex)))
+                                        continue;
+                                }
+
+                                if (!string.IsNullOrEmpty(item.Name))
+                                {
+                                    catchScope.Variables[item.Name] = new ScriptVariable(item.Name, null, new ScriptValue(exceptionObject), false, false, AccessibilityLevel.Public);
+                                }
+
+                                catched = true;
+                                foreach (var body in item.Body)
+                                {
+                                    if (body is ReturnNode)
+                                    {
+                                        var returnNode = (ReturnNode)body;
+
+                                        if (returnNode.Value != null)
+                                        {
+                                            var value = InterpretExpression(catchScope, returnNode.Value);
+
+                                            return value;
+                                        }
+                                        return new ValueReference(ScriptValue.Null);
+                                    }
+                                    else if (body is BreakNode)
+                                    {
+                                        return new ValueReference(ScriptValue.Break);
+                                    }
+                                    else if (body is ContinueNode)
+                                    {
+                                        return new ValueReference(ScriptValue.Continue);
+                                    }
+                                    else if (IsStatementNode(body))
+                                    {
+                                        var statementResult = InterpretStatement(catchScope, body);
+                                        if (!statementResult.IsEmpty)
+                                            return statementResult;
+                                    }
+                                    else
+                                    {
+                                        InterpretChild(catchScope, body, false);
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        if (realNode.FinallyBranch != null)
+                        {
+                            var finallyScope = new ScriptScope(null, interpretScope);
+                            foreach (var item in realNode.FinallyBranch)
+                            {
+                                if (item is ReturnNode)
+                                {
+                                    var returnNode = (ReturnNode)item;
+
+                                    if (returnNode.Value != null)
+                                    {
+                                        var value = InterpretExpression(finallyScope, returnNode.Value);
+                                        if (exceptionObject != null && !catched)
+                                            throw (Exception)exceptionObject.BuildInObject;
+                                        return value;
+                                    }
+                                    return new ValueReference(ScriptValue.Null);
+                                }
+                                else if (item is BreakNode)
+                                {
+                                    if (exceptionObject != null && !catched)
+                                        throw (Exception)exceptionObject.BuildInObject;
+                                    return new ValueReference(ScriptValue.Break);
+                                }
+                                else if (item is ContinueNode)
+                                {
+                                    if (exceptionObject != null && !catched)
+                                        throw (Exception)exceptionObject.BuildInObject;
+                                    return new ValueReference(ScriptValue.Continue);
+                                }
+                                else if (IsStatementNode(item))
+                                {
+                                    var statementResult = InterpretStatement(finallyScope, item);
+                                    if (!statementResult.IsEmpty)
+                                        return statementResult;
+                                }
+                                else
+                                {
+                                    InterpretChild(finallyScope, item, false);
+                                }
+                            }
+                        }
+
+                        if (exceptionObject != null && !catched)
+                            throw (Exception)exceptionObject.BuildInObject;
+
+                        return ValueReference.Empty;
+                    }
+                case IfNode realNode:
+                    {
+                        var scope = new ScriptScope(null, interpretScope);
+
+                        var compareResult = InterpretExpression(scope, realNode.Condition).Ref;
+                        var compareResultObj = compareResult.TryObject;
+                        if (compareResultObj == null)
+                            throw new SystemException($"Cannot compare {compareResult}");
+
+                        if (!(compareResultObj.ClassType is ScriptBool))
+                            throw new SystemException($"Cannot compare {compareResult}");
+
+                        List<AstNode> currentBranch;
+                        if (ScriptBool.AsCSharp(compareResultObj))
+                            currentBranch = realNode.ThenBranch;
+                        else
+                            currentBranch = realNode.ElseBranch;
+
+                        foreach (var item in currentBranch)
+                        {
+                            if (item is ReturnNode)
+                            {
+                                var returnNode = (ReturnNode)item;
 
                                 if (returnNode.Value != null)
                                 {
-                                    var value = InterpretExpression(catchScope, returnNode.Value);
+                                    var value = InterpretExpression(scope, returnNode.Value);
 
                                     return value;
                                 }
                                 return new ValueReference(ScriptValue.Null);
                             }
-                            else if (body is BreakNode)
+                            else if (item is BreakNode)
                             {
                                 return new ValueReference(ScriptValue.Break);
                             }
-                            else if (body is ContinueNode)
+                            else if (item is ContinueNode)
                             {
                                 return new ValueReference(ScriptValue.Continue);
                             }
-                            else if (IsStatementNode(body))
+                            else if (IsStatementNode(item))
                             {
-                                var statementResult = InterpretStatement(catchScope, body);
+                                var statementResult = InterpretStatement(scope, item);
+                                if (!statementResult.IsEmpty)
+                                    return statementResult;
+                            }
+                            else if (IsExpressionNode(item))
+                            {
+                                InterpretChild(scope, item, false);
+                            }
+                            else
+                            {
+                                throw new SystemException($"Unexpected if body");
+                            }
+                        }
+
+                        return ValueReference.Empty;
+                    }
+                case SwitchNode realNode:
+                    {
+                        var switchValue = InterpretExpression(interpretScope, realNode.Condition);
+                        bool hasMatchCase = false;
+
+                        foreach (var caseNode in realNode.Cases)
+                        {
+                            foreach (var condition in caseNode.Conditions)
+                            {
+                                var caseExpression = InterpretExpression(interpretScope, condition);
+                                if (caseExpression.Ref.Equals(switchValue.Ref))
+                                {
+                                    hasMatchCase = true;
+                                    foreach (var item in caseNode.Body)
+                                    {
+                                        var scope = new ScriptScope(null, interpretScope);
+                                        if (item is ReturnNode)
+                                        {
+                                            var returnNode = (ReturnNode)item;
+
+                                            if (returnNode.Value != null)
+                                            {
+                                                var value = InterpretExpression(scope, returnNode.Value);
+
+                                                return value;
+                                            }
+
+                                            return new ValueReference(ScriptValue.Null);
+                                        }
+                                        else if (item is BreakNode)
+                                        {
+                                            return ValueReference.Empty;
+                                        }
+                                        else if (IsStatementNode(item))
+                                        {
+                                            var statementResult = InterpretStatement(scope, item);
+                                            if (!statementResult.IsEmpty)
+                                                return statementResult;
+                                        }
+                                        else
+                                        {
+                                            InterpretChild(scope, item, false);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (realNode.DefaultCase == null || hasMatchCase)
+                            return ValueReference.Empty;
+                        var defaultScope = new ScriptScope(null, interpretScope);
+                        foreach (var item in realNode.DefaultCase.Body)
+                        {
+                            if (item is ReturnNode)
+                            {
+                                var returnNode = (ReturnNode)item;
+
+                                if (returnNode.Value != null)
+                                {
+                                    var value = InterpretExpression(defaultScope, returnNode.Value);
+
+                                    return value;
+                                }
+
+                                return new ValueReference(ScriptValue.Null);
+                            }
+                            else if (IsStatementNode(item))
+                            {
+                                var statementResult = InterpretStatement(defaultScope, item);
                                 if (!statementResult.IsEmpty)
                                     return statementResult;
                             }
                             else
                             {
-                                InterpretChild(catchScope, body, false);
+                                InterpretChild(defaultScope, item, false);
                             }
                         }
-                        break;
+                        return ValueReference.Empty;
                     }
-                }
-
-                if (realNode.FinallyBranch != null)
-                {
-                    var finallyScope = new ScriptScope(null, interpretScope);
-                    foreach (var item in realNode.FinallyBranch)
+                case WhileNode realNode:
                     {
-                        if (item is ReturnNode)
-                        {
-                            var returnNode = (ReturnNode)item;
+                        var condition = realNode.Condition;
 
-                            if (returnNode.Value != null)
+                        while ((bool)((ScriptObject)(InterpretExpression(interpretScope, condition).Ref.Value)).BuildInObject)
+                        {
+                            var scope = new ScriptScope(null, interpretScope);
+                            var hasBreak = false;
+
+                            foreach (var bodyNode in realNode.Body)
                             {
-                                var value = InterpretExpression(finallyScope, returnNode.Value);
-                                if (exceptionObject != null && !catched)
-                                    throw (Exception)exceptionObject.BuildInObject;
-                                return value;
-                            }
-                            return new ValueReference(ScriptValue.Null);
-                        }
-                        else if (item is BreakNode)
-                        {
-                            if (exceptionObject != null && !catched)
-                                throw (Exception)exceptionObject.BuildInObject;
-                            return new ValueReference(ScriptValue.Break);
-                        }
-                        else if (item is ContinueNode)
-                        {
-                            if (exceptionObject != null && !catched)
-                                throw (Exception)exceptionObject.BuildInObject;
-                            return new ValueReference(ScriptValue.Continue);
-                        }
-                        else if (IsStatementNode(item))
-                        {
-                            var statementResult = InterpretStatement(finallyScope, item);
-                            if (!statementResult.IsEmpty)
-                                return statementResult;
-                        }
-                        else
-                        {
-                            InterpretChild(finallyScope, item, false);
-                        }
-                    }
-                }
-
-                if (exceptionObject != null && !catched)
-                    throw (Exception)exceptionObject.BuildInObject;
-
-                return ValueReference.Empty;
-            }
-            else if (node is IfNode)
-            {
-                var realNode = (IfNode)node;
-
-                var scope = new ScriptScope(null, interpretScope);
-
-                var compareResult = InterpretExpression(scope, realNode.Condition).Ref;
-                var compareResultObj = compareResult.TryObject;
-                if (compareResultObj == null)
-                    throw new SystemException($"Cannot compare {compareResult}");
-
-                if (!(compareResultObj.ClassType is ScriptBool))
-                    throw new SystemException($"Cannot compare {compareResult}");
-
-                List<AstNode> currentBranch;
-                if (ScriptBool.AsCSharp(compareResultObj)) 
-                    currentBranch = realNode.ThenBranch;
-                else
-                    currentBranch = realNode.ElseBranch;
-
-                foreach (var item in currentBranch)
-                {
-                    if (item is ReturnNode)
-                    {
-                        var returnNode = (ReturnNode)item;
-
-                        if (returnNode.Value != null)
-                        {
-                            var value = InterpretExpression(scope, returnNode.Value);
-
-                            return value;
-                        }
-                        return new ValueReference(ScriptValue.Null);
-                    }
-                    else if (item is BreakNode)
-                    {
-                        return new ValueReference(ScriptValue.Break);
-                    }
-                    else if (item is ContinueNode)
-                    {
-                        return new ValueReference(ScriptValue.Continue);
-                    }
-                    else if (IsStatementNode(item))
-                    {
-                        var statementResult = InterpretStatement(scope, item);
-                        if (!statementResult.IsEmpty)
-                            return statementResult;
-                    }
-                    else if (IsExpressionNode(item))
-                    {
-                        InterpretChild(scope, item, false);
-                    }
-                    else
-                    {
-                        throw new SystemException($"Unexpected if body");
-                    }
-                }
-
-                return ValueReference.Empty;
-            }
-            else if (node is SwitchNode)
-            {
-                var realNode = (SwitchNode)node;
-                var switchValue = InterpretExpression(interpretScope, realNode.Condition);
-                bool hasMatchCase = false;
-
-                foreach (var caseNode in realNode.Cases)
-                {
-                    foreach (var condition in caseNode.Conditions)
-                    {
-                        var caseExpression = InterpretExpression(interpretScope, condition);
-                        if (caseExpression.Ref.Equals(switchValue.Ref))
-                        {
-                            hasMatchCase = true;
-                            foreach (var item in caseNode.Body)
-                            {
-                                var scope = new ScriptScope(null, interpretScope);
-                                if (item is ReturnNode)
+                                if (bodyNode is BreakNode)
                                 {
-                                    var returnNode = (ReturnNode)item;
+                                    hasBreak = true;
+                                    break;
+                                }
+                                else if (bodyNode is ContinueNode)
+                                {
+                                    break;
+                                }
+                                else if (bodyNode is ReturnNode)
+                                {
+                                    var returnNode = (ReturnNode)bodyNode;
 
                                     if (returnNode.Value != null)
                                     {
@@ -1101,341 +1181,252 @@ namespace HanabiLangLib.Interprets
 
                                     return new ValueReference(ScriptValue.Null);
                                 }
-                                else if (item is BreakNode)
+                                else if (IsStatementNode(bodyNode))
                                 {
-                                    return ValueReference.Empty;
-                                }
-                                else if (IsStatementNode(item))
-                                {
-                                    var statementResult = InterpretStatement(scope, item);
+                                    var statementResult = InterpretStatement(scope, bodyNode);
                                     if (!statementResult.IsEmpty)
+                                    {
+                                        if (statementResult.Ref.IsBreak)
+                                        {
+                                            hasBreak = true;
+                                            break;
+                                        }
+                                        else if (statementResult.Ref.IsContinue)
+                                        {
+                                            break;
+                                        }
                                         return statementResult;
+                                    }
                                 }
                                 else
                                 {
-                                    InterpretChild(scope, item, false);
+                                    InterpretChild(scope, bodyNode, false);
                                 }
                             }
-                        }
-                    }
-                }
 
-                if (realNode.DefaultCase == null || hasMatchCase)
-                    return ValueReference.Empty;
-                var defaultScope = new ScriptScope(null, interpretScope);
-                foreach (var item in realNode.DefaultCase.Body)
-                {
-                    if (item is ReturnNode)
-                    {
-                        var returnNode = (ReturnNode)item;
-
-                        if (returnNode.Value != null)
-                        {
-                            var value = InterpretExpression(defaultScope, returnNode.Value);
-
-                            return value;
+                            if (hasBreak)
+                                break;
                         }
 
-                        return new ValueReference(ScriptValue.Null);
+                        return ValueReference.Empty;
                     }
-                    else if (IsStatementNode(item))
+                case ForNode realNode:
                     {
-                        var statementResult = InterpretStatement(defaultScope, item);
-                        if (!statementResult.IsEmpty)
-                            return statementResult;
-                    }
-                    else
-                    {
-                        InterpretChild(defaultScope, item, false);
-                    }
-                }
-                return ValueReference.Empty;
-            }
-            else if (node is WhileNode)
-            {
-                var realNode = (WhileNode)node;
-                var condition = realNode.Condition;
+                        var location = InterpretExpression(interpretScope, realNode.Iterable).Ref;
 
-                while ((bool)((ScriptObject)(InterpretExpression(interpretScope, condition).Ref.Value)).BuildInObject)
-                {
-                    var scope = new ScriptScope(null, interpretScope);
-                    var hasBreak = false;
+                        if (!ScriptIterable.TryGetIterable(location.TryObject, out var iter))
+                            throw new SystemException("For loop running failed, variable is not iterable");
 
-                    foreach (var bodyNode in realNode.Body)
-                    {
-                        if (bodyNode is BreakNode)
-                        {
-                            hasBreak = true;
-                            break;
-                        }
-                        else if (bodyNode is ContinueNode)
-                        {
-                            break;
-                        }
-                        else if (bodyNode is ReturnNode)
-                        {
-                            var returnNode = (ReturnNode)bodyNode;
+                        var hasBreak = false;
 
-                            if (returnNode.Value != null)
+                        foreach (var item in iter)
+                        {
+                            var scope = new ScriptScope(null, interpretScope);
+
+                            if (realNode.Initializers.Count == 1)
                             {
-                                var value = InterpretExpression(scope, returnNode.Value);
+                                scope.Variables[realNode.Initializers[0]] =
+                                    new ScriptVariable(realNode.Initializers[0], null, item, false, true, AccessibilityLevel.Private);
+                            }
+                            else
+                            {
+                                if (!ScriptIterable.TryGetIterable(item.TryObject, out var _initializerValues))
+                                    throw new SystemException($"{item} is not iterable");
 
-                                return value;
+                                List<ScriptValue> initializerValues;
+                                if (_initializerValues is List<ScriptValue>)
+                                    initializerValues = (List<ScriptValue>)_initializerValues;
+                                else
+                                    initializerValues = _initializerValues.ToList();
+
+                                if (initializerValues.Count != realNode.Initializers.Count)
+                                    throw new SystemException($"Expect {realNode.Initializers.Count} initializers in for loop, found {initializerValues.Count} initializers");
+
+                                for (int i = 0; i < initializerValues.Count; i++)
+                                {
+                                    scope.Variables[realNode.Initializers[i]] =
+                                        new ScriptVariable(realNode.Initializers[i], null, initializerValues[i], false, true, AccessibilityLevel.Private);
+                                }
                             }
 
-                            return new ValueReference(ScriptValue.Null);
-                        }
-                        else if (IsStatementNode(bodyNode))
-                        {
-                            var statementResult = InterpretStatement(scope, bodyNode);
-                            if (!statementResult.IsEmpty)
+                            foreach (var bodyNode in realNode.Body)
                             {
-                                if (statementResult.Ref.IsBreak)
+                                if (bodyNode is BreakNode)
                                 {
                                     hasBreak = true;
                                     break;
                                 }
-                                else if (statementResult.Ref.IsContinue)
+                                else if (bodyNode is ContinueNode)
                                 {
                                     break;
                                 }
-                                return statementResult;
+                                else if (bodyNode is ReturnNode)
+                                {
+                                    var returnNode = (ReturnNode)bodyNode;
+
+                                    if (returnNode.Value != null)
+                                    {
+                                        var value = InterpretExpression(scope, returnNode.Value);
+
+                                        return value;
+                                    }
+
+                                    return new ValueReference(ScriptValue.Null);
+                                }
+                                else if (IsStatementNode(bodyNode))
+                                {
+                                    var statementResult = InterpretStatement(scope, bodyNode);
+                                    if (!statementResult.IsEmpty)
+                                    {
+                                        if (statementResult.Ref.IsBreak)
+                                        {
+                                            hasBreak = true;
+                                            break;
+                                        }
+                                        else if (statementResult.Ref.IsContinue)
+                                        {
+                                            break;
+                                        }
+                                        return statementResult;
+                                    }
+                                }
+                                else if (IsExpressionNode(bodyNode))
+                                {
+                                    InterpretExpression(scope, bodyNode);
+                                }
+                                else
+                                {
+                                    throw new SystemException($"Unexpected for loop body");
+                                }
                             }
+
+                            if (hasBreak)
+                                break;
                         }
-                        else
-                        {
-                            InterpretChild(scope, bodyNode, false);
-                        }
+
+                        //this.currentScope = this.currentScope.Parent;
+                        return ValueReference.Empty;
                     }
-
-                    if (hasBreak)
-                        break;
-                }
-
-                return ValueReference.Empty;
-            }
-            else if (node is ForNode)
-            {
-                var realNode = (ForNode)node;
-                var location = InterpretExpression(interpretScope, realNode.Iterable).Ref;
-
-                if (!ScriptIterable.TryGetIterable(location.TryObject, out var iter))
-                    throw new SystemException("For loop running failed, variable is not iterable");
-
-                var hasBreak = false;
-
-                foreach (var item in iter)
-                {
-                    var scope = new ScriptScope(null, interpretScope);
-
-                    if (realNode.Initializers.Count == 1)
+                case ImportNode realNode:
                     {
-                        scope.Variables[realNode.Initializers[0]] =
-                            new ScriptVariable(realNode.Initializers[0], null, item, false, true, AccessibilityLevel.Private);
+                        ImportFile(interpretScope, node);
+                        return ValueReference.Empty;
                     }
-                    else
+                case ThrowNode realNode:
                     {
-                        if (!ScriptIterable.TryGetIterable(item.TryObject, out var _initializerValues))
-                            throw new SystemException($"{item} is not iterable");
-
-                        List<ScriptValue> initializerValues;
-                        if (_initializerValues is List<ScriptValue>)
-                            initializerValues = (List<ScriptValue>)_initializerValues;
-                        else
-                            initializerValues = _initializerValues.ToList();
-
-                        if (initializerValues.Count != realNode.Initializers.Count)
-                            throw new SystemException($"Expect {realNode.Initializers.Count} initializers in for loop, found {initializerValues.Count} initializers");
-
-                        for (int i = 0; i < initializerValues.Count; i++) 
-                        {
-                            scope.Variables[realNode.Initializers[i]] =
-                                new ScriptVariable(realNode.Initializers[i], null, initializerValues[i], false, true, AccessibilityLevel.Private);
-                        }
+                        var result = InterpretExpression(interpretScope, realNode.Value);
+                        if (!result.Ref.IsObject)
+                            throw new SystemException($"{result.Ref} is not exception type");
+                        object exception = ((ScriptObject)result.Ref.Value).BuildInObject;
+                        if (!(exception is Exception))
+                            throw new SystemException($"{result.Ref} is not exception type");
+                        throw (Exception)exception;
                     }
-
-                    foreach (var bodyNode in realNode.Body)
+                case VariableDefinitionNode realnode:
                     {
-                        if (bodyNode is BreakNode)
-                        {
-                            hasBreak = true;
-                            break;
-                        }
-                        else if (bodyNode is ContinueNode)
-                        {
-                            break;
-                        }
-                        else if (bodyNode is ReturnNode)
-                        {
-                            var returnNode = (ReturnNode)bodyNode;
+                        VariableDefinition(realnode, interpretScope);
+                        return ValueReference.Empty;
+                    }
+                //case VariableAssignmentNode realnode:
+                //{
+                //    VariableAssignment((VariableAssignmentNode)node, interpretScope);
+                //    return ValueReference.Empty;
+                //}
+                case FnDefineNode realNode:
+                    {
+                        // Normal Function
 
-                            if (returnNode.Value != null)
+                        ScriptFns scriptFns = null;
+                        if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
+                        {
+                            if (scriptVar.Value.IsFunction)
                             {
-                                var value = InterpretExpression(scope, returnNode.Value);
-
-                                return value;
+                                scriptFns = scriptVar.Value.TryFunction;
                             }
-
-                            return new ValueReference(ScriptValue.Null);
-                        }
-                        else if (IsStatementNode(bodyNode))
-                        {
-                            var statementResult = InterpretStatement(scope, bodyNode);
-                            if (!statementResult.IsEmpty)
+                            else
                             {
-                                if (statementResult.Ref.IsBreak)
-                                {
-                                    hasBreak = true;
-                                    break;
-                                }
-                                else if (statementResult.Ref.IsContinue)
-                                {
-                                    break;
-                                }
-                                return statementResult;
+                                if (scriptVar.IsConstant)
+                                    throw new SystemException($"Cannot define fn {realNode.Name} to constant variable.");
                             }
                         }
-                        else if (IsExpressionNode(bodyNode))
+                        if (scriptFns == null)
                         {
-                            InterpretExpression(scope, bodyNode);
+                            scriptFns = new ScriptFns(realNode.Name);
+                            scriptVar = new ScriptVariable(realNode.Name, scriptFns, AccessibilityLevel.Public);
+                            interpretScope.Variables[realNode.Name] = scriptVar;
                         }
-                        else
+
+                        List<FnParameter> fnParameters = new List<FnParameter>();
+                        foreach (var param in realNode.Parameters)
                         {
-                            throw new SystemException($"Unexpected for loop body");
+                            DefinedTypes dataTypes = null;
+                            ScriptValue defaultValue = null;
+                            if (param.DataType != null)
+                            {
+                                ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
+                                if (!type.IsDefinedTypes)
+                                    throw new SystemException($"Unexpected error: {realNode.Name}.{param.Name}");
+                                dataTypes = (DefinedTypes)type.Value;
+                            }
+                            if (param.DefaultValue != null)
+                                defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
+                            fnParameters.Add(new FnParameter(param.Name, dataTypes?.Value, defaultValue, param.IsMultiArgs));
                         }
+
+                        scriptFns.AddFn(new ScriptFn(fnParameters,
+                            realNode.Body, interpretScope, realNode.IsStatic, realNode.Level), true);
+                        return ValueReference.Empty;
                     }
-
-                    if (hasBreak)
-                        break;
-                }
-
-                //this.currentScope = this.currentScope.Parent;
-                return ValueReference.Empty;
-            }
-            else if (node is ImportNode)
-            {
-                ImportFile(interpretScope, node);
-                return ValueReference.Empty;
-            }
-            else if (node is ThrowNode)
-            {
-                var realNode = (ThrowNode)node;
-                var result = InterpretExpression(interpretScope, realNode.Value);
-                if (!result.Ref.IsObject)
-                    throw new SystemException($"{result.Ref} is not exception type");
-                object exception = ((ScriptObject)result.Ref.Value).BuildInObject;
-                if (!(exception is Exception))
-                    throw new SystemException($"{result.Ref} is not exception type");
-                throw (Exception)exception;
-            }
-            else if (node is VariableDefinitionNode)
-            {
-                VariableDefinition((VariableDefinitionNode)node, interpretScope);
-                return ValueReference.Empty;
-            }
-            /*else if (node is VariableAssignmentNode)
-            {
-                VariableAssignment((VariableAssignmentNode)node, interpretScope);
-                return ValueReference.Empty;
-            }*/
-            else if (node is FnDefineNode)
-            {
-                // Normal Function
-                var realNode = (FnDefineNode)node;
-
-                ScriptFns scriptFns = null;
-                if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
-                {
-                    if (scriptVar.Value.IsFunction)
+                case ClassDefineNode realNode:
                     {
-                        scriptFns = scriptVar.Value.TryFunction;
+                        List<ScriptClass> superClasses = new List<ScriptClass>();
+                        foreach (var item in realNode.SuperClasses)
+                        {
+                            var superClass = InterpretExpression(interpretScope, item);
+                            if (!superClass.Ref.IsClass)
+                                throw new SystemException($"{superClass} cannot be inherited");
+                            superClasses.Add((ScriptClass)superClass.Ref.Value);
+                        }
+
+                        if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
+                        {
+                            if (scriptVar.IsConstant && !scriptVar.Value.IsClass)
+                                throw new SystemException($"Cannot define class {realNode.Name} to constant variable.");
+                        }
+
+                        ScriptClass scriptClass = new ScriptClass(realNode.Name, realNode.Body, interpretScope, superClasses, realNode.IsStatic, realNode.Level);
+                        scriptVar = new ScriptVariable(realNode.Name, scriptClass);
+                        interpretScope.Variables[realNode.Name] = scriptVar;
+
+                        return ValueReference.Empty;
                     }
-                    else
+                case EnumDefineNode realNode:
                     {
-                        if (scriptVar.IsConstant)
-                            throw new SystemException($"Cannot define fn {realNode.Name} to constant variable.");
+                        var enumClass = new ScriptClass(realNode.Name, new List<AstNode>(),
+                            null, new List<ScriptClass> { BasicTypes.Enum }, false, realNode.Level);
+
+                        if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
+                        {
+                            if (scriptVar.IsConstant && !scriptVar.Value.IsClass)
+                                throw new SystemException($"Cannot define class {realNode.Name} to constant variable.");
+                        }
+
+                        scriptVar = new ScriptVariable(realNode.Name, enumClass);
+                        interpretScope.Variables[realNode.Name] = scriptVar;
+
+                        foreach (var kv in realNode.Members)
+                        {
+                            var value = InterpretExpression(interpretScope, kv.Value).Ref;
+                            ScriptObject obj = enumClass.Create();
+                            obj.BuildInObject = Tuple.Create(kv.Key, value);
+                            enumClass.Scope.Variables[kv.Key] = new ScriptVariable(kv.Key, null,
+                                new ScriptValue(obj), true, true, AccessibilityLevel.Public);
+                        }
+                        return ValueReference.Empty;
                     }
-                }
-                if (scriptFns == null)
-                {
-                    scriptFns = new ScriptFns(realNode.Name);
-                    scriptVar = new ScriptVariable(realNode.Name, scriptFns, AccessibilityLevel.Public);
-                    interpretScope.Variables[realNode.Name] = scriptVar;
-                }
-
-                List<FnParameter> fnParameters = new List<FnParameter>();
-                foreach (var param in realNode.Parameters)
-                {
-                    DefinedTypes dataTypes = null;
-                    ScriptValue defaultValue = null;
-                    if (param.DataType != null)
-                    {
-                        ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
-                        if (!type.IsDefinedTypes)
-                            throw new SystemException($"Unexpected error: {realNode.Name}.{param.Name}");
-                        dataTypes = (DefinedTypes)type.Value;
-                    }
-                    if (param.DefaultValue != null)
-                        defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataTypes?.Value, defaultValue, param.IsMultiArgs));
-                }
-
-                scriptFns.AddFn(new ScriptFn(fnParameters,
-                    realNode.Body, interpretScope, realNode.IsStatic, realNode.Level), true);
-                return ValueReference.Empty;
+                default:
+                    throw new SystemException("Unexcepted interpret statement: " + node.NodeName);
             }
-            else if (node is ClassDefineNode)
-            {
-                var realNode = (ClassDefineNode)node;
-
-                List<ScriptClass> superClasses = new List<ScriptClass>();
-                foreach (var item in realNode.SuperClasses)
-                {
-                    var superClass = InterpretExpression(interpretScope, item);
-                    if (!superClass.Ref.IsClass)
-                        throw new SystemException($"{superClass} cannot be inherited");
-                    superClasses.Add((ScriptClass)superClass.Ref.Value);
-                }
-
-                if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
-                {
-                    if (scriptVar.IsConstant && !scriptVar.Value.IsClass)
-                        throw new SystemException($"Cannot define class {realNode.Name} to constant variable.");
-                }
-
-                ScriptClass scriptClass = new ScriptClass(realNode.Name, realNode.Body, interpretScope, superClasses, realNode.IsStatic, realNode.Level);
-                scriptVar = new ScriptVariable(realNode.Name, scriptClass);
-                interpretScope.Variables[realNode.Name] = scriptVar;
-
-                return ValueReference.Empty;
-            }
-            else if (node is EnumDefineNode)
-            {
-                var realNode = (EnumDefineNode)node;
-
-                var enumClass = new ScriptClass(realNode.Name, new List<AstNode>(),
-                    null, new List<ScriptClass> { BasicTypes.Enum }, false, realNode.Level);
-
-                if (interpretScope.Variables.TryGetValue(realNode.Name, out ScriptVariable scriptVar))
-                {
-                    if (scriptVar.IsConstant && !scriptVar.Value.IsClass)
-                        throw new SystemException($"Cannot define class {realNode.Name} to constant variable.");
-                }
-
-                scriptVar = new ScriptVariable(realNode.Name, enumClass);
-                interpretScope.Variables[realNode.Name] = scriptVar;
-
-                foreach (var kv in realNode.Members)
-                {
-                    var value = InterpretExpression(interpretScope, kv.Value).Ref;
-                    ScriptObject obj = enumClass.Create();
-                    obj.BuildInObject = Tuple.Create(kv.Key, value);
-                    enumClass.Scope.Variables[kv.Key] = new ScriptVariable(kv.Key, null,
-                        new ScriptValue(obj), true, true, AccessibilityLevel.Public);
-                }
-                return ValueReference.Empty;
-            }
-            throw new SystemException("Unexcepted interpret statement: " + node.NodeName);
         }
 
         private static ScriptObject FindThisFromScope(ScriptScope interpretScope)
@@ -1548,400 +1539,388 @@ namespace HanabiLangLib.Interprets
 
         public static ValueReference InterpretExpression(ScriptScope interpretScope, AstNode node)
         {
-            if (node is ExpressionNode)
+            switch (node)
             {
-                var realNode = (ExpressionNode)node;
-
-                var _operater = realNode.Operator;
-
-                ValueReference leftRef = InterpretExpression(interpretScope, realNode.Left);
-                ScriptValue left = leftRef.Ref;
-
-                if (_operater == "." || _operater == "?.")
-                {
-                    if (left.IsNull && _operater == "?.")
+                case ExpressionNode realNode:
                     {
-                        return new ValueReference(left);
-                    }
-                    bool isStaticAccess = left.Value is ScriptClass;
+                        var _operater = realNode.Operator;
 
-                    ScriptScope leftScope = null;
-                    AccessibilityLevel accessLevel = AccessibilityLevel.Public;
-                    if (left.Value is ScriptBoundSuperClass)
-                    {
-                        leftScope = ((ScriptBoundSuperClass)left.Value).Scope;
-                        left = new ScriptValue(((ScriptBoundSuperClass)left.Value).BoundObject);
-                        if (interpretScope.ContainsScope(((ScriptObject)left.Value).ClassType.Scope))
-                            accessLevel = AccessibilityLevel.Protected;
-                    }
-                    else if (left.Value is ScriptObject)
-                    {
-                        leftScope = ((ScriptObject)left.Value).Scope;
-                        if (interpretScope.ContainsScope(((ScriptObject)left.Value).ClassType.Scope))
-                            accessLevel = AccessibilityLevel.Private;
-                    }
-                    else if (left.Value is ScriptClass)
-                    {
-                        leftScope = ((ScriptClass)left.Value).Scope;
-                        if (interpretScope.ContainsScope(leftScope))
-                            accessLevel = AccessibilityLevel.Private;
-                        //if (((ScriptClass)left.Value).SuperClasses
-                    }
-                    else/* if (left.Value is ScriptFns)*/
-                    {
-                        throw new SystemException("Function cannot use operator '.'");
-                    }
+                        ValueReference leftRef = InterpretExpression(interpretScope, realNode.Left);
+                        ScriptValue left = leftRef.Ref;
 
-                    if (realNode.Right is VariableReferenceNode)
-                    {
-                        return VariableReference((VariableReferenceNode)realNode.Right, left,
-                            leftScope, accessLevel, isStaticAccess);
-                    }
-                    else if (realNode.Right is FnReferenceCallNode)
-                    {
-                        // Obsolete
-                        throw new SystemException($"Unexcepted obsolete operation {left}'{_operater}'");
-                    }
-                    throw new SystemException($"Unexcepted operation {left}'{_operater}'");
-                }
-
-                ScriptValue right = null;
-
-                //if (_operater == "&&")
-                //{
-                //    // Short-Circuit Evaluation
-                //    // Left operand is false, the entire expression will always be false.
-                //    ScriptObject leftObj = left.TryObject;
-                //    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && !ScriptBool.AsCSharp(leftObj))
-                //        return new ValueReference(new ScriptValue(false));
-                //    right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                //    return new ValueReference(ScriptValue.And(left, right));
-                //}
-                //else if (_operater == "||")
-                //{
-                //    // Short-Circuit Evaluation
-                //    // Left operand is true, the entire expression will always be true.
-                //    ScriptObject leftObj = left.TryObject;
-                //    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && ScriptBool.AsCSharp(leftObj))
-                //        return new ValueReference(new ScriptValue(true));
-                //    right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                //    return new ValueReference(ScriptValue.Or(left, right));
-                //}
-
-                //right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                //if (_operater == "+") return new ValueReference(left + right);
-                //else if (_operater == "-") return new ValueReference(left - right);
-                //else if (_operater == "*") return new ValueReference(left * right);
-                //else if (_operater == "/") return new ValueReference(left / right);
-                //else if (_operater == "%") return new ValueReference(left % right);
-                //else if (_operater == "==") return new ValueReference(new ScriptValue(left.Equals(right)));
-                //else if (_operater == "!=") return new ValueReference(new ScriptValue(!left.Equals(right)));
-                //else if (_operater == "<") return new ValueReference(left < right);
-                //else if (_operater == ">") return new ValueReference(left > right);
-                //else if (_operater == "<=") return new ValueReference(left <= right);
-                //else if (_operater == ">=") return new ValueReference(left >= right);
-                //else throw new SystemException("Unknown operator " + _operater);
-
-                // // Short-Circuit Evaluation
-                switch (_operater)
-                {
-                    case "&&":
+                        if (_operater == "." || _operater == "?.")
                         {
-                            // Left operand is false, the entire expression will always be false.
-                            ScriptObject leftObj = left.TryObject;
-                            if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && !ScriptBool.AsCSharp(leftObj))
-                                return new ValueReference(new ScriptValue(false));
-                            right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                            return new ValueReference(ScriptValue.And(left, right));
+                            if (left.IsNull && _operater == "?.")
+                            {
+                                return new ValueReference(left);
+                            }
+                            bool isStaticAccess = left.Value is ScriptClass;
+
+                            ScriptScope leftScope = null;
+                            AccessibilityLevel accessLevel = AccessibilityLevel.Public;
+                            if (left.Value is ScriptBoundSuperClass)
+                            {
+                                leftScope = ((ScriptBoundSuperClass)left.Value).Scope;
+                                left = new ScriptValue(((ScriptBoundSuperClass)left.Value).BoundObject);
+                                if (interpretScope.ContainsScope(((ScriptObject)left.Value).ClassType.Scope))
+                                    accessLevel = AccessibilityLevel.Protected;
+                            }
+                            else if (left.Value is ScriptObject)
+                            {
+                                leftScope = ((ScriptObject)left.Value).Scope;
+                                if (interpretScope.ContainsScope(((ScriptObject)left.Value).ClassType.Scope))
+                                    accessLevel = AccessibilityLevel.Private;
+                            }
+                            else if (left.Value is ScriptClass)
+                            {
+                                leftScope = ((ScriptClass)left.Value).Scope;
+                                if (interpretScope.ContainsScope(leftScope))
+                                    accessLevel = AccessibilityLevel.Private;
+                                //if (((ScriptClass)left.Value).SuperClasses
+                            }
+                            else/* if (left.Value is ScriptFns)*/
+                            {
+                                throw new SystemException("Function cannot use operator '.'");
+                            }
+
+                            if (realNode.Right is VariableReferenceNode)
+                            {
+                                return VariableReference((VariableReferenceNode)realNode.Right, left,
+                                    leftScope, accessLevel, isStaticAccess);
+                            }
+                            else if (realNode.Right is FnReferenceCallNode)
+                            {
+                                // Obsolete
+                                throw new SystemException($"Unexcepted obsolete operation {left}'{_operater}'");
+                            }
+                            throw new SystemException($"Unexcepted operation {left}'{_operater}'");
                         }
-                    case "||":
+
+                        ScriptValue right = null;
+
+                        //if (_operater == "&&")
+                        //{
+                        //    // Short-Circuit Evaluation
+                        //    // Left operand is false, the entire expression will always be false.
+                        //    ScriptObject leftObj = left.TryObject;
+                        //    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && !ScriptBool.AsCSharp(leftObj))
+                        //        return new ValueReference(new ScriptValue(false));
+                        //    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                        //    return new ValueReference(ScriptValue.And(left, right));
+                        //}
+                        //else if (_operater == "||")
+                        //{
+                        //    // Short-Circuit Evaluation
+                        //    // Left operand is true, the entire expression will always be true.
+                        //    ScriptObject leftObj = left.TryObject;
+                        //    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && ScriptBool.AsCSharp(leftObj))
+                        //        return new ValueReference(new ScriptValue(true));
+                        //    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                        //    return new ValueReference(ScriptValue.Or(left, right));
+                        //}
+
+                        //right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                        //if (_operater == "+") return new ValueReference(left + right);
+                        //else if (_operater == "-") return new ValueReference(left - right);
+                        //else if (_operater == "*") return new ValueReference(left * right);
+                        //else if (_operater == "/") return new ValueReference(left / right);
+                        //else if (_operater == "%") return new ValueReference(left % right);
+                        //else if (_operater == "==") return new ValueReference(new ScriptValue(left.Equals(right)));
+                        //else if (_operater == "!=") return new ValueReference(new ScriptValue(!left.Equals(right)));
+                        //else if (_operater == "<") return new ValueReference(left < right);
+                        //else if (_operater == ">") return new ValueReference(left > right);
+                        //else if (_operater == "<=") return new ValueReference(left <= right);
+                        //else if (_operater == ">=") return new ValueReference(left >= right);
+                        //else throw new SystemException("Unknown operator " + _operater);
+
+                        // // Short-Circuit Evaluation
+                        switch (_operater)
                         {
-                            // Left operand is true, the entire expression will always be true.
-                            ScriptObject leftObj = left.TryObject;
-                            if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && ScriptBool.AsCSharp(leftObj))
-                                return new ValueReference(new ScriptValue(true));
-                            right = InterpretExpression(interpretScope, realNode.Right).Ref;
-                            return new ValueReference(ScriptValue.Or(left, right));
+                            case "&&":
+                                {
+                                    // Left operand is false, the entire expression will always be false.
+                                    ScriptObject leftObj = left.TryObject;
+                                    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && !ScriptBool.AsCSharp(leftObj))
+                                        return new ValueReference(new ScriptValue(false));
+                                    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                                    return new ValueReference(ScriptValue.And(left, right));
+                                }
+                            case "||":
+                                {
+                                    // Left operand is true, the entire expression will always be true.
+                                    ScriptObject leftObj = left.TryObject;
+                                    if (leftObj != null && leftObj.IsTypeOrSubOf(BasicTypes.Bool) && ScriptBool.AsCSharp(leftObj))
+                                        return new ValueReference(new ScriptValue(true));
+                                    right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                                    return new ValueReference(ScriptValue.Or(left, right));
+                                }
+                            case "??":
+                                if (!left.IsNull)
+                                    return new ValueReference(left);
+                                return InterpretExpression(interpretScope, realNode.Right);
                         }
-                    case "??":
-                        if (!left.IsNull)
-                            return new ValueReference(left);
-                        return InterpretExpression(interpretScope, realNode.Right);
-                }
 
-                right = InterpretExpression(interpretScope, realNode.Right).Ref;
+                        right = InterpretExpression(interpretScope, realNode.Right).Ref;
 
-                switch (_operater)
-                {
-                    case "&":
-                        return new ValueReference(ScriptValue.BitAnd(left, right));
-                    case "|":
-                        return new ValueReference(ScriptValue.BitOr(left, right));
-                    case "^":
-                        return new ValueReference(ScriptValue.BitXor(left, right));
-                    case "<<":
-                        return new ValueReference(ScriptValue.BitLeftShift(left, right));
-                    case ">>":
-                        return new ValueReference(ScriptValue.BitRightShift(left, right));
-                    case "+":
-                        return new ValueReference(ScriptValue.Add(left, right));
-                    case "-":
-                        return new ValueReference(ScriptValue.Minus(left, right));
-                    case "*":
-                        return new ValueReference(ScriptValue.Multiply(left, right));
-                    case "/":
-                        return new ValueReference(ScriptValue.Divide(left, right));
-                    case "%":
-                        return new ValueReference(ScriptValue.Mudulo(left, right));
-                    case ">":
-                        return new ValueReference(ScriptValue.Larger(left, right));
-                    case ">=":
-                        return new ValueReference(ScriptValue.LargerEquals(left, right));
-                    case "<":
-                        return new ValueReference(ScriptValue.Less(left, right));
-                    case "<=":
-                        return new ValueReference(ScriptValue.LessEquals(left, right));
-                    case "==":
-                        return new ValueReference(ScriptValue.Equals(left, right));
-                    case "!=":
-                        return new ValueReference(ScriptValue.NotEquals(left, right));
-                    case "is":
-                        return new ValueReference(ScriptValue.ReferenceEquals(left, right));
-                    case "is not":
-                        return new ValueReference(ScriptValue.ReferenceNotEquals(left, right));
-                    default:
-                        throw new SystemException($"Unexpected Operator: {_operater}");
-                }
-            }
-            else if (node is ConstValueNode)
-            {
-                var realNode = (ConstValueNode)node;
-                return new ValueReference(realNode.Value);
-            }
-            else if (node is InterpretedNode)
-            {
-                var realNode = (InterpretedNode)node;
-                return new ValueReference(realNode.CloneValue());
-            }
-            else if (node is InterpolatedStringNode)
-            {
-                var realNode = (InterpolatedStringNode)node;
-                StringBuilder text = new StringBuilder();
-                var interpolatedNodes = realNode.CloneInterpolatedNodes();
-                foreach (string str in realNode.Texts)
-                {
-                    if (str == null)
-                    {
-                        text.Append(InterpretExpression(interpretScope, interpolatedNodes.Dequeue()).Ref.ToString());
+                        switch (_operater)
+                        {
+                            case "&":
+                                return new ValueReference(ScriptValue.BitAnd(left, right));
+                            case "|":
+                                return new ValueReference(ScriptValue.BitOr(left, right));
+                            case "^":
+                                return new ValueReference(ScriptValue.BitXor(left, right));
+                            case "<<":
+                                return new ValueReference(ScriptValue.BitLeftShift(left, right));
+                            case ">>":
+                                return new ValueReference(ScriptValue.BitRightShift(left, right));
+                            case "+":
+                                return new ValueReference(ScriptValue.Add(left, right));
+                            case "-":
+                                return new ValueReference(ScriptValue.Minus(left, right));
+                            case "*":
+                                return new ValueReference(ScriptValue.Multiply(left, right));
+                            case "/":
+                                return new ValueReference(ScriptValue.Divide(left, right));
+                            case "%":
+                                return new ValueReference(ScriptValue.Mudulo(left, right));
+                            case ">":
+                                return new ValueReference(ScriptValue.Larger(left, right));
+                            case ">=":
+                                return new ValueReference(ScriptValue.LargerEquals(left, right));
+                            case "<":
+                                return new ValueReference(ScriptValue.Less(left, right));
+                            case "<=":
+                                return new ValueReference(ScriptValue.LessEquals(left, right));
+                            case "==":
+                                return new ValueReference(ScriptValue.Equals(left, right));
+                            case "!=":
+                                return new ValueReference(ScriptValue.NotEquals(left, right));
+                            case "is":
+                                return new ValueReference(ScriptValue.ReferenceEquals(left, right));
+                            case "is not":
+                                return new ValueReference(ScriptValue.ReferenceNotEquals(left, right));
+                            default:
+                                throw new SystemException($"Unexpected Operator: {_operater}");
+                        }
                     }
-                    else
+                case ConstValueNode realNode:
                     {
-                        text.Append(str);
+                        return new ValueReference(realNode.Value);
                     }
-                }
-                return new ValueReference(new ScriptValue(text.ToString()));
-            }
-            else if (node is UnaryNode)
-            {
-                var realNode = (UnaryNode)node;
-                ScriptValue value = InterpretExpression(interpretScope, realNode.Node).Ref;
-
-                //if (realNode.Operator == "+")
-                //    return new ValueReference(+value);
-                //else if (realNode.Operator == "!")
-                //    return new ValueReference(ScriptValue.Not(value));
-                //else if (realNode.Operator == "-")
-                //    return new ValueReference(-value);
-                //else if (realNode.Operator == "*")
-                //    return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
-                //else
-                //    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
-
-                switch (realNode.Operator)
-                {
-                    case "~":
-                        return new ValueReference(ScriptValue.BitNot(value));
-                    case "!":
-                        return new ValueReference(ScriptValue.Not(value));
-                    case "+":
-                        return new ValueReference(ScriptValue.Positive(value));
-                    case "-":
-                        return new ValueReference(ScriptValue.Negative(value));
-                    case "*":
-                        return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
-                    case "^++":
-                        return new ValueReference(ScriptValue.PrefixIncrement(value));
-                    case "^--":
-                        return new ValueReference(ScriptValue.PrefixDecrement(value));
-                    case "++$":
-                        return new ValueReference(ScriptValue.PostfixIncrement(value));
-                    case "--$":
-                        return new ValueReference(ScriptValue.PostfixDecrement(value));
-                    default:
-                        throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
-                }
-            }
-            else if (node is VariableReferenceNode)
-            {
-                return VariableReference((VariableReferenceNode)node, interpretScope);
-            }
-            else if (node is FnReferenceCallNode)
-            {
-                return FnReferenceCall((FnReferenceCallNode)node, interpretScope);
-            }
-            else if (node is ListNode)
-            {
-                var realNode = (ListNode)node;
-
-                List<ScriptValue> values = new List<ScriptValue>();
-
-                foreach (var value in realNode.Elements)
-                {
-                    ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
-                    if (scriptValue.IsUnzipable)
-                        values.AddRange(scriptValue.TryUnzipable);
-                    else
-                        values.Add(scriptValue);
-                }
-
-                return new ValueReference(new ScriptValue(values));
-            }
-            else if (node is DictNode)
-            {
-                var realNode = (DictNode)node;
-
-                var keyValues = new Dictionary<ScriptValue, ScriptValue>();
-
-                foreach (var keyValue in realNode.KeyValues)
-                {
-                    var key = InterpretExpression(interpretScope, keyValue.Item1).Ref;
-                    var value = InterpretExpression(interpretScope, keyValue.Item2).Ref;
-                    keyValues[key] = value;
-                }
-
-                return new ValueReference(new ScriptValue(keyValues));
-            }
-            else if (node is IndexerNode)
-            {
-                var realNode = (IndexerNode)node;
-
-                var left = InterpretExpression(interpretScope, realNode.Object);
-
-                if (realNode.IsNullConditional && left.Ref.IsNull)
-                    return new ValueReference(new ScriptValue());
-
-                ScriptObject obj = left.Ref.TryObject;
-                if (obj == null)
-                    throw new SystemException("Indexer can only apply in object");
-
-                List<ScriptValue> indexes = new List<ScriptValue>();
-                foreach (var index in realNode.Indexes)
-                {
-                    indexes.Add(InterpretExpression(interpretScope, index).Ref);
-                }
-                ScriptValue indexer = new ScriptValue(indexes);
-
-                obj.ClassType.Scope.Variables.TryGetValue(ScriptClass.GET_INDEXER, out ScriptVariable getFn);
-                obj.ClassType.Scope.Variables.TryGetValue(ScriptClass.SET_INDEXER, out ScriptVariable setFn);
-
-                if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
-                {
-                    return new ValueReference(() => getFn.Value.TryFunction.Call(obj, indexer), x => setFn.Value.TryFunction.Call(obj, indexer, x));
-                }
-                else
-                {
-                    throw new SystemException("The variable cannot use indexer");
-                }
-            }
-            else if (node is FnDefineNode)
-            {
-                // Lambda Function / get_fn / set_fn
-                var realNode = (FnDefineNode)node;
-                List<FnParameter> fnParameters = new List<FnParameter>();
-                foreach (var param in realNode.Parameters)
-                {
-                    HashSet<ScriptClass> dataTypes = null;
-                    ScriptValue defaultValue = null;
-                    if (param.DataType != null)
+                case InterpretedNode realNode:
                     {
-                        ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
-                        if (!type.IsDefinedTypes)
-                            throw new SystemException($"Unexpected error: {realNode.Name}.{param.Name}");
-                        dataTypes = ((DefinedTypes)type.Value).Value;
+                        return new ValueReference(realNode.CloneValue());
                     }
-                    if (param.DefaultValue != null)
-                        defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
-                    fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue, param.IsMultiArgs));
-                }
-                var scriptFns = new ScriptFns(realNode.Name);
-                scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,
-                                interpretScope, realNode.IsStatic, realNode.Level));
+                case InterpolatedStringNode realNode:
+                    {
+                        StringBuilder text = new StringBuilder();
+                        var interpolatedNodes = realNode.CloneInterpolatedNodes();
+                        foreach (string str in realNode.Texts)
+                        {
+                            if (str == null)
+                            {
+                                text.Append(InterpretExpression(interpretScope, interpolatedNodes.Dequeue()).Ref.ToString());
+                            }
+                            else
+                            {
+                                text.Append(str);
+                            }
+                        }
+                        return new ValueReference(new ScriptValue(text.ToString()));
+                    }
+                case UnaryNode realNode:
+                    {
+                        ScriptValue value = InterpretExpression(interpretScope, realNode.Node).Ref;
 
-                if (scriptFns.IsLambda)
-                    return new ValueReference(new ScriptValue(new ScriptBoundFns(scriptFns, null, AccessibilityLevel.Public)));
-                else 
-                    return new ValueReference(new ScriptValue(scriptFns));
-            }
-            else if (node is TernaryNode)
-            {
-                var realNode = (TernaryNode)node;
-                var condition = InterpretExpression(interpretScope, realNode.Condition);
+                        //if (realNode.Operator == "+")
+                        //    return new ValueReference(+value);
+                        //else if (realNode.Operator == "!")
+                        //    return new ValueReference(ScriptValue.Not(value));
+                        //else if (realNode.Operator == "-")
+                        //    return new ValueReference(-value);
+                        //else if (realNode.Operator == "*")
+                        //    return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
+                        //else
+                        //    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
 
-                if (!(condition.Ref.Value is ScriptObject))
-                    throw new SystemException("Ternary condition should be boolean");
+                        switch (realNode.Operator)
+                        {
+                            case "~":
+                                return new ValueReference(ScriptValue.BitNot(value));
+                            case "!":
+                                return new ValueReference(ScriptValue.Not(value));
+                            case "+":
+                                return new ValueReference(ScriptValue.Positive(value));
+                            case "-":
+                                return new ValueReference(ScriptValue.Negative(value));
+                            case "*":
+                                return new ValueReference(ScriptValue.OperatorSingleUnzip(value));
+                            case "^++":
+                                return new ValueReference(ScriptValue.PrefixIncrement(value));
+                            case "^--":
+                                return new ValueReference(ScriptValue.PrefixDecrement(value));
+                            case "++$":
+                                return new ValueReference(ScriptValue.PostfixIncrement(value));
+                            case "--$":
+                                return new ValueReference(ScriptValue.PostfixDecrement(value));
+                            default:
+                                throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
+                        }
+                    }
+                case VariableReferenceNode realNode:
+                    {
+                        return VariableReference((VariableReferenceNode)node, interpretScope);
+                    }
+                case FnReferenceCallNode realNode:
+                    {
+                        return FnReferenceCall((FnReferenceCallNode)node, interpretScope);
+                    }
+                case ListNode realNode:
+                    {
+                        List<ScriptValue> values = new List<ScriptValue>();
 
-                if (!(((ScriptObject)condition.Ref.Value).ClassType is ScriptBool))
-                    throw new SystemException("Ternary condition should be boolean");
+                        foreach (var value in realNode.Elements)
+                        {
+                            ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
+                            if (scriptValue.IsUnzipable)
+                                values.AddRange(scriptValue.TryUnzipable);
+                            else
+                                values.Add(scriptValue);
+                        }
 
-                if ((bool)((ScriptObject)condition.Ref.Value).BuildInObject)
-                {
-                    return InterpretExpression(interpretScope, realNode.Consequent);
-                }
-                return InterpretExpression(interpretScope, realNode.Alternative);
+                        return new ValueReference(new ScriptValue(values));
+                    }
+                case DictNode realNode:
+                    {
+                        var keyValues = new Dictionary<ScriptValue, ScriptValue>();
+
+                        foreach (var keyValue in realNode.KeyValues)
+                        {
+                            var key = InterpretExpression(interpretScope, keyValue.Item1).Ref;
+                            var value = InterpretExpression(interpretScope, keyValue.Item2).Ref;
+                            keyValues[key] = value;
+                        }
+
+                        return new ValueReference(new ScriptValue(keyValues));
+                    }
+                case IndexerNode realNode:
+                    {
+                        var left = InterpretExpression(interpretScope, realNode.Object);
+
+                        if (realNode.IsNullConditional && left.Ref.IsNull)
+                            return new ValueReference(new ScriptValue());
+
+                        ScriptObject obj = left.Ref.TryObject;
+                        if (obj == null)
+                            throw new SystemException("Indexer can only apply in object");
+
+                        List<ScriptValue> indexes = new List<ScriptValue>();
+                        foreach (var index in realNode.Indexes)
+                        {
+                            indexes.Add(InterpretExpression(interpretScope, index).Ref);
+                        }
+                        ScriptValue indexer = new ScriptValue(indexes);
+
+                        obj.ClassType.Scope.Variables.TryGetValue(ScriptClass.GET_INDEXER, out ScriptVariable getFn);
+                        obj.ClassType.Scope.Variables.TryGetValue(ScriptClass.SET_INDEXER, out ScriptVariable setFn);
+
+                        if ((getFn != null && getFn.Value.IsFunction) || (setFn != null && setFn.Value.IsFunction))
+                        {
+                            return new ValueReference(() => getFn.Value.TryFunction.Call(obj, indexer), x => setFn.Value.TryFunction.Call(obj, indexer, x));
+                        }
+                        else
+                        {
+                            throw new SystemException("The variable cannot use indexer");
+                        }
+                    }
+                case FnDefineNode realNode:
+                    {
+                        // Lambda Function / get_fn / set_fn
+                        List<FnParameter> fnParameters = new List<FnParameter>();
+                        foreach (var param in realNode.Parameters)
+                        {
+                            HashSet<ScriptClass> dataTypes = null;
+                            ScriptValue defaultValue = null;
+                            if (param.DataType != null)
+                            {
+                                ScriptValue type = InterpretExpression(interpretScope, param.DataType).Ref;
+                                if (!type.IsDefinedTypes)
+                                    throw new SystemException($"Unexpected error: {realNode.Name}.{param.Name}");
+                                dataTypes = ((DefinedTypes)type.Value).Value;
+                            }
+                            if (param.DefaultValue != null)
+                                defaultValue = InterpretExpression(interpretScope, param.DefaultValue).Ref;
+                            fnParameters.Add(new FnParameter(param.Name, dataTypes, defaultValue, param.IsMultiArgs));
+                        }
+                        var scriptFns = new ScriptFns(realNode.Name);
+                        scriptFns.Fns.Add(new ScriptFn(fnParameters, realNode.Body,
+                                        interpretScope, realNode.IsStatic, realNode.Level));
+
+                        if (scriptFns.IsLambda)
+                            return new ValueReference(new ScriptValue(new ScriptBoundFns(scriptFns, null, AccessibilityLevel.Public)));
+                        else
+                            return new ValueReference(new ScriptValue(scriptFns));
+                    }
+                case TernaryNode realNode:
+                    {
+                        var condition = InterpretExpression(interpretScope, realNode.Condition);
+
+                        if (!(condition.Ref.Value is ScriptObject))
+                            throw new SystemException("Ternary condition should be boolean");
+
+                        if (!(((ScriptObject)condition.Ref.Value).ClassType is ScriptBool))
+                            throw new SystemException("Ternary condition should be boolean");
+
+                        if ((bool)((ScriptObject)condition.Ref.Value).BuildInObject)
+                        {
+                            return InterpretExpression(interpretScope, realNode.Consequent);
+                        }
+                        return InterpretExpression(interpretScope, realNode.Alternative);
+                    }
+                case VariableAssignmentNode realNode:
+                    {
+                        return VariableAssignment(realNode, interpretScope);
+                    }
+                case TypeNode realNode:
+                    {
+                        HashSet<ScriptClass> types = new HashSet<ScriptClass>();
+                        foreach (var value in realNode.Types)
+                        {
+                            ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
+                            if (scriptValue.IsNull)
+                                types.Add(BasicTypes.Null);
+                            else if (scriptValue.IsClass)
+                                types.Add(scriptValue.TryClass);
+                            else
+                                throw new SystemException($"{scriptValue} is not a type");
+                        }
+                        return new ValueReference(new ScriptValue(new DefinedTypes(types)));
+                    }
+                case CatchExpressionNode realNode:
+                    {
+                        ScriptValue result = null;
+                        Exception catchedException = null;
+                        try
+                        {
+                            result = InterpretExpression(interpretScope, realNode.Expression).Ref;
+                        }
+                        catch (Exception _ex)
+                        {
+                            catchedException = _ex;
+                        }
+                        if (realNode.DefaultValue != null)
+                        {
+                            if (catchedException == null)
+                                return new ValueReference(result);
+                            else
+                                return InterpretExpression(interpretScope, realNode.DefaultValue);
+                        }
+                        return new ValueReference(new ScriptValue(BasicTypes.CatchedExpression.Create(result, catchedException)));
+                    }
+                default:
+                    throw new SystemException("Unexcepted interpret expression: " + node.NodeName);
             }
-            else if (node is VariableAssignmentNode)
-            {
-                return VariableAssignment((VariableAssignmentNode)node, interpretScope);
-            }
-            else if (node is TypeNode)
-            {
-                var realNode = (TypeNode)node;
-                HashSet<ScriptClass> types = new HashSet<ScriptClass>();
-                foreach (var value in realNode.Types)
-                {
-                    ScriptValue scriptValue = InterpretExpression(interpretScope, value).Ref;
-                    if (scriptValue.IsNull)
-                        types.Add(BasicTypes.Null);
-                    else if (scriptValue.IsClass)
-                        types.Add(scriptValue.TryClass);
-                    else
-                        throw new SystemException($"{scriptValue} is not a type");
-                }
-                return new ValueReference(new ScriptValue(new DefinedTypes(types)));
-            }
-            else if (node is CatchExpressionNode)
-            {
-                var realNode = (CatchExpressionNode)node;
-                ScriptValue result = null;
-                Exception catchedException = null;
-                try
-                {
-                    result = InterpretExpression(interpretScope, realNode.Expression).Ref;
-                }
-                catch (Exception _ex)
-                {
-                    catchedException = _ex;
-                }
-                if (realNode.DefaultValue != null)
-                {
-                    if (catchedException == null)
-                        return new ValueReference(result);
-                    else
-                        return InterpretExpression(interpretScope, realNode.DefaultValue);
-                }
-                return new ValueReference(new ScriptValue(BasicTypes.CatchedExpression.Create(result, catchedException)));
-            }
-            throw new SystemException("Unexcepted interpret expression: " + node.NodeName);
         }
     }
 }
