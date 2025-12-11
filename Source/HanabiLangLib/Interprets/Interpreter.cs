@@ -240,83 +240,68 @@ namespace HanabiLangLib.Interprets
                 string extension = System.IO.Path.GetExtension(realNode.Path).ToLower();
 
                 DateTime lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(fullPath);
-                if (extension.Equals(".json"))
+                Interpreter newInterpreter = null;
+                if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
                 {
-                    var tokens = Lexer.Tokenize(System.IO.File.ReadAllLines(fullPath));
+                    string[] lines = Lexer.ReadScriptToLines(fullPath);
+                    var tokens = Lexer.Tokenize(lines);
                     var parser = new Parser(tokens);
                     var ast = parser.Parse();
-                    if (ast.Nodes.Count != 1)
-                        throw new SystemException("Incorrect format of json");
-
-                    var jsonValue = InterpretJson(ast.Nodes.First());
-
-                    interpretScope.Variables[realNode.AsName ?? fileNameWithoutExtension] = new ScriptVariable(realNode.AsName ?? fileNameWithoutExtension, null, jsonValue.Ref, true, true, AccessibilityLevel.Public);
+                    //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
+                    newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
+                    newInterpreter.Interpret(true, false);
+                    ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
                 }
                 else
                 {
-                    Interpreter newInterpreter = null;
-                    if (!ImportedItems.Files.TryGetValue(fullPath, out Tuple<DateTime, Interpreter> scriptInfo) || lastWriteTimeUtc != scriptInfo.Item1)
-                    {
-                        string[] lines = Lexer.ReadScriptToLines(fullPath);
-                        var tokens = Lexer.Tokenize(lines);
-                        var parser = new Parser(tokens);
-                        var ast = parser.Parse();
-                        //Interpreter interpreter = new Interpreter(ast, fullPath, false, this.Arguments);
-                        newInterpreter = new Interpreter(ast, null, interpretScope?.ParentInterpreter?.PredefinedScope, fullPath, false);
-                        newInterpreter.Interpret(true, false);
-                        ImportedItems.Files[fullPath] = Tuple.Create(lastWriteTimeUtc, newInterpreter);
-                    }
-                    else
-                    {
-                        newInterpreter = scriptInfo.Item2;
-                    }
+                    newInterpreter = scriptInfo.Item2;
+                }
 
-                    // Import as variable
-                    if (realNode.Imports == null)
+                // Import as variable
+                if (realNode.Imports == null)
+                {
+                    if (string.IsNullOrEmpty(realNode.AsName))
+                        interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(
+                            fileNameWithoutExtension,
+                            new ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
+                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
+                        );
+                    else
+                        interpretScope.Variables[realNode.AsName] = new ScriptVariable(
+                            realNode.AsName,
+                            new ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
+                                newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
+                        );
+                }
+                // Import all
+                else if (realNode.Imports.Count <= 0)
+                {
+                    foreach (var kv in newInterpreter.CurrentScope.Variables)
                     {
-                        if (string.IsNullOrEmpty(realNode.AsName))
-                            interpretScope.Variables[fileNameWithoutExtension] = new ScriptVariable(
-                                fileNameWithoutExtension,
-                                new ScriptClass(fileNameWithoutExtension, newInterpreter.ast.Nodes,
-                                    newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
-                            );
-                        else
-                            interpretScope.Variables[realNode.AsName] = new ScriptVariable(
-                                realNode.AsName,
-                                new ScriptClass(realNode.AsName, newInterpreter.ast.Nodes,
-                                    newInterpreter.CurrentScope, null, true, AccessibilityLevel.Public, true)
-                            );
+                        if (kv.Value.Level != AccessibilityLevel.Public)
+                            continue;
+                        interpretScope.Variables[kv.Key] = kv.Value;
                     }
-                    // Import all
-                    else if (realNode.Imports.Count <= 0)
+                }
+                // Import some
+                else
+                {
+                    foreach (var item in realNode.Imports)
                     {
-                        foreach (var kv in newInterpreter.CurrentScope.Variables)
+                        string toBeImportName = item.Item1;
+                        string importedName = item.Item2 ?? item.Item1;
+                        if (interpretScope.TryGetValue(importedName, out _))
+                            throw new SystemException($"Import failed, {importedName} exists");
+
+                        if (newInterpreter.CurrentScope.TryGetValue(toBeImportName, out ScriptVariable scriptType))
                         {
-                            if (kv.Value.Level != AccessibilityLevel.Public)
-                                continue;
-                            interpretScope.Variables[kv.Key] = kv.Value;
+                            if (scriptType.Level != AccessibilityLevel.Public)
+                                throw new SystemException($"Import failed, {toBeImportName} is not public");
+                            interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
                         }
-                    }
-                    // Import some
-                    else
-                    {
-                        foreach (var item in realNode.Imports)
+                        else
                         {
-                            string toBeImportName = item.Item1;
-                            string importedName = item.Item2 ?? item.Item1;
-                            if (interpretScope.TryGetValue(importedName, out _))
-                                throw new SystemException($"Import failed, {importedName} exists");
-
-                            if (newInterpreter.CurrentScope.TryGetValue(toBeImportName, out ScriptVariable scriptType))
-                            {
-                                if (scriptType.Level != AccessibilityLevel.Public)
-                                    throw new SystemException($"Import failed, {toBeImportName} is not public");
-                                interpretScope.Variables[importedName] = (ScriptVariable)scriptType;
-                            }
-                            else
-                            {
-                                throw new SystemException($"{toBeImportName} is not defined in {realNode.Path}");
-                            }
+                            throw new SystemException($"{toBeImportName} is not defined in {realNode.Path}");
                         }
                     }
                 }
@@ -1471,70 +1456,6 @@ namespace HanabiLangLib.Interprets
                 return currentClass.SuperClass;
 
             return null;
-        }
-
-        public static ValueReference InterpretJson(AstNode node)
-        {
-            if (node is ConstValueNode)
-            {
-                var realNode = (ConstValueNode)node;
-                return new ValueReference(realNode.Value);
-            }
-            else if (node is UnaryNode)
-            {
-                var realNode = (UnaryNode)node;
-                ScriptValue value = InterpretJson(realNode.Node).Ref;
-
-                if (realNode.Operator == "+")
-                    return new ValueReference(ScriptValue.Positive(value));
-                else if (realNode.Operator == "-")
-                    return new ValueReference(ScriptValue.Negative(value));
-                else
-                    throw new SystemException($"Unexpected Unary Operator: {realNode.Operator}");
-            }
-            else if (node is ListNode)
-            {
-                var realNode = (ListNode)node;
-
-                List<ScriptValue> values = new List<ScriptValue>();
-
-                foreach (var value in realNode.Elements)
-                {
-                    ScriptValue scriptValue = InterpretJson(value).Ref;
-                    if (scriptValue.IsUnzipable)
-                        values.AddRange(scriptValue.TryUnzipable);
-                    else
-                        values.Add(scriptValue);
-                }
-
-                return new ValueReference(new ScriptValue(values));
-            }
-            else if (node is InterpretedListNode)
-            {
-                var realNode = (InterpretedListNode)node;
-                return new ValueReference(realNode.CloneValue());
-            }
-            else if (node is DictNode)
-            {
-                var realNode = (DictNode)node;
-
-                var keyValues = new Dictionary<ScriptValue, ScriptValue>();
-
-                foreach (var keyValue in realNode.KeyValues)
-                {
-                    var key = InterpretJson(keyValue.Item1).Ref;
-                    var value = InterpretJson(keyValue.Item2).Ref;
-                    keyValues[key] = value;
-                }
-
-                return new ValueReference(new ScriptValue(keyValues));
-            }
-            else if (node is InterpretedDictNode)
-            {
-                var realNode = (InterpretedDictNode)node;
-                return new ValueReference(realNode.CloneValue());
-            }
-            throw new SystemException($"Unexpected Node: {node.NodeName}");
         }
 
         public static ValueReference InterpretExpression(ScriptScope interpretScope, AstNode node)
