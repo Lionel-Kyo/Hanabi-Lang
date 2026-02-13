@@ -42,7 +42,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public static readonly string GET_INDEXER = "__GET_INDEXER__";
         public static readonly string SET_INDEXER = "__SET_INDEXER__";
         public static readonly string GET_ITERABLE = "__ITER__";
-        // public static readonly string OBJECT_INITIALZATION = "__INIT__";
+        public static readonly string OBJECT_INITIALZATION = "__INIT__";
 
         public string ConstructorName => $"{this.Name}::New";
         public string Name { get; private set; }
@@ -110,7 +110,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 this.SuperClasses = GetAllSuperClassesFromDefinedSuperClasses(definedSuperClasses).ToList();
             }
 
-            this.BuildInConstructor = new ScriptFns(this.ConstructorName);
+            this.BuildInConstructor = new ScriptFns(OBJECT_INITIALZATION);
             this.Level = level;
 
             if (body != null && !isImported)
@@ -150,13 +150,14 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 if (variable.Value.Value.IsFunction)
                 {
                     var fns = variable.Value.Value.TryFunction;
-                    bool isConstructor = variable.Key.Equals(from.ConstructorName);
+                    bool isConstructor = variable.Key.Equals(OBJECT_INITIALZATION);
 
                     if (isConstructor && skipConstructor)
                         continue;
 
                     // Change constructor name
-                    string fnName = isConstructor ? to.ConstructorName : variable.Key;
+                    //string fnName = isConstructor ? to.ConstructorName : variable.Key;
+                    string fnName = variable.Key;
 
                     ScriptFns scriptFns = null;
                     if (to.Scope.Variables.TryGetValue(fnName, out ScriptVariable scriptVar))
@@ -362,7 +363,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
             ScriptObject _object = Create();
 
-            if (this.Scope.Variables.TryGetValue(ConstructorName, out ScriptVariable currentConstructor) && currentConstructor.Value.IsFunction)
+            if (this.Scope.Variables.TryGetValue(OBJECT_INITIALZATION, out ScriptVariable currentConstructor) && currentConstructor.Value.IsFunction)
             {
                 var fnInfo = currentConstructor.Value.TryFunction.FindCallableInfo(currentScope, _object, args, keyArgs);
                 currentConstructor.Value.TryFunction.Call(fnInfo);

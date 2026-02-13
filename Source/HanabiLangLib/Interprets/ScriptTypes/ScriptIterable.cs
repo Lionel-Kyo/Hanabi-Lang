@@ -15,7 +15,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptIterable() :
             base("Iterable", isStatic: false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("iter", BasicTypes.Iterable),

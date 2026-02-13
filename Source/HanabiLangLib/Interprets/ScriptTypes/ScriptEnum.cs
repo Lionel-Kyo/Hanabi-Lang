@@ -16,7 +16,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         {
             this.InitializeOperators();
 
-            this.AddFunction(ConstructorName, new List<FnParameter>() { new FnParameter("this"), }, args => throw new NotSupportedException("Enum class can not be called"));
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>() { new FnParameter("this"), }, args => throw new NotSupportedException("Enum class can not be called"));
 
             AddVariable("Value", args =>
             {

@@ -64,7 +64,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         {
             if (ClassType.IsBuildIn)
             {
-                return BuildInObject.GetHashCode();
+                return BuildInObject == null ? 0 : BuildInObject.GetHashCode();
             }
             return base.GetHashCode();
         }

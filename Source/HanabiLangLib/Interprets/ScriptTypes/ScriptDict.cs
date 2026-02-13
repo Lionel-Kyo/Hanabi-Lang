@@ -18,7 +18,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         {
             this.InitializeOperators();
 
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
             }, args =>

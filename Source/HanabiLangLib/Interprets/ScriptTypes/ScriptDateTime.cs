@@ -13,7 +13,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
             base("DateTime", new List<ScriptClass>(), isStatic: false)
         {
             // Constructor
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("year", BasicTypes.Int, ScriptValue.Null),

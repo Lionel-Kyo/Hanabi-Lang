@@ -13,7 +13,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptFnEvent() :
             base("FnEvent", null, isStatic: false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("args", (ScriptClass)null, null, true),

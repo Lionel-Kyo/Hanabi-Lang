@@ -773,7 +773,7 @@ namespace HanabiLangLib.Interprets
                 {
                     var _superClass = (ScriptBoundSuperClass)scriptValue.Value;
                     ScriptFns _superFns = null;
-                    if (!_superClass.TryGetValue(_superClass.ConstructorName, out ScriptVariable superFns) || (_superFns = superFns.Value.TryFunction) == null)
+                    if (!_superClass.TryGetValue(ScriptClass.OBJECT_INITIALZATION, out ScriptVariable superFns) || (_superFns = superFns.Value.TryFunction) == null)
                         throw new SystemException($"Unexpected super access");
 
                     var callableInfo = _superFns.FindCallableInfo(interpretScope, _superClass.BoundObject, realNode.Args, realNode.KeyArgs);

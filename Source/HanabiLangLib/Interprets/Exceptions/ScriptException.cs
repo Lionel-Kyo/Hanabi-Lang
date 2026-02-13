@@ -14,7 +14,7 @@ namespace HanabiLangLib.Interprets.Exceptions
         public ScriptException() :
             base("Exception", isStatic: false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>() { new FnParameter("this") }, args =>
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>() { new FnParameter("this") }, args =>
             {
                 ScriptObject _this = (ScriptObject)args[0].Value;
                 _this.BuildInObject = new HanibiException(_this);
@@ -22,7 +22,7 @@ namespace HanabiLangLib.Interprets.Exceptions
                 return ScriptValue.Null;
             });
 
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("message", BasicTypes.Str)

@@ -10,7 +10,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
     {
         public ScriptTypeClass() : base("Type", false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("value")
@@ -77,7 +77,13 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                 return new ScriptValue(valueClass.SuperClasses?.Contains(thisType) ?? false);
             });
 
-            this.AddVariable("Value", args => new ScriptValue((ScriptClass)((ScriptObject)args[0].Value).BuildInObject), null, false, null);
+            this.AddVariable("Value", args => new ScriptValue(AsCSharp(args[0].TryObject)), null, false, null);
+
+            this.AddVariable("Super", args =>
+            {
+                var _class = AsCSharp(args[0].TryObject);
+                return new ScriptValue(_class.SuperClass);
+            }, null, false, null);
 
             this.AddFunction(TO_STR, new List<FnParameter>()
             {

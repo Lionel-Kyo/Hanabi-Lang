@@ -18,36 +18,34 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         {
             this.InitializeOperators();
 
-            this.AddFunction(ConstructorName, new List<FnParameter>()
-            {
-                new FnParameter("this")
-            }, args =>
-            {
-                ScriptObject _this = args[0].TryObject;
-                _this.BuildInObject = new List<ScriptValue>();
-                return ScriptValue.Null;
-            });
-
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
-                new FnParameter("value")
+                new FnParameter("value", (ScriptClass)null, new ScriptValue(), false)
             }, args =>
             {
                 ScriptObject _this = args[0].TryObject;
-                ScriptObject value = (ScriptObject)args[1].Value;
+                ScriptObject value = args[1].TryObject;
 
-                if (value.ClassType == BasicTypes.Int)
+                if (args[1].IsNull)
+                {
+                    _this.BuildInObject = new List<ScriptValue>();
+                }
+                else if (value.IsTypeOrSubOf(BasicTypes.Int))
                 {
                     int size = ScriptInt.ValidateToInt32(ScriptInt.AsCSharp(value));
-                    _this.BuildInObject = Enumerable.Repeat(new ScriptValue(), size).ToList();
+                    _this.BuildInObject = Enumerable.Repeat(ScriptValue.Null, size).ToList();
+                }
+                else if (value.IsTypeOrSubOf(BasicTypes.Iterable))
+                {
+                    if (!ScriptIterable.TryGetIterable(value, out var iter))
+                        throw new SystemException("Create List failed, variable is not Iterable");
+
+                    _this.BuildInObject = new List<ScriptValue>(iter);
                 }
                 else
                 {
-                    if (!ScriptIterable.TryGetIterable(value, out var iter))
-                        throw new SystemException("Create List failed, variable is not enumerable");
-
-                    _this.BuildInObject = new List<ScriptValue>(iter);
+                    throw new SystemException("Create List failed, variable is not int/Iterable");
                 }
                 return ScriptValue.Null;
             });

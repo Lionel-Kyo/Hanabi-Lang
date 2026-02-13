@@ -129,13 +129,13 @@ finally {
         {
             string sourceCode = @"
 class MyException1 : Exception {
-    fn MyException1(this) {
+    fn __INIT__(this) {
         super(""My Message1"");
     }
 }
 
 class MyException2 : Exception {
-    fn MyException2(this) {
+    fn __INIT__(this) {
         super(""My Message2"");
     }
 }
@@ -295,7 +295,7 @@ const result = factorial(12);
 class TestClass {
 	let value = null;
 
-	fn TestClass(this, value) {
+	fn __INIT__(this, value) {
 		this.value = value;
 	}
 
@@ -343,7 +343,7 @@ class Middle3: Super3 {
 
 class TestClass: Middle1, Middle3, Middle2 {
 	let Name: str { get; private set; }
-	fn TestClass(this, name: str) {
+	fn __INIT__(this, name: str) {
 		this.Name = name;
 	}
 
@@ -623,7 +623,7 @@ class Test: Iterable {
     private let values = null;
     public let __ITER__ => TestIterator.Create(this.values);
 
-    public fn Test(this, values: Iterable) {
+    public fn __INIT__(this, values: Iterable) {
         this.values = values;
     }
 
@@ -631,7 +631,7 @@ class Test: Iterable {
         private let values = null;
         private let index = -1;
 
-        public fn TestIterator(this, values) {
+        public fn __INIT__(this, values) {
             this.values = values;
         }
 

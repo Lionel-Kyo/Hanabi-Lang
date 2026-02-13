@@ -193,9 +193,9 @@ namespace HanabiLangLib.Interprets
             this.value = BasicTypes.NullValue;
         }
 
-        public static ScriptValue Null => new ScriptValue();
-        public static ScriptValue Break => new ScriptValue(new BreakType());
-        public static ScriptValue Continue => new ScriptValue(new ContinueType());
+        public static readonly ScriptValue Null = new ScriptValue();
+        public static readonly ScriptValue Break = new ScriptValue(new BreakType());
+        public static readonly ScriptValue Continue = new ScriptValue(new ContinueType());
 
         public bool IsFunction => this.value is ScriptFns;
         public ScriptFns TryFunction => this.value is ScriptFns ? (ScriptFns)this.value : null;

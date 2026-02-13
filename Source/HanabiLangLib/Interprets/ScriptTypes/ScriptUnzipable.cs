@@ -11,7 +11,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public ScriptUnzipable() :
             base("Unzipable", new List<ScriptClass> { BasicTypes.Iterable }, isStatic: false)
         {
-            this.AddFunction(ConstructorName, new List<FnParameter>()
+            this.AddFunction(OBJECT_INITIALZATION, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("value")
