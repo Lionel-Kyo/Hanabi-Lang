@@ -187,10 +187,11 @@ namespace HanabiLangLib.Lexers
                             _pos++;
                         }
                         break;
-                    //+, +=, ++, -, -=, --, ->
+                    // ==, +, +=, ++, -, -=, --, ->, *, *=, **, &, &&, &=, |, ||, |=, >, >>, >=, <, <<, <=, =>, ->
                     case '=':
                     case '+':
                     case '-':
+                    case '*':
                     case '&':
                     case '|':
                     case '<':
@@ -242,16 +243,15 @@ namespace HanabiLangLib.Lexers
                         }
                         break;
                     case '!':
-                    case '*':
                     case '/':
                     case '%':
-                        // !=, *=, /=, %=
+                        // !=, /=, %=
                         if (_pos + 1 < _input.Length && _input[_pos + 1] == '=')
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, _input.Substring(_pos, 2), startPos, startLine));
                             _pos += 2;
                         }
-                        // !, *, /, %
+                        // !, /, %
                         else
                         {
                             tokens.Add(new Token(TokenType.OPERATOR, c.ToString(), startPos, startLine));

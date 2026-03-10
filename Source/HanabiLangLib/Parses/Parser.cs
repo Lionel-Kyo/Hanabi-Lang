@@ -352,8 +352,7 @@ namespace HanabiLangLib.Parses
         {
             var left = this.TermDot(skipIndexer, skipArrowFn);
 
-            while (HasToken &&
-                (CurrentToken.Raw == "*" || CurrentToken.Raw == "/" || CurrentToken.Raw == "%"))
+            while (HasToken && (CurrentToken.Raw == "**"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
@@ -368,7 +367,7 @@ namespace HanabiLangLib.Parses
             var left = this.TermArithmetic1(skipIndexer, skipArrowFn);
 
             while (HasToken &&
-                (CurrentToken.Raw == "+" || CurrentToken.Raw == "-"))
+                (CurrentToken.Raw == "*" || CurrentToken.Raw == "/" || CurrentToken.Raw == "%"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
@@ -378,15 +377,30 @@ namespace HanabiLangLib.Parses
             return left;
         }
 
-        private AstNode TermShift(bool skipIndexer, bool skipArrowFn)
+        private AstNode TermArithmetic3(bool skipIndexer, bool skipArrowFn)
         {
             var left = this.TermArithmetic2(skipIndexer, skipArrowFn);
+
+            while (HasToken &&
+                (CurrentToken.Raw == "+" || CurrentToken.Raw == "-"))
+            {
+                var currentToken = CurrentToken;
+                this.Expect(TokenType.OPERATOR);
+                left = new ExpressionNode(left, this.TermArithmetic2(skipIndexer, skipArrowFn), currentToken.Raw);
+            }
+
+            return left;
+        }
+
+        private AstNode TermShift(bool skipIndexer, bool skipArrowFn)
+        {
+            var left = this.TermArithmetic3(skipIndexer, skipArrowFn);
 
             while (HasToken && (CurrentToken.Raw == "<<" || CurrentToken.Raw == ">>"))
             {
                 var currentToken = CurrentToken;
                 this.Expect(TokenType.OPERATOR);
-                left = new ExpressionNode(left, this.TermArithmetic2(skipIndexer, skipArrowFn), currentToken.Raw);
+                left = new ExpressionNode(left, this.TermArithmetic3(skipIndexer, skipArrowFn), currentToken.Raw);
             }
 
             return left;

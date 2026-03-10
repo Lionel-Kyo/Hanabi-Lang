@@ -241,7 +241,7 @@ namespace HanabiLangLib.Interprets.ScriptTypes
                     throw new Exception($"{_this} / {_other} is not defined");
                 return new ScriptValue(resultObject);
             });
-            this.AddFunction(OPEARTOR_MUDULO, new List<FnParameter>()
+            this.AddFunction(OPEARTOR_MODULO, new List<FnParameter>()
             {
                 new FnParameter("this"),
                 new FnParameter("other"),
@@ -269,6 +269,36 @@ namespace HanabiLangLib.Interprets.ScriptTypes
 
                 if (resultObject == null)
                     throw new Exception($"{_this} % {_other} is not defined");
+                return new ScriptValue(resultObject);
+            });
+            this.AddFunction(OPEARTOR_POWER, new List<FnParameter>()
+            {
+                new FnParameter("this"),
+                new FnParameter("other"),
+            }, args =>
+            {
+                ScriptObject _this = args[0].TryObject;
+                ScriptObject _other = args[1].TryObject;
+                ScriptObject resultObject = null;
+                if (_other == null)
+                {
+
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Int))
+                {
+                    resultObject = BasicTypes.Decimal.Create(Math.Pow((double)AsCSharp(_this), ScriptInt.AsCSharp(_other)));
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Float))
+                {
+                    resultObject = BasicTypes.Decimal.Create(Math.Pow((double)AsCSharp(_this), ScriptFloat.AsCSharp(_other)));
+                }
+                else if (_other.IsTypeOrSubOf(BasicTypes.Decimal))
+                {
+                    resultObject = BasicTypes.Decimal.Create(Math.Pow((double)AsCSharp(_this),(double)AsCSharp(_other)));
+                }
+
+                if (resultObject == null)
+                    throw new Exception($"{_this} ** {_other} is not defined");
                 return new ScriptValue(resultObject);
             });
             this.AddFunction(OPEARTOR_LESS, new List<FnParameter>()

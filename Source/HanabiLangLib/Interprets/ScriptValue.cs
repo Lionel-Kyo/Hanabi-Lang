@@ -306,7 +306,8 @@ namespace HanabiLangLib.Interprets
         public static ScriptValue Minus(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MINUS, "-");
         public static ScriptValue Multiply(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MULTIPLY, "*");
         public static ScriptValue Divide(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_DIVIDE, "/");
-        public static ScriptValue Mudulo(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MUDULO, "%");
+        public static ScriptValue Modulo(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_MODULO, "%");
+        public static ScriptValue Power(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_POWER, "**");
         public static ScriptValue Larger(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LARGER, ">");
         public static ScriptValue LargerEquals(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LARGER_EQUALS, ">=");
         public static ScriptValue Less(ScriptValue value1, ScriptValue value2) => OperatorTwoValues(value1, value2, ScriptClass.OPEARTOR_LESS, "<");

@@ -837,7 +837,7 @@ namespace HanabiLangLib.Lexers
                         }
                     }
 
-                    // *, *=, %, %=
+                    // %, %=
                     else if (c == '*' || c == '%')
                     {
                         if (i + 1 < line.Length && line[i + 1] == '=')
@@ -851,8 +851,8 @@ namespace HanabiLangLib.Lexers
                         }
                     }
 
-                    // +, +=, ++, -, -=, --, ->
-                    else if (c == '+' || c == '-')
+                    // +, +=, ++, -, -=, --, *, *=, **, ->
+                    else if (c == '+' || c == '-' || c == '*')
                     {
                         // ->
                         if (i + 1 < line.Length && c == '-' && line[i + 1] == '>')

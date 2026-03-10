@@ -1604,7 +1604,9 @@ namespace HanabiLangLib.Interprets
                             case "/":
                                 return new ValueReference(ScriptValue.Divide(left, right));
                             case "%":
-                                return new ValueReference(ScriptValue.Mudulo(left, right));
+                                return new ValueReference(ScriptValue.Modulo(left, right));
+                            case "**":
+                                return new ValueReference(ScriptValue.Power(left, right));
                             case ">":
                                 return new ValueReference(ScriptValue.Larger(left, right));
                             case ">=":

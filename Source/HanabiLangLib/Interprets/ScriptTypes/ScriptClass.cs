@@ -30,7 +30,8 @@ namespace HanabiLangLib.Interprets.ScriptTypes
         public static readonly string OPEARTOR_MINUS = "__OP_MINUS__";
         public static readonly string OPEARTOR_MULTIPLY = "__OP_MULTIPLY__";
         public static readonly string OPEARTOR_DIVIDE = "__OP_DIVIDE__";
-        public static readonly string OPEARTOR_MUDULO = "__OP_MUDULO__";
+        public static readonly string OPEARTOR_MODULO = "__OP_MODULO__";
+        public static readonly string OPEARTOR_POWER = "__OP_POWER__";
         public static readonly string OPEARTOR_LARGER = "__OP_LARGER__";
         public static readonly string OPEARTOR_LARGER_EQUALS = "__OP_LARGER_EQUALS__";
         public static readonly string OPEARTOR_LESS = "__OP_LESS__";
